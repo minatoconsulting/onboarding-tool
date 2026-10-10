@@ -130,6 +130,11 @@ a.btn.ghost{color:var(--muted)}
 .submit-zone{margin-top:20px;display:grid;gap:8px}
 .center{text-align:center}
 .big-icon{font-size:2.6rem;line-height:1}
+
+.script{border:1px dashed var(--seal);background:var(--seal-soft);border-radius:12px;padding:12px 14px;max-height:38vh;overflow:auto}
+.script-head{display:grid;gap:2px;margin-bottom:6px}
+.script ol{margin:0;padding-left:1.4em;display:grid;gap:6px;font-size:.95rem;line-height:1.6}
+.script mark{background:var(--ai);color:var(--ai-ink);border-radius:4px;padding:0 2px}
 </style>
 </head>
 <body>
@@ -147,9 +152,9 @@ const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
 const ID_TYPES = ['運転免許証', 'パスポート', 'マイナンバーカード'];
 const SECTIONS = [
   { id: 'me', title: 'お名前・生年月日', fields: [
-    F('name_ja', '氏名（漢字）', { hint: '例：江口 由紀' }),
-    F('first_romaji', '名（ローマ字）', { hint: '例：YUKI' }),
-    F('last_romaji', '姓（ローマ字）', { hint: '例：EGUCHI' }),
+    F('name_ja', '氏名（漢字）', { hint: '例：山田 花子' }),
+    F('first_romaji', '名（ローマ字）', { hint: '例：HANAKO' }),
+    F('last_romaji', '姓（ローマ字）', { hint: '例：YAMADA' }),
     F('gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
     F('birth_date', '生年月日', { type: 'date' }),
     F('birth_country', '生まれた国', { def: '日本' }),
@@ -208,6 +213,12 @@ const SECTIONS = [
   { id: 'tax', title: '税金について', fields: [
     F('us_status', 'アメリカとの関係', { type: 'select', opts: ['米国市民・米国居住者ではない', '米国市民・米国居住者である', '米国生まれだが市民権を放棄した'], hint: 'アメリカ国籍やグリーンカードがなければ「ではない」' }),
     F('tax_country', '税金を納めている国', { def: '日本' }),
+  ]},
+  { id: 'contract', title: 'ご契約内容（担当者と決めた内容）', fields: [
+    F('product_type', '契約商品', { type: 'select', opts: ['S&P500', 'EVO', 'その他'] }),
+    F('contract_years', '契約年数', { type: 'number', hint: '例：15' }),
+    F('monthly_usd', '月々の金額（米ドル）', { type: 'number', hint: '数字のみ。例：月200ドル → 200' }),
+    F('introducer_name', '紹介者（漢字フルネーム）'),
   ]},
   { id: 'funds', title: '資金について', fields: [
     F('bank_name', 'お支払いに使う銀行', { hint: '例：三菱UFJ銀行' }),
@@ -461,15 +472,62 @@ async function toJpegBase64(file, max = 1600) {
   return c.toDataURL('image/jpeg', 0.85).split(',')[1];
 }
 
+
+/* ---------- 読み上げ見本（まだ空いている項目だけ表示） ---------- */
+const SCRIPT = [
+  { keys: ['name_ja'], text: 'お名前は「漢字のフルネーム」です。' },
+  { keys: ['birth_date', 'gender'], text: '生年月日は「〇年〇月〇日」で、性別は「男性・女性」です。' },
+  { keys: ['id_number'], text: '運転免許証の番号は「12桁の番号」です。（免許証を撮影した場合は不要）' },
+  { keys: ['email'], text: 'メールアドレスは「〇〇＠〇〇」です。' },
+  { keys: ['phone_area', 'phone_local'], text: '携帯番号は「〇〇〇-〇〇〇〇-〇〇〇〇」です。' },
+  { keys: ['address_ja', 'addr1', 'city', 'prefecture'], text: '住所は「都道府県から部屋番号まで」です。' },
+  { keys: ['postal_code'], text: '郵便番号は「〇〇〇-〇〇〇〇」です。' },
+  { keys: ['employer_type', 'employer_name'], text: '働き方は「会社員・自営業など」で、勤務先は「会社名」です。' },
+  { keys: ['industry', 'position'], text: '業種は「医療・不動産など」で、役職は「一般社員・管理職など」です。' },
+  { keys: ['job_detail', 'employment_start'], text: '仕事の内容は「〇〇」で、今の勤務先では「〇年〇月」から働いています。' },
+  { keys: ['income_amount'], text: '年収は「〇〇万円」です。' },
+  { keys: ['pep'], text: '政治家や官公庁の幹部などとの関係は「ありません」。' },
+  { keys: ['us_status'], text: 'アメリカの国籍やグリーンカードは「持っていません」。' },
+  { keys: ['ben_name_ja', 'ben_relation'], text: '受取人は「続柄（妻・夫・子など）」の「漢字のフルネーム」です。' },
+  { keys: ['ben_birth_date', 'ben_gender', 'ben_percent'], text: '受取人の生年月日は「〇年〇月〇日」、性別は「男性・女性」、受け取る割合は「100」パーセントです。' },
+  { keys: ['ben_id_number'], text: '受取人の運転免許証の番号は「12桁の番号」です。（受取人の免許証を撮影した場合は不要）' },
+  { keys: ['bank_name', 'bank_branch'], text: 'お支払いに使う銀行は「〇〇銀行」の「〇〇支店」です。' },
+  { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
+  { keys: ['fund_method', 'fund_amount'], text: 'お支払いのお金は「給与・貯蓄など」からで、金額は「〇〇万円くらい」です。' },
+  { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
+  { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P500・EVO」を「〇年」、月「〇〇ドル」です。' },
+  { keys: ['introducer_name'], text: '紹介者は「漢字のフルネーム」です。' },
+  { keys: ['staff_name'], text: '担当者は「〇〇」です。' },
+];
+function scriptLines(values, available) {
+  return SCRIPT.filter(s => s.keys.some(k => available.includes(k)))
+    .filter(s => s.keys.filter(k => available.includes(k)).some(k => !String(values[k] ?? '').trim()))
+    .map(s => s.text);
+}
+function scriptBox(values, available) {
+  const lines = scriptLines(values, available);
+  const box = h('div', { class: 'script' });
+  if (!lines.length) { box.append(h('p', { class: 'small', style: 'margin:0' }, '入力が必要な項目は、すべて埋まっています。')); return box; }
+  box.append(h('div', { class: 'script-head' }, h('strong', {}, '読み上げ見本'), h('span', { class: 'muted small' }, '「」の中を自分の内容に変えて、上から順に読むだけでOK')));
+  const ol = h('ol', {});
+  for (const t of lines) {
+    const li = h('li', {});
+    t.split(/(「[^」]*」)/).forEach(part => li.append(/^「/.test(part) ? h('mark', {}, part) : part));
+    ol.append(li);
+  }
+  box.append(ol);
+  return box;
+}
+
 /* ---------- 話して入力 ---------- */
 function stopVoice() { recording = false; if (rec) { try { rec.stop(); } catch {} rec = null; } }
 function openVoice() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：メールは yuki@example.com、携帯は090-1234-5678です。勤務先は中央病院で看護師をしていて、2018年4月からです。年収は450万円くらい。受取人は夫の江口太郎で100%。目的は老後資金です。' });
+  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：メールは hanako@example.com、携帯は090-1234-5678です。勤務先は〇〇株式会社で事務をしていて、2018年4月からです。年収は450万円くらい。受取人は夫の山田太郎で100%。目的は老後資金です。' });
   ta.value = voiceDraft; ta.addEventListener('input', () => { voiceDraft = ta.value; });
   const label = h('p', { class: 'mic-label' }, SR ? '押して話す' : '');
   const status = h('p', { class: 'muted small', role: 'status' }, SR
-    ? 'マイクを押して、思いつくままに話してください。終わったらもう一度押します。'
+    ? 'マイクを押して、上の見本を順番に読んでください。終わったらもう一度押します。'
     : '下の欄を押して、キーボードのマイクボタンで話してください。');
   const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', hidden: !SR }, icon('mic'));
   let base = '', finalText = '';
@@ -500,6 +558,7 @@ function openVoice() {
   });
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
+    scriptBox(data, ALL_KEYS),
     mic, label, status, ta, send,
     h('p', { class: 'muted small' }, 'カード番号・マイナンバー・口座番号は話さないでください（話しても入力されません）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
