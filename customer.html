@@ -72,7 +72,7 @@ a.btn.ghost{color:var(--muted)}
 .field.ai .ok-btn{display:inline-block}
 
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
-.dock-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px}
+.dock-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
 .dock-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:62px;border-radius:12px;border:1px solid var(--line);background:var(--paper);font-size:.78rem;font-weight:500;line-height:1.3;cursor:pointer;text-align:center}
 .dock-btn svg{width:24px;height:24px}
 .dock-btn.primary{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700;font-size:.88rem}
@@ -135,6 +135,26 @@ a.btn.ghost{color:var(--muted)}
 .script-head{display:grid;gap:2px;margin-bottom:6px}
 .script ol{margin:0;padding-left:1.4em;display:grid;gap:6px;font-size:.95rem;line-height:1.6}
 .script mark{background:var(--ai);color:var(--ai-ink);border-radius:4px;padding:0 2px}
+
+.doc-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.doc-badge{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--ai-line);background:var(--ai);color:var(--ai-ink);white-space:nowrap}
+.doc-badge.ok{border-color:var(--seal);background:var(--seal);color:var(--seal-ink)}
+.shot-tips{display:flex;gap:14px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--paper);border:1px solid var(--line)}
+.shot-tips ul{margin:0;padding-left:1.1em;font-size:.84rem;display:grid;gap:2px}
+.frame{position:relative;width:84px;height:58px;flex:none}
+.frame .card{position:absolute;inset:9px;border-radius:5px;background:var(--seal-soft);border:1.5px solid var(--seal)}
+.frame .c{position:absolute;width:15px;height:15px;border:0 solid var(--danger)}
+.frame .tl{top:0;left:0;border-top-width:3px;border-left-width:3px}
+.frame .tr{top:0;right:0;border-top-width:3px;border-right-width:3px}
+.frame .bl{bottom:0;left:0;border-bottom-width:3px;border-left-width:3px}
+.frame .br{bottom:0;right:0;border-bottom-width:3px;border-right-width:3px}
+.doc-group{border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.doc-group.done{border-color:var(--seal)}
+.doc-name{display:flex;justify-content:space-between;align-items:center;font-weight:700;padding:2px 0 4px}
+.doc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.doc-label{display:grid;gap:0}
+.doc-actions{display:flex;gap:6px;flex:none}
+.doc-ok{color:var(--seal);font-weight:700;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -232,6 +252,7 @@ const SECTIONS = [
   ]},
 ];
 const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
+FIELD_MAP.has_passport = F('has_passport', 'パスポートを持っていますか', { type: 'select', opts: ['はい', 'いいえ'] });
 const ALL_KEYS = Object.keys(FIELD_MAP);
 const DOCS = {
   license: { label: '運転免許証（申込者）', set: { id_type: '運転免許証' },
@@ -309,15 +330,15 @@ function viewWelcome() {
     h('h1', {}, 'お申込み情報のご入力'),
     h('p', { class: 'muted' }, 'スマホで5〜10分ほどで終わります。途中で閉じても、入力した内容は保存されます。'),
     h('ol', { class: 'steps' },
-      h('li', {}, h('span', { class: 'num' }, '1'), h('span', {}, '運転免許証を撮影すると、お名前や住所が自動で入ります')),
+      h('li', {}, h('span', { class: 'num' }, '1'), h('span', {}, '本人確認書類を2点撮影します（パスポートをお持ちの方は必ずパスポートを含めてください）。お名前や住所が自動で入ります')),
       h('li', {}, h('span', { class: 'num' }, '2'), h('span', {}, '残りの項目は、話すだけで自動で入ります（手入力もできます）')),
       h('li', {}, h('span', { class: 'num' }, '3'), h('span', {}, '内容を確認して「送信する」を押せば完了です'))),
     h('div', { class: 'consent' },
       h('strong', {}, 'ご確認ください'),
       h('ul', {},
         h('li', {}, 'ご入力の情報は、Investors Trust（ITA）へのお申込み手続きのために、担当のファイナンシャルプランナーが利用します。'),
-        h('li', {}, '撮影した画像は文字の読み取りにだけ使い、保存しません。読み取りにはAI（Anthropic社のClaude）を使用します。'),
-        h('li', {}, 'クレジットカード番号・マイナンバー（12桁の番号）・口座番号は、ここには入力しないでください。'),
+        h('li', {}, '撮影した本人確認書類の写真は、お申込み手続きのために担当者だけが見られる場所に保存し、手続き後に削除します。文字の読み取りにはAI（Anthropic社のClaude）を使用します。'),
+        h('li', {}, 'クレジットカード番号・口座番号は、ここには入力しないでください。マイナンバーは、カード裏面の写真としてのみお預かりします。'),
         h('li', {}, 'このリンクはあなた専用です。他の人には送らないでください。'))),
     h('label', { class: 'check', for: 'agree' }, agree, '上の内容を確認しました'),
     start));
@@ -328,14 +349,14 @@ function viewForm() {
   inputs = {}; counters = [];
   saveEl = h('span', { class: 'save', role: 'status' }, '');
   const main = h('main', { class: 'wrap' },
-    h('p', { class: 'note' }, '下のボタンから「免許証を撮影」→「話して入力」の順がおすすめです。黄色の欄は、内容を確認して「確認OK」を押してください。'),
+    h('p', { class: 'note' }, 'まず下の「本人確認書類」を2点撮影 → そのあと「話して入力」で見本を読むのがおすすめです。黄色の欄は、内容を確認して「確認OK」を押してください。'),
+    (docsPanelEl = renderDocsPanel()),
     ...SECTIONS.map((s, i) => renderSection(s, i)),
     h('div', { class: 'submit-zone' },
       h('button', { class: 'btn primary wide', type: 'button', onclick: submit }, '内容を確認して送信する'),
       h('p', { class: 'muted small center' }, '送信すると、このリンクは使えなくなります。')));
   const dock = h('nav', { class: 'dock', 'aria-label': '入力の方法' }, h('div', { class: 'dock-in' },
-    h('button', { class: 'dock-btn', onclick: () => pickImage('license') }, icon('card'), h('span', {}, '免許証を撮影')),
-    h('button', { class: 'dock-btn', onclick: () => pickImage('mynumber') }, icon('card2'), h('span', {}, 'マイナンバー', h('br'), '表面を撮影')),
+    h('button', { class: 'dock-btn', onclick: () => { const p = document.getElementById('docs-panel'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, icon('card'), h('span', {}, '書類を撮影')),
     h('button', { class: 'dock-btn primary', onclick: openVoice }, icon('mic'), h('span', {}, '話して入力'))));
   app.replaceChildren(h('header', { class: 'topbar' }, h('h1', { class: 'tb-title' }, 'お申込み情報のご入力'), saveEl), main, dock);
   updateCounts(); window.scrollTo(0, 0);
@@ -408,6 +429,12 @@ async function save(final = false) {
 window.addEventListener('pagehide', () => { if (saveTimer) save(); });
 
 async function submit() {
+  const ds = docStatus(data);
+  if (!ds.ok) {
+    alert(ds.needPassport ? 'パスポートをお持ちの場合は、パスポートの写真が必要です。' : '本人確認書類を2点撮影してください（運転免許証・マイナンバーカードは表と裏の両方）。');
+    const p = document.getElementById('docs-panel'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   const empty = ALL_KEYS.filter(k => !String(data[k] ?? '').trim()).length;
   const unchecked = aiKeys.size;
   let msg = 'この内容で送信します。よろしいですか？';
@@ -448,9 +475,11 @@ function applyAI(res, preset = {}) {
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
   const r = inputs[first]; if (r) r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
-function pickImage(doc) { fileInput.dataset.doc = doc; fileInput.value = ''; fileInput.click(); }
+function pickImage(doc) { fileInput.dataset.slot = ''; fileInput.dataset.doc = doc; fileInput.value = ''; fileInput.click(); }
 fileInput.addEventListener('change', async () => {
-  const file = fileInput.files && fileInput.files[0], doc = DOCS[fileInput.dataset.doc];
+  const f0 = fileInput.files && fileInput.files[0];
+  if (fileInput.dataset.slot) { const slot = fileInput.dataset.slot; fileInput.dataset.slot = ''; fileInput.value = ''; if (f0) await handleDocFile(slot, f0); return; }
+  const file = f0, doc = DOCS[fileInput.dataset.doc];
   if (!file || !doc) return;
   const done = busy('読み取り中…');
   try {
@@ -473,11 +502,118 @@ async function toJpegBase64(file, max = 1600) {
 }
 
 
+const STAFF = false;
+const D = () => data;
+function markDirty(k) { dirty.add(k); scheduleSave(); }
+
+/* ---------- 本人確認書類（2点・パスポート優先） ---------- */
+const DOC_TYPES = { passport: 'パスポート', license: '運転免許証', mynumber: 'マイナンバーカード', juminhyo: '住民票' };
+const DOC_SLOTS = [
+  { slot: 'passport', doc: 'passport', label: '顔写真のページ', ai: 'passport' },
+  { slot: 'license_front', doc: 'license', label: '表', ai: 'license' },
+  { slot: 'license_back', doc: 'license', label: '裏', ai: 'license_back' },
+  { slot: 'mynumber_front', doc: 'mynumber', label: '表', ai: 'mynumber' },
+  { slot: 'mynumber_back', doc: 'mynumber', label: '裏', ai: null, note: '裏面の番号は担当者だけが確認します。' },
+  { slot: 'juminhyo', doc: 'juminhyo', label: '全体', ai: 'juminhyo', note: 'マイナンバーが載っていない住民票を撮影してください。' },
+];
+DOCS.passport = { label: 'パスポートの顔写真ページ（申込者）', set: { id_type: 'パスポート' },
+  keys: ['first_romaji', 'last_romaji', 'gender', 'birth_date', 'nationality', 'id_number', 'id_country', 'id_issue_date', 'id_expiry'] };
+DOCS.license_back = { label: '運転免許証の裏面（申込者・住所変更などの記載欄）', set: {},
+  keys: ['address_ja', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
+DOCS.juminhyo = { label: '住民票（申込者）', set: {},
+  keys: ['name_ja', 'birth_date', 'gender', 'address_ja', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
+
+const docsOf = d => (d && d._docs) || {};
+const docDone = (d, doc) => DOC_SLOTS.filter(x => x.doc === doc).every(x => docsOf(d)[x.slot]);
+function docStatus(d) {
+  const done = Object.keys(DOC_TYPES).filter(k => docDone(d, k));
+  const needPassport = d.has_passport === 'はい' && !done.includes('passport');
+  return { done, needPassport, ok: done.length >= 2 && !needPassport };
+}
+// パスポートがある時は、身分証明書とローマ字の名前はパスポートを優先（他の書類で上書きしない）
+function docPlan(docKey, d) {
+  const cfg = DOCS[docKey];
+  let keys = cfg.keys.slice(), set = { ...cfg.set };
+  const passportFirst = !!docsOf(d).passport || d.id_type === 'パスポート';
+  if (docKey !== 'passport' && docKey !== 'ben_license' && passportFirst) {
+    keys = keys.filter(k => !/^id_/.test(k) && k !== 'first_romaji' && k !== 'last_romaji');
+    set = {};
+  }
+  return { label: cfg.label, keys, set };
+}
+function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; fileInput.click(); }
+async function handleDocFile(slot, file) {
+  const s = DOC_SLOTS.find(x => x.slot === slot); if (!s) return;
+  const done = busy(s.ai ? '保存して読み取り中…' : '保存中…');
+  try {
+    const image = await toJpegBase64(file, 2000);
+    const storeBody = { mode: 'store', slot, image };
+    if (STAFF) storeBody.customer_id = state.id;
+    const tasks = [callAI(storeBody)];
+    let plan = null;
+    if (s.ai) { plan = docPlan(s.ai, D()); tasks.push(callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: fieldSpec(plan.keys) })); }
+    const [stored, read] = await Promise.allSettled(tasks);
+    done();
+    if (stored.status === 'rejected') { toast('写真を保存できませんでした：' + stored.reason.message, 6000); return; }
+    const d = D(); d._docs = { ...docsOf(d), [slot]: new Date().toISOString() };
+    refreshDocs();
+    if (read && read.status === 'fulfilled') applyAI(read.value, plan.set);
+    else if (read) toast('写真は保存しました。文字の読み取りはできなかったので、手で入力してください。', 5000);
+    else toast('写真を保存しました。');
+  } catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
+}
+let docsPanelEl = null;
+function refreshDocs() { if (docsPanelEl && docsPanelEl.isConnected) { const n = renderDocsPanel(); docsPanelEl.replaceWith(n); docsPanelEl = n; } }
+function renderDocsPanel() {
+  const d = D(), st = docStatus(d);
+  const left = Math.max(0, 2 - st.done.length);
+  const badge = st.ok ? h('span', { class: 'doc-badge ok' }, '2点そろいました')
+    : h('span', { class: 'doc-badge' }, st.needPassport && !left ? 'パスポートが必要です' : `あと${left || 1}点`);
+  const hp = FIELD_MAP.has_passport;
+  const hpSel = h('select', { id: 'f-has_passport' }, h('option', { value: '' }, '選択してください'), ...hp.opts.map(o => h('option', { value: o }, o)));
+  hpSel.value = d.has_passport || '';
+  hpSel.addEventListener('change', () => { d.has_passport = hpSel.value; markDirty('has_passport'); refreshDocs(); });
+  const groups = Object.keys(DOC_TYPES).map(doc => {
+    const isDone = docDone(d, doc);
+    return h('div', { class: 'doc-group' + (isDone ? ' done' : '') },
+      h('div', { class: 'doc-name' }, h('span', {}, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ 撮影済み') : null),
+      ...DOC_SLOTS.filter(x => x.doc === doc).map(x => {
+        const has = !!docsOf(d)[x.slot];
+        return h('div', { class: 'doc-row' },
+          h('div', { class: 'doc-label' }, h('span', {}, x.label), h('small', { class: has ? 'doc-ok' : 'muted' }, has ? '撮影済み' : 'まだ'), x.note ? h('small', { class: 'hint' }, x.note) : null),
+          h('div', { class: 'doc-actions' },
+            STAFF && has ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => viewDoc(x.slot) }, '見る') : null,
+            h('button', { class: 'btn sm ' + (has ? 'ghost' : 'outline'), type: 'button', onclick: () => captureDoc(x.slot) }, has ? '撮り直す' : '撮影する')));
+      }));
+  });
+  const el = h('section', { class: 'sec docs', id: 'docs-panel' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('div', { class: 'doc-top' }, h('strong', {}, '本人確認書類（2点）'), badge),
+    h('p', { class: 'small', style: 'margin:0' }, 'パスポート・運転免許証・マイナンバーカード・住民票のうち2点を撮影してください。パスポートをお持ちの方は、必ずパスポートを含めてください。'),
+    h('div', { class: 'field' }, h('label', { for: 'f-has_passport' }, hp.label), hpSel),
+    h('div', { class: 'shot-tips' },
+      h('div', { class: 'frame', 'aria-hidden': 'true' }, h('span', { class: 'card' }), h('span', { class: 'c tl' }), h('span', { class: 'c tr' }), h('span', { class: 'c bl' }), h('span', { class: 'c br' })),
+      h('ul', {}, h('li', {}, '四隅がすべて写るように（切れないように）'), h('li', {}, '明るい場所で、光の反射やかげがないように'), h('li', {}, '文字がぼやけていないか確認'))),
+    ...groups,
+    STAFF && Object.keys(docsOf(d)).length ? h('button', { class: 'btn danger sm', type: 'button', onclick: purgeDocs }, '書類の写真をすべて削除（ITA提出後に）') : null));
+  return el;
+}
+async function viewDoc(slot) {
+  const { data: res, error } = await sb.storage.from('onboarding-docs').createSignedUrl(`${state.id}/${slot}.jpg`, 300);
+  if (error || !res) { toast('写真を開けませんでした：' + (error ? error.message : '')); return; }
+  window.open(res.signedUrl, '_blank', 'noopener');
+}
+async function purgeDocs() {
+  if (!confirm('このお客様の書類の写真をすべて削除します。元に戻せません。よろしいですか？')) return;
+  const done = busy('削除中…');
+  try { await callAI({ mode: 'purge', customer_id: state.id }); done(); state.data._docs = {}; refreshDocs(); toast('削除しました'); }
+  catch (e) { done(); toast('削除できませんでした：' + e.message); }
+}
+
 /* ---------- 読み上げ見本（まだ空いている項目だけ表示） ---------- */
 const SCRIPT = [
   { keys: ['name_ja'], text: 'お名前は「漢字のフルネーム」です。' },
   { keys: ['birth_date', 'gender'], text: '生年月日は「〇年〇月〇日」で、性別は「男性・女性」です。' },
-  { keys: ['id_number'], text: '運転免許証の番号は「12桁の番号」です。（免許証を撮影した場合は不要）' },
+  { keys: ['id_number'], text: '本人確認書類の番号は「〇〇」です。（書類を撮影した場合は不要）' },
   { keys: ['email'], text: 'メールアドレスは「〇〇＠〇〇」です。' },
   { keys: ['phone_area', 'phone_local'], text: '携帯番号は「〇〇〇-〇〇〇〇-〇〇〇〇」です。' },
   { keys: ['address_ja', 'addr1', 'city', 'prefecture'], text: '住所は「都道府県から部屋番号まで」です。' },
