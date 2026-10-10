@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F6457">
+<title>申込入力</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --paper:#F3F6F7;--surface:#FFFFFF;--ink:#16222B;--muted:#5B6A75;--line:#D3DCE2;
+  --seal:#1F6457;--seal-ink:#FFFFFF;--seal-soft:#E2EFEB;
+  --ai:#FFF3CC;--ai-line:#C9961A;--ai-ink:#6B4E00;
+  --danger:#AE3A2A;--dock-h:84px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0F161B;--surface:#172128;--ink:#E5EDF1;--muted:#97A7B2;--line:#2A3943;
+  --seal:#4E9F8D;--seal-ink:#06110E;--seal-soft:#1B2F2A;
+  --ai:#382D10;--ai-line:#D9AE3E;--ai-ink:#F2D58A;--danger:#E07A69;
+}}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--paper);color:var(--ink);font-family:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:16px;line-height:1.65;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--seal);outline-offset:2px}
+[hidden]{display:none!important}
+
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--dock-h) + 48px + env(safe-area-inset-bottom,0px))}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--paper);background:color-mix(in srgb,var(--paper) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.tb-title{flex:1;min-width:0;margin:0;font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save{font-size:.76rem;color:var(--muted);white-space:nowrap;background:none;border:0;padding:4px;cursor:default}
+.save.bad{color:var(--danger);cursor:pointer;text-decoration:underline}
+.status-sel{font-size:.85rem;min-height:36px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:500;cursor:pointer}
+.btn.primary{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
+.btn.outline{border-color:var(--seal);color:var(--seal);background:transparent}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.danger{border-color:var(--danger);color:var(--danger);background:transparent}
+.btn.sm{min-height:36px;padding:0 10px;font-size:.88rem}
+.btn.wide{width:100%}
+a.btn{text-decoration:none;color:inherit}
+a.btn.outline{color:var(--seal)}
+a.btn.ghost{color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+.icon-btn{flex:none;width:40px;height:40px;border:0;background:transparent;border-radius:8px;display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:22px;height:22px}
+
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 14px;overflow:hidden}
+.sec-head{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:0;background:transparent;text-align:left;cursor:pointer}
+.num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:.85rem;font-weight:700;border:1.5px solid var(--line);color:var(--muted)}
+.sec.done .num{background:var(--seal);border-color:var(--seal);color:var(--seal-ink)}
+.sec-title{flex:1;font-weight:700}
+.count{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.chev{flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px;transition:transform .2s}
+.sec-head[aria-expanded="false"] .chev{transform:rotate(-45deg);margin-bottom:0}
+.sec-body{padding:2px 16px 18px;display:grid;gap:14px}
+.note{margin:0;padding:10px 12px;border-radius:8px;background:var(--seal-soft);font-size:.86rem}
+
+.field{display:grid;gap:4px}
+.field-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px}
+.field label{font-size:.88rem;font-weight:500}
+.field input,.field select,.field textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
+.field textarea{resize:vertical;min-height:84px}
+.hint{color:var(--muted);font-size:.78rem}
+.field.ai input,.field.ai select,.field.ai textarea{background:var(--ai);border-color:var(--ai-line)}
+.ok-btn{display:none;border:1px solid var(--ai-line);background:var(--ai);color:var(--ai-ink);font-size:.74rem;font-weight:700;border-radius:999px;padding:2px 10px;cursor:pointer;white-space:nowrap}
+.field.ai .ok-btn{display:inline-block}
+
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.dock-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px}
+.dock-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:62px;border-radius:12px;border:1px solid var(--line);background:var(--paper);font-size:.78rem;font-weight:500;line-height:1.3;cursor:pointer;text-align:center}
+.dock-btn svg{width:24px;height:24px}
+.dock-btn.primary{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700;font-size:.88rem}
+
+.list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.row{width:100%;display:grid;grid-template-columns:1fr auto;grid-template-areas:"name chip" "date chip";gap:0 10px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;cursor:pointer}
+.row-name{grid-area:name;font-weight:700}
+.row-date{grid-area:date;font-size:.78rem;color:var(--muted)}
+.chip{grid-area:chip;font-size:.76rem;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;color:var(--muted)}
+.chip.s-b{border-color:var(--ai-line);color:var(--ai-ink);background:var(--ai)}
+.chip.s-c{border-color:var(--seal);color:var(--seal-ink);background:var(--seal)}
+.search{width:100%;min-height:46px;margin-top:12px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+.pad{padding:12px 4px}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.err{color:var(--danger);margin:0}
+
+.login,.setup{max-width:420px;margin:0 auto;padding:calc(56px + env(safe-area-inset-top,0px)) 20px 40px;display:grid;gap:14px}
+.login h1,.setup h1{margin:0;font-size:1.6rem;letter-spacing:.02em}
+.login p,.setup p{margin:0}
+.lbl{display:grid;gap:4px;font-size:.88rem;font-weight:500}
+.lbl input{min-height:48px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+
+.backdrop{position:fixed;inset:0;z-index:50;background:rgba(8,16,20,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:720px;background:var(--surface);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:12px;max-height:92vh;overflow:auto}
+.sheet-top{display:flex;align-items:center;justify-content:space-between}
+.sheet h2{margin:0;font-size:1.1rem}
+.mic{justify-self:center;width:96px;height:96px;border-radius:50%;border:0;background:var(--seal);color:var(--seal-ink);display:grid;place-items:center;cursor:pointer;position:relative}
+.mic svg{width:40px;height:40px}
+.mic:disabled{opacity:.4;cursor:default}
+.mic[aria-pressed="true"]{background:var(--danger)}
+.mic[aria-pressed="true"]::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px solid var(--danger);animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{from{transform:scale(.92);opacity:.7}to{transform:scale(1.18);opacity:0}}
+.mic-label{text-align:center;font-weight:700;margin:0}
+.transcript{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:16px;line-height:1.6;resize:vertical}
+
+.busy{position:fixed;inset:0;z-index:60;background:rgba(8,16,20,.5);display:grid;place-items:center}
+.busy-card{background:var(--surface);padding:20px 24px;border-radius:14px;display:flex;align-items:center;gap:12px;font-weight:700}
+.spinner{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--seal);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));z-index:70;width:max-content;max-width:min(92vw,560px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.danger-zone{margin-top:28px;display:grid}
+@media (prefers-reduced-motion:reduce){.mic[aria-pressed="true"]::after,.spinner{animation:none}.chev{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input type="file" id="file-input" accept="image/*" hidden>
+<script>
+/* =========================================================
+   ① ここだけ書きかえてください（Supabaseの設定）
+   ========================================================= */
+const CONFIG = {
+  SUPABASE_URL: 'https://axaxqgvvezvhffopggba.supabase.co',  // テスト中はすごろくのプロジェクトに同居
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YXhxZ3Z2ZXp2aGZmb3BnZ2JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1Nzc5MTgsImV4cCI6MjEwMDE1MzkxOH0.l4HVsYvcFV-WyD86hjrfSS7Pgc9qCqgUlMaZWZD9vCg',  // 公開してよい鍵
+  FUNCTION_NAME: 'onboarding-extract',
+  TABLE: 'onboarding_customers',
+};
+
+/* =========================================================
+   ② 入力項目（ITA申込サイトの順番にそろえています）
+   ========================================================= */
+const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
+const ID_TYPES = ['運転免許証', 'パスポート', 'マイナンバーカード'];
+const SECTIONS = [
+  { id: 'applicant', title: '申込者情報', fields: [
+    F('name_ja', '氏名（日本語）'),
+    F('first_romaji', '名（ローマ字）', { hint: '例：YUKI' }),
+    F('last_romaji', '姓（ローマ字）', { hint: '例：EGUCHI' }),
+    F('gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
+    F('birth_date', '生年月日', { type: 'date' }),
+    F('birth_country', '出生国', { def: '日本' }),
+    F('nationality', '国籍', { def: '日本' }),
+    F('industry', '職業 - 業種', { hint: '例：医療機関' }),
+    F('position', '職業 - 役職', { hint: '例：会社従業員' }),
+    F('pep', '政府・政治家などとの関係', { type: 'select', opts: ['いいえ', 'はい'], hint: '公的な重要ポジションの経験、またはその家族・近しい関係がありますか' }),
+  ]},
+  { id: 'idcard', title: '身分証明書', fields: [
+    F('id_type', '身分証明書の種類', { type: 'select', opts: ID_TYPES, def: '運転免許証' }),
+    F('id_number', '身分証明書番号'),
+    F('id_country', '発行国', { def: '日本' }),
+    F('id_issue_date', '発行日', { type: 'date' }),
+    F('id_expiry', '有効期限', { type: 'date' }),
+  ]},
+  { id: 'contact', title: '連絡先', fields: [
+    F('email', 'メールアドレス', { type: 'email' }),
+    F('phone_type', '電話の種類', { type: 'select', opts: ['携帯', '自宅', '勤務先'], def: '携帯' }),
+    F('phone_cc', '国コード', { def: '+81' }),
+    F('phone_area', '市外局番', { type: 'tel', hint: '先頭の0を除く（090 → 90）' }),
+    F('phone_local', '市内番号', { type: 'tel', hint: '例：12345678' }),
+  ]},
+  { id: 'address', title: '住所（ローマ字）', fields: [
+    F('address_ja', '住所（日本語・確認用）', { hint: 'ITAには入力しません。ローマ字の確認用です' }),
+    F('postal_code', '郵便番号', { type: 'tel', hint: '7桁。例：2701164' }),
+    F('prefecture', '都道府県', { hint: '例：Chiba' }),
+    F('city', '市町村', { hint: '例：Abiko-shi' }),
+    F('addr1', '住所1', { hint: '町名・番地・部屋番号。例：3-2-1302 Tsukushino' }),
+    F('addr2', '住所2', { hint: '建物名など' }),
+    F('addr_country', '国名', { def: '日本' }),
+  ]},
+  { id: 'invest', title: '投資内容', fields: [
+    F('product', '商品', { hint: '例：S&P 500 インデックス 15年プラン - シリーズ III' }),
+    F('annual_usd', '総年間拠出金（米ドル）', { type: 'number', hint: '例：月200ドルなら 2400' }),
+    F('frequency', '支払頻度', { type: 'select', opts: ['毎月', '四半期', '半年', '毎年'], def: '毎月' }),
+    F('trust', '信託', { type: 'select', opts: ['ITA International Trust', 'Investors Trust Cayman', '信託なし'] }),
+    F('insurer', '保険会社', { type: 'select', opts: ['ITA International Insurer', 'ITA Asia Limited'] }),
+    F('insured', '被保険者', { type: 'select', opts: ['第一申込者（本人）', '他の被保険者'], def: '第一申込者（本人）' }),
+  ]},
+  { id: 'beneficiary', title: '受益者', capture: 'ben_license', fields: [
+    F('ben_name_ja', '氏名（日本語）'),
+    F('ben_first_romaji', '名（ローマ字）'),
+    F('ben_last_romaji', '姓（ローマ字）'),
+    F('ben_gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
+    F('ben_birth_date', '生年月日', { type: 'date' }),
+    F('ben_birth_country', '出生国', { def: '日本' }),
+    F('ben_nationality', '国籍', { def: '日本' }),
+    F('ben_id_type', '身分証明書の種類', { type: 'select', opts: ID_TYPES, def: '運転免許証' }),
+    F('ben_id_number', '身分証明書番号'),
+    F('ben_id_country', '発行国', { def: '日本' }),
+    F('ben_id_issue_date', '発行日', { type: 'date' }),
+    F('ben_id_expiry', '有効期限', { type: 'date' }),
+    F('ben_relation', '申込者との関係', { hint: '例：配偶者、子' }),
+    F('ben_percent', '割合（%）', { type: 'number', def: '100' }),
+  ]},
+  { id: 'tax', title: '税務上の居住地', note: '税金確認番号（マイナンバー）はここには入力しません。第2段階で安全な一時預かりを追加します。', fields: [
+    F('us_status', '米国との関係', { type: 'select', opts: ['米国市民・米国居住者ではない', '米国市民・米国居住者である', '米国生まれだが市民権を放棄した'], hint: '必ずお客様本人に確認してください' }),
+    F('tax_country', '税務上の居住国', { def: '日本' }),
+  ]},
+  { id: 'funds', title: '勤務先・資金源', fields: [
+    F('employer_type', '勤務先情報', { hint: '例：会社員、自営業、公務員' }),
+    F('employer_name', '勤務先名'),
+    F('job_detail', '職業詳細', { type: 'textarea', hint: '例：中央病院の看護師' }),
+    F('employment_start', '今の勤務先で働き始めた日', { type: 'date' }),
+    F('income_currency', '年収の通貨', { def: 'JPY' }),
+    F('income_amount', '年収（金額）', { type: 'number', hint: '例：450万円なら 4500000' }),
+    F('bank_name', '銀行名（ローマ字）', { hint: '例：MUFG Bank' }),
+    F('bank_branch', '支店名'),
+    F('bank_addr1', '銀行の住所1'),
+    F('bank_addr2', '銀行の住所2'),
+    F('bank_city', '銀行の市町村'),
+    F('bank_pref', '銀行の都道府県'),
+    F('bank_postal', '銀行の郵便番号', { type: 'tel' }),
+    F('bank_open_date', '口座開設日', { type: 'date' }),
+    F('fund_method', '資金調達の方法', { hint: '例：給与、貯蓄' }),
+    F('fund_currency', '資金源の通貨', { def: 'JPY' }),
+    F('fund_amount', '資金源の額', { type: 'number' }),
+    F('fund_detail', '詳しい説明', { type: 'textarea' }),
+    F('purpose', '投資の目的', { hint: '例：老後資金、教育資金' }),
+  ]},
+  { id: 'payment', title: '支払方法', note: 'カード番号・口座番号はここには入力しません。第2段階で安全な一時預かりを追加します。', fields: [
+    F('pay_method', '支払方法', { type: 'select', opts: ['クレジットカード', '銀行送金'], def: 'クレジットカード' }),
+    F('card_brand', 'カードの種類', { type: 'select', opts: ['VISA', 'Mastercard', 'AMEX', 'JCB'] }),
+    F('pay_fund_source', '資金調達の方法（支払）'),
+    F('pay_fund_country', '資金調達の国', { def: '日本' }),
+  ]},
+];
+const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
+const ALL_KEYS = Object.keys(FIELD_MAP);
+
+// 写真の種類ごとに、読み取る項目
+const DOCS = {
+  license: { label: '運転免許証（申込者）', set: { id_type: '運転免許証' },
+    keys: ['name_ja','first_romaji','last_romaji','birth_date','id_number','id_issue_date','id_expiry','address_ja','postal_code','prefecture','city','addr1','addr2'] },
+  mynumber: { label: 'マイナンバーカードの表面（申込者）', set: {},
+    keys: ['name_ja','first_romaji','last_romaji','gender','birth_date','address_ja','postal_code','prefecture','city','addr1','addr2'] },
+  ben_license: { label: '運転免許証（受益者）', set: { ben_id_type: '運転免許証' },
+    keys: ['ben_name_ja','ben_first_romaji','ben_last_romaji','ben_birth_date','ben_id_number','ben_id_issue_date','ben_id_expiry'] },
+};
+const STATUSES = ['入力中', '入力完了', 'ITA提出済み'];
+
+/* =========================================================
+   ③ ここから下は動きの部分（ふだんは触らなくてOK）
+   ========================================================= */
+const app = document.getElementById('app');
+const fileInput = document.getElementById('file-input');
+let sb = null;
+let state = null;            // { id, status, data, voiceDraft }
+let inputs = {};             // 項目キー → 画面の部品
+let counters = [];
+let titleEl = null, saveEl = null;
+let saveTimer = null, savePromise = null;
+let dirty = new Set(), statusDirty = false;
+let rec = null, recording = false;
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) {
+    if (c == null || c === false) continue;
+    el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
+const ICONS = {
+  back: '<path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  card: '<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="11" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.8 16c.5-1.5 1.5-2.2 2.7-2.2s2.2.7 2.7 2.2M13.5 10h5M13.5 13.5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  card2: '<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 9.5h7M6 12.5h5M6 15.5h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="15" y="9" width="3.5" height="4.5" rx=".8" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+};
+function icon(name) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = ICONS[name];  // 固定の図形だけなので安全
+  return s;
+}
+function toast(msg, ms = 3200) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = h('div', { class: 'toast', role: 'status' }, msg);
+  document.body.append(t);
+  setTimeout(() => t.remove(), ms);
+}
+function busy(msg) {
+  const b = h('div', { class: 'busy', role: 'alert', 'aria-live': 'assertive' },
+    h('div', { class: 'busy-card' }, h('span', { class: 'spinner' }), msg));
+  document.body.append(b);
+  return () => b.remove();
+}
+const nameOf = d => (d && (d.name_ja || [d.first_romaji, d.last_romaji].filter(Boolean).join(' '))) || '名前未入力';
+const statusClass = s => 's-' + ({ '入力中': 'a', '入力完了': 'b', 'ITA提出済み': 'c' }[s] || 'a');
+const fmtDate = iso => { try { return new Date(iso).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' 更新'; } catch { return ''; } };
+function defaults() { const d = { _ai: [], _guess: [] }; for (const f of Object.values(FIELD_MAP)) if (f.def) d[f.k] = f.def; return d; }
+
+/* ---------- 起動 ---------- */
+async function boot() {
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) return viewSetup();
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  const { data: { session } } = await sb.auth.getSession();
+  session ? viewList() : viewLogin();
+}
+function viewSetup() {
+  app.replaceChildren(h('main', { class: 'setup' },
+    h('h1', {}, '設定がまだです'),
+    h('p', {}, 'このファイルを開いて、上のほうにある CONFIG の SUPABASE_URL と SUPABASE_ANON_KEY を書きこんでください。'),
+    h('p', { class: 'muted small' }, 'どちらも Supabase の Project Settings → API で確認できます。')));
+}
+
+/* ---------- ログイン ---------- */
+function viewLogin() {
+  stopVoice();
+  const email = h('input', { type: 'email', autocomplete: 'username', inputmode: 'email' });
+  const pw = h('input', { type: 'password', autocomplete: 'current-password' });
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary wide', type: 'button', onclick: async () => {
+    btn.disabled = true; err.textContent = '';
+    const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pw.value });
+    btn.disabled = false;
+    if (error) { err.textContent = 'メールアドレスかパスワードが違います。'; return; }
+    viewList();
+  }}, 'ログイン');
+  pw.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+  app.replaceChildren(h('main', { class: 'login' },
+    h('h1', {}, '申込入力'),
+    h('p', { class: 'muted' }, '免許証の撮影と音声で、ITAの申込情報をまとめます。'),
+    h('label', { class: 'lbl' }, 'メールアドレス', email),
+    h('label', { class: 'lbl' }, 'パスワード', pw),
+    btn, err));
+}
+
+/* ---------- お客様一覧 ---------- */
+async function viewList() {
+  stopVoice(); state = null;
+  const search = h('input', { type: 'search', class: 'search', placeholder: '名前で探す', 'aria-label': '名前で探す' });
+  const ul = h('ul', { class: 'list' }, h('li', { class: 'muted pad' }, '読み込み中…'));
+  app.replaceChildren(
+    h('header', { class: 'topbar' },
+      h('h1', { class: 'tb-title' }, 'お客様'),
+      h('button', { class: 'btn ghost sm', onclick: async () => { await sb.auth.signOut(); viewLogin(); } }, 'ログアウト')),
+    h('main', { class: 'wrap' },
+      h('button', { class: 'btn primary wide', onclick: newCustomer }, '新しいお客様を追加'),
+      search, ul));
+  const { data, error } = await sb.from(CONFIG.TABLE).select('id,status,data,updated_at').order('updated_at', { ascending: false }).limit(300);
+  if (error) { ul.replaceChildren(h('li', { class: 'err pad' }, '一覧を読み込めませんでした：' + error.message)); return; }
+  const { data: isStaff } = await sb.rpc('is_onboarding_staff');
+  if (isStaff !== true) { ul.replaceChildren(h('li', { class: 'err pad' }, 'このアカウントには使う権限がありません。管理者に追加を頼んでください。')); return; }
+  const draw = () => {
+    const q = search.value.trim().toLowerCase();
+    const rows = data.filter(r => !q || nameOf(r.data).toLowerCase().includes(q));
+    ul.replaceChildren();
+    if (!rows.length) { ul.append(h('li', { class: 'muted pad' }, data.length ? '該当するお客様がいません。' : 'まだお客様がいません。「新しいお客様を追加」から始めましょう。')); return; }
+    for (const r of rows) ul.append(h('li', {}, h('button', { class: 'row', onclick: () => viewCustomer(r) },
+      h('span', { class: 'row-name' }, nameOf(r.data)),
+      h('span', { class: 'chip ' + statusClass(r.status) }, r.status),
+      h('span', { class: 'row-date' }, fmtDate(r.updated_at)))));
+  };
+  search.addEventListener('input', draw);
+  draw();
+}
+async function newCustomer() {
+  const { data, error } = await sb.from(CONFIG.TABLE).insert({ data: defaults() }).select('id,status,data,updated_at').single();
+  if (error) { toast('追加できませんでした：' + error.message); return; }
+  viewCustomer(data);
+}
+
+/* ---------- お客様の入力画面 ---------- */
+function viewCustomer(row) {
+  state = { id: row.id, status: row.status, data: { _ai: [], _guess: [], ...(row.data || {}) }, voiceDraft: '' };
+  dirty = new Set(); statusDirty = false;
+  inputs = {}; counters = [];
+  titleEl = h('h1', { class: 'tb-title' }, nameOf(state.data));
+  saveEl = h('button', { class: 'save', type: 'button', role: 'status', onclick: () => { if (saveEl.classList.contains('bad')) save(); } }, '保存済み');
+  const statusSel = h('select', { class: 'status-sel', 'aria-label': '進み具合' }, ...STATUSES.map(s => h('option', { value: s }, s)));
+  statusSel.value = state.status;
+  statusSel.addEventListener('change', () => { state.status = statusSel.value; statusDirty = true; scheduleSave(0); });
+
+  const main = h('main', { class: 'wrap' },
+    renderInviteCard(),
+    ...SECTIONS.map((s, i) => renderSection(s, i)),
+    h('div', { class: 'danger-zone' }, h('button', { class: 'btn danger', onclick: deleteCustomer }, 'このお客様を削除')));
+  const dock = h('nav', { class: 'dock', 'aria-label': '入力の方法' }, h('div', { class: 'dock-in' },
+    h('button', { class: 'dock-btn', onclick: () => pickImage('license') }, icon('card'), h('span', {}, '免許証を撮影')),
+    h('button', { class: 'dock-btn', onclick: () => pickImage('mynumber') }, icon('card2'), h('span', {}, 'マイナンバー', h('br'), '表面を撮影')),
+    h('button', { class: 'dock-btn primary', onclick: openVoice }, icon('mic'), h('span', {}, '話して入力'))));
+
+  app.replaceChildren(
+    h('header', { class: 'topbar' },
+      h('button', { class: 'icon-btn', 'aria-label': '一覧にもどる', onclick: async () => { await flushSave(); viewList(); } }, icon('back')),
+      titleEl, saveEl, statusSel),
+    main, dock);
+  updateCounts();
+  window.scrollTo(0, 0);
+}
+function renderSection(sec, idx) {
+  const count = h('span', { class: 'count' });
+  const body = h('div', { class: 'sec-body' });
+  const head = h('button', { class: 'sec-head', type: 'button', 'aria-expanded': 'true' },
+    h('span', { class: 'num' }, String(idx + 1)), h('span', { class: 'sec-title' }, sec.title), count, h('span', { class: 'chev', 'aria-hidden': 'true' }));
+  head.addEventListener('click', () => {
+    const open = head.getAttribute('aria-expanded') === 'true';
+    head.setAttribute('aria-expanded', String(!open)); body.hidden = open;
+  });
+  if (sec.note) body.append(h('p', { class: 'note' }, sec.note));
+  if (sec.capture) body.append(h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage(sec.capture) }, icon('card'), '受益者の免許証を撮影して入力'));
+  for (const f of sec.fields) body.append(renderField(f));
+  const el = h('section', { class: 'sec' }, head, body);
+  counters.push({ sec, el, count });
+  return el;
+}
+function renderField(f) {
+  const id = 'f-' + f.k;
+  let input;
+  if (f.type === 'select') input = h('select', { id }, h('option', { value: '' }, '選択してください'), ...f.opts.map(o => h('option', { value: o }, o)));
+  else if (f.type === 'textarea') input = h('textarea', { id, rows: '3' });
+  else input = h('input', { id, type: f.type === 'number' ? 'text' : f.type, inputmode: f.type === 'number' ? 'decimal' : (f.type === 'tel' ? 'numeric' : null), autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+  input.value = state.data[f.k] ?? '';
+  const ok = h('button', { class: 'ok-btn', type: 'button' }, '確認OK');
+  ok.addEventListener('click', () => { clearAI(f.k); scheduleSave(); });
+  const wrap = h('div', { class: 'field' },
+    h('div', { class: 'field-top' }, h('label', { for: id }, f.label), ok),
+    input, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+  input.addEventListener(f.type === 'select' ? 'change' : 'input', () => {
+    state.data[f.k] = input.value; dirty.add(f.k);
+    clearAI(f.k); afterChange(f.k); scheduleSave();
+  });
+  inputs[f.k] = { input, wrap, ok };
+  paintAI(f.k);
+  return wrap;
+}
+function listHas(name, k) { return (state.data[name] || []).includes(k); }
+function listAdd(name, k) { dirty.add(name); const a = state.data[name] || (state.data[name] = []); if (!a.includes(k)) a.push(k); }
+function listDel(name, k) { dirty.add(name); state.data[name] = (state.data[name] || []).filter(x => x !== k); }
+function paintAI(k) {
+  const r = inputs[k]; if (!r) return;
+  const ai = listHas('_ai', k);
+  r.wrap.classList.toggle('ai', ai);
+  r.ok.textContent = listHas('_guess', k) ? '推測・確認OK' : '確認OK';
+}
+function clearAI(k) { listDel('_ai', k); listDel('_guess', k); paintAI(k); }
+function setField(k, v, { ai = false, guess = false } = {}) {
+  state.data[k] = v; dirty.add(k);
+  if (inputs[k]) inputs[k].input.value = v;
+  if (ai) { listAdd('_ai', k); guess ? listAdd('_guess', k) : listDel('_guess', k); }
+  paintAI(k); afterChange(k);
+}
+function afterChange(k) {
+  if (['name_ja', 'first_romaji', 'last_romaji'].includes(k) && titleEl) titleEl.textContent = nameOf(state.data);
+  updateCounts();
+}
+function updateCounts() {
+  for (const c of counters) {
+    const total = c.sec.fields.length;
+    const filled = c.sec.fields.filter(f => String(state.data[f.k] ?? '').trim()).length;
+    c.count.textContent = `${filled}/${total}`;
+    c.el.classList.toggle('done', filled === total);
+  }
+}
+
+/* ---------- お客様用リンク ---------- */
+function renderInviteCard() {
+  const got = state.data._customer_updated_at;
+  const info = got
+    ? h('p', { class: 'note' }, 'お客様がリンクから入力しました（' + fmtDate(got).replace(' 更新', '') + '）。黄色の欄を確認してください。')
+    : null;
+  return h('section', { class: 'sec invite' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('div', {}, h('strong', {}, 'お客様に入力してもらう'),
+      h('p', { class: 'muted small', style: 'margin:2px 0 0' }, 'お客様専用のリンクを作って、LINEやメールで送れます。ログイン不要・7日間有効・送信後は使えなくなります。')),
+    info,
+    h('button', { class: 'btn outline wide', type: 'button', onclick: makeInvite }, 'お客様用リンクを作る')));
+}
+async function makeInvite() {
+  await flushSave();
+  const done = busy('リンクを作成中…');
+  const { data: token, error } = await sb.rpc('create_onboarding_invite', { p_customer: state.id, p_days: 7 });
+  done();
+  if (error || !token) { toast('リンクを作れませんでした：' + (error ? error.message : '')); return; }
+  const url = new URL('customer.html', location.href); url.search = '?t=' + token;
+  const link = url.toString();
+  const isFile = location.protocol === 'file:';
+  const msg = 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます（7日間有効）。\n' + link;
+  const linkBox = h('textarea', { class: 'transcript', rows: '3', readonly: true }); linkBox.value = link;
+  const copy = h('button', { class: 'btn primary wide', type: 'button' }, 'リンクをコピー');
+  copy.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(link); toast('コピーしました'); }
+    catch { linkBox.select(); document.execCommand('copy'); toast('コピーしました'); }
+  });
+  const close = () => back.remove();
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'お客様用リンク' },
+    h('div', { class: 'sheet-top' }, h('h2', {}, 'お客様用リンクができました'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
+    isFile ? h('p', { class: 'note' }, '今はパソコンのファイルを直接開いているので、このリンクはこのパソコンでしか開けません（テスト用）。お客様に送るには、ツールをネット上に置く必要があります。') : null,
+    linkBox, copy,
+    h('a', { class: 'btn outline wide', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(msg), target: '_blank', rel: 'noopener' }, 'LINEで送る'),
+    h('a', { class: 'btn ghost wide', href: link, target: '_blank', rel: 'noopener' }, 'お客様の画面を自分で開いてみる'),
+    h('p', { class: 'muted small' }, '新しくリンクを作ると、前に作ったリンクは使えなくなります。')));
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+  document.body.append(back);
+}
+
+/* ---------- 保存（入力をやめて1秒ほどで自動保存） ---------- */
+function scheduleSave(delay = 1200) {
+  if (!state) return;
+  saveEl.textContent = '保存待ち'; saveEl.classList.remove('bad');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, delay);
+}
+async function save() {
+  clearTimeout(saveTimer); saveTimer = null;
+  if (!state) return;
+  saveEl.textContent = '保存中…'; saveEl.classList.remove('bad');
+  // 変えた項目だけ送る（お客様がリンクから入れた内容を消さないため）
+  const keys = [...dirty]; const patch = {};
+  for (const k of keys) patch[k] = state.data[k] ?? '';
+  const sentStatus = statusDirty ? state.status : null;
+  dirty = new Set(); statusDirty = false;
+  savePromise = sb.rpc('onboarding_merge', { p_id: state.id, p_patch: patch, p_status: sentStatus });
+  const { error } = await savePromise;
+  savePromise = null;
+  if (error) {
+    keys.forEach(k => dirty.add(k)); if (sentStatus) statusDirty = true;
+    saveEl.textContent = '保存できませんでした（押して再試行）'; saveEl.classList.add('bad'); return;
+  }
+  saveEl.textContent = '保存済み';
+}
+async function flushSave() {
+  if (saveTimer) await save();
+  else if (savePromise) await savePromise;
+}
+window.addEventListener('pagehide', () => { if (saveTimer) save(); });
+
+async function deleteCustomer() {
+  if (!confirm('このお客様の情報を削除します。元に戻せません。よろしいですか？')) return;
+  clearTimeout(saveTimer); saveTimer = null;
+  const { error } = await sb.from(CONFIG.TABLE).delete().eq('id', state.id);
+  if (error) { toast('削除できませんでした：' + error.message); return; }
+  viewList();
+}
+
+/* ---------- AIの呼び出し ---------- */
+function fieldSpec(keys) {
+  return keys.map(k => FIELD_MAP[k]).filter(Boolean).map(f => ({ k: f.k, label: f.label, opts: f.opts, hint: f.hint }));
+}
+async function callAI(body) {
+  const { data, error } = await sb.functions.invoke(CONFIG.FUNCTION_NAME, { body });
+  if (error) {
+    let msg = error.message;
+    try { const j = await error.context.json(); if (j && j.error) msg = j.error; } catch {}
+    throw new Error(msg);
+  }
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+function applyAI(res, preset = {}) {
+  const vals = (res && res.values) || {};
+  const guess = new Set((res && res.uncertain) || []);
+  let n = 0, first = null;
+  for (const [k, v] of Object.entries(preset)) setField(k, v);
+  for (const [k, raw] of Object.entries(vals)) {
+    const f = FIELD_MAP[k]; if (!f || raw == null) continue;
+    let v = String(raw).trim(); if (!v) continue;
+    if (f.type === 'select' && !f.opts.includes(v)) continue;
+    if (f.type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) continue;
+    if (f.type === 'number') v = v.replace(/[,，円\s]/g, '');
+    setField(k, v, { ai: true, guess: guess.has(k) });
+    n++; first = first || k;
+  }
+  scheduleSave();
+  if (!n) { toast('読み取れる項目がありませんでした。明るい場所でもう一度お試しください。'); return; }
+  toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
+  const r = inputs[first];
+  if (r) r.wrap.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+
+/* ---------- 写真から読み取り（写真は保存しません） ---------- */
+function pickImage(doc) {
+  fileInput.dataset.doc = doc;
+  fileInput.value = '';
+  fileInput.click();
+}
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files && fileInput.files[0];
+  const doc = DOCS[fileInput.dataset.doc];
+  if (!file || !doc || !state) return;
+  const done = busy('読み取り中…');
+  try {
+    const image = await toJpegBase64(file);
+    const res = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: doc.label, fields: fieldSpec(doc.keys) });
+    done(); applyAI(res, doc.set);
+  } catch (e) {
+    done(); toast('読み取りに失敗しました：' + e.message, 5000);
+  } finally { fileInput.value = ''; }
+});
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('画像を開けませんでした')); };
+    img.src = url;
+  });
+}
+async function toJpegBase64(file, max = 1600) {
+  const img = await loadImage(file);
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+}
+
+/* ---------- 話して入力 ---------- */
+function stopVoice() { recording = false; if (rec) { try { rec.stop(); } catch {} rec = null; } }
+function openVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：メールは yuki@example.com、携帯は090-1234-5678。勤務先は中央病院で看護師、2018年4月から。年収は450万円。受益者は夫の江口太郎さんで100%。' });
+  ta.value = state.voiceDraft || '';
+  ta.addEventListener('input', () => { state.voiceDraft = ta.value; });
+  const label = h('p', { class: 'mic-label' }, SR ? '押して話す' : '録音ボタンは使えません');
+  const status = h('p', { class: 'muted small', role: 'status' }, SR
+    ? '話し終わったら、もう一度押して止めます。文字は直接なおせます。'
+    : 'この端末では録音ボタンが使えません。キーボードのマイクボタンで、下の欄に話してください。');
+  const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', disabled: !SR }, icon('mic'));
+  let base = '', finalText = '';
+  const setRec = on => { mic.setAttribute('aria-pressed', String(on)); label.textContent = on ? '聞いています…押して止める' : '押して話す'; };
+  mic.addEventListener('click', () => {
+    if (recording) { stopVoice(); setRec(false); return; }
+    base = ta.value ? ta.value.replace(/\s*$/, '\n') : ''; finalText = '';
+    rec = new SR(); rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t + ' '; else interim += t;
+      }
+      ta.value = base + finalText + interim; state.voiceDraft = ta.value;
+    };
+    rec.onerror = e => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      const fileMode = location.protocol === 'file:';
+      status.textContent = fileMode
+        ? 'ファイルを直接開いた状態では録音ボタンが使えません。下の欄をクリックして、キーボードの音声入力（Macは fn キーを2回）で話してください。'
+        : (e.error === 'not-allowed' || e.error === 'service-not-allowed')
+          ? 'マイクが許可されていません。ブラウザの設定でマイクを許可してください。'
+          : '録音がうまくいきませんでした（' + e.error + '）。下の欄にキーボードの音声入力で話してください。';
+      stopVoice(); setRec(false);
+    };
+    rec.onend = () => {  // スマホは途中で止まることがあるので、録音中なら自動で再開
+      if (recording && rec) { base = ta.value.replace(/\s*$/, ' '); finalText = ''; try { rec.start(); } catch { stopVoice(); setRec(false); } }
+      else setRec(false);
+    };
+    try { rec.start(); recording = true; setRec(true); } catch { status.textContent = '録音を始められませんでした。もう一度押してください。'; }
+  });
+  const close = () => { stopVoice(); back.remove(); };
+  const send = h('button', { class: 'btn primary wide', type: 'button' }, 'AIで項目に振り分ける');
+  send.addEventListener('click', async () => {
+    stopVoice();
+    const t = ta.value.trim();
+    if (!t) { status.textContent = '話した内容がまだありません。'; return; }
+    close();
+    const done = busy('振り分け中…');
+    try {
+      const res = await callAI({ mode: 'voice', transcript: t, fields: fieldSpec(ALL_KEYS) });
+      done(); state.voiceDraft = ''; applyAI(res);
+    } catch (e) { done(); toast('振り分けに失敗しました：' + e.message, 5000); }
+  });
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
+    h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
+    mic, label, status, ta, send,
+    h('p', { class: 'muted small' }, 'カード番号・マイナンバー・口座番号は話さないでください（話しても入力されません）。')));
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+  document.body.append(back);
+}
+
+boot();
+</script>
+</body>
+</html>
