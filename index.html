@@ -153,6 +153,15 @@ a.btn.ghost{color:var(--muted)}
 .warn{margin:0;padding:10px 12px;border-radius:8px;background:#FDECEA;color:#8A2A1D;border:1px solid #F2B8AE;font-size:.88rem;display:grid;gap:4px}
 .warn p{margin:0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn{background:#3A1E1A;color:#F2B8AE;border-color:#6B3328}}
+
+.doc-name{gap:10px;justify-content:flex-start}
+.doc-title{flex:1}
+.doc-ill{width:54px;height:38px;flex:none;display:inline-flex}
+.doc-ill svg,.tip-ill svg,.need-ill svg,.hero-ill svg,.flow-ill svg{width:100%;height:100%}
+.tips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;background:var(--paper);font-size:.78rem;font-weight:700;text-align:center}
+.tip-ill{width:34px;height:34px;display:inline-flex}
+.sec.secret{border:1px dashed var(--ai-line)}
 </style>
 </head>
 <body>
@@ -204,6 +213,7 @@ const SECTIONS = [
   ]},
   { id: 'address', title: '住所（ローマ字）', fields: [
     F('address_ja', '住所（日本語・確認用）', { hint: 'ITAには入力しません。ローマ字の確認用です' }),
+    F('address_kana', '住所（カタカナ）', { hint: '例：アイチケン ナゴヤシ ナカク サカエ 1-2-3' }),
     F('postal_code', '郵便番号', { type: 'tel', hint: '7桁。例：4600008' }),
     F('prefecture', '都道府県', { hint: '例：Aichi' }),
     F('city', '市町村', { hint: '例：Nagoya-shi Naka-ku' }),
@@ -212,11 +222,12 @@ const SECTIONS = [
     F('addr_country', '国名', { def: '日本' }),
   ]},
   { id: 'invest', title: '契約内容（ITA打ち込み依頼）', fields: [
-    F('product_type', '契約商品', { type: 'select', opts: ['S&P500', 'EVO', 'その他'] }),
-    F('contract_years', '契約年数', { type: 'number', hint: '例：15' }),
+    F('product_type', '契約商品', { type: 'select', opts: ['S&P', 'EVO', 'FIP', 'PLS'] }),
+    F('contract_years', '契約年数', { type: 'select', opts: ['25年', '20年', '15年', '10年'] }),
     F('monthly_usd', '契約金額（月額・米ドル）', { type: 'number', hint: '数字のみ。例：月200ドル → 200' }),
+    F('fund_choice', 'ファンド選択', { hint: '担当者と決めたもの', chips: ['BTC100％', 'BTC75％ ETH25％', 'BTC50％ GOLD50％', '分散ファンド'] }),
     F('introducer_name', '紹介者（漢字フルネーム）'),
-    F('staff_name', '担当者', { hint: '例：赤田' }),
+    F('staff_name', '担当FP', { hint: '例：赤田' }),
     F('product', 'ITAでの商品名（任意）', { hint: '例：S&P 500 インデックス 15年プラン - シリーズ III' }),
     F('annual_usd', '総年間拠出金（米ドル）', { type: 'number', hint: '月額を入れると自動で12倍が入ります' }),
     F('frequency', '支払頻度', { type: 'select', opts: ['毎月', '四半期', '半年', '毎年'], def: '毎月' }),
@@ -248,12 +259,15 @@ const SECTIONS = [
   { id: 'funds', title: '勤務先・資金源', fields: [
     F('employer_type', '勤務先情報', { hint: '例：会社員、自営業、公務員', chips: ['会社員', '自営業', '会社役員', '公務員', '専業主婦・主夫', 'パート・アルバイト', '年金生活'] }),
     F('employer_name', '勤務先名'),
+    F('employer_address', '勤務先の住所', { hint: '郵便番号＋本社の住所' }),
+    F('employer_website', '勤務先のホームページ', { hint: 'なければ「なし」' }),
     F('job_detail', '職業詳細', { type: 'textarea', hint: '例：中央病院の看護師' }),
     F('employment_start', '今の勤務先で働き始めた日', { type: 'date' }),
     F('income_currency', '年収の通貨', { def: 'JPY' }),
     F('income_amount', '年収（金額）', { type: 'number', hint: '例：450万円なら 4500000' }),
     F('bank_name', '銀行名（ローマ字）', { hint: '例：MUFG Bank' }),
     F('bank_branch', '支店名'),
+    F('bank_branch_no', '支店番号', { type: 'tel', hint: '3桁の番号' }),
     F('bank_addr1', '銀行の住所1'),
     F('bank_addr2', '銀行の住所2'),
     F('bank_city', '銀行の市町村'),
@@ -266,23 +280,25 @@ const SECTIONS = [
     F('fund_detail', '詳しい説明', { type: 'textarea' }),
     F('purpose', '投資の目的', { hint: '例：老後資金、教育資金', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
-  { id: 'payment', title: '支払方法', note: 'カード番号・口座番号はここには入力しません。第2段階で安全な一時預かりを追加します。', fields: [
+  { id: 'payment', title: '支払方法（カード）', note: 'カード番号・有効期限は、下の「スプレッドシートに送る」欄で入力します（ツールには保存しません）。', fields: [
     F('pay_method', '支払方法', { type: 'select', opts: ['クレジットカード', '銀行送金'], def: 'クレジットカード' }),
-    F('card_brand', 'カードの種類', { type: 'select', opts: ['VISA', 'Mastercard', 'AMEX', 'JCB'] }),
+    F('card_kind', '使用カード', { type: 'select', opts: ['クレジット', 'デビット'] }),
+    F('card_brand', 'カード種類', { type: 'select', opts: ['VISA', 'MASTER', 'JCB', 'AMEX', 'DINERS'] }),
+    F('card_company', 'カード会社', { hint: '例：楽天カード' }),
     F('pay_fund_source', '資金調達の方法（支払）'),
     F('pay_fund_country', '資金調達の国', { def: '日本' }),
   ]},
 ];
 const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
-FIELD_MAP.has_passport = F('has_passport', 'パスポートを持っていますか', { type: 'select', opts: ['はい', 'いいえ'] });
+FIELD_MAP.has_passport = F('has_passport', 'パスポートはお持ちですか？（あれば必ず撮影）', { type: 'select', opts: ['はい', 'いいえ'] });
 const ALL_KEYS = Object.keys(FIELD_MAP);
 
 // 写真の種類ごとに、読み取る項目
 const DOCS = {
   license: { label: '運転免許証（申込者）', set: { id_type: '運転免許証' },
-    keys: ['name_ja','first_romaji','last_romaji','birth_date','id_number','id_issue_date','id_expiry','address_ja','postal_code','prefecture','city','addr1','addr2'] },
+    keys: ['name_ja','first_romaji','last_romaji','birth_date','id_number','id_issue_date','id_expiry','address_ja','address_kana','postal_code','prefecture','city','addr1','addr2'] },
   mynumber: { label: 'マイナンバーカードの表面（申込者）', set: {},
-    keys: ['name_ja','first_romaji','last_romaji','gender','birth_date','address_ja','postal_code','prefecture','city','addr1','addr2'] },
+    keys: ['name_ja','first_romaji','last_romaji','gender','birth_date','address_ja','address_kana','postal_code','prefecture','city','addr1','addr2'] },
   ben_license: { label: '運転免許証（受益者）', set: { ben_id_type: '運転免許証' },
     keys: ['ben_name_ja','ben_first_romaji','ben_last_romaji','ben_birth_date','ben_id_number','ben_id_issue_date','ben_id_expiry'] },
 };
@@ -406,7 +422,7 @@ async function viewList() {
     for (const r of rows) ul.append(h('li', {}, h('button', { class: 'row', onclick: () => viewCustomer(r) },
       h('span', { class: 'row-name' }, nameOf(r.data)),
       h('span', { class: 'chip ' + statusClass(r.status) }, r.status),
-      h('span', { class: 'row-date' }, fmtDate(r.updated_at) + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '')))));
+      h('span', { class: 'row-date' }, fmtDate(r.updated_at) + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '') + (r.data && r.data._gform ? (r.data._gform.status === 'sent' ? '・シート送信済み' : '・シート未送信') : '')))));
   };
   search.addEventListener('input', draw);
   draw();
@@ -432,6 +448,8 @@ function viewCustomer(row) {
     renderInviteCard(),
     (docsPanelEl = renderDocsPanel()),
     ...SECTIONS.map((s, i) => renderSection(s, i)),
+    secretCard('スプレッドシートに送る（番号はここで入力）'),
+    h('button', { class: 'btn primary wide', type: 'button', onclick: sendSheet }, 'スプレッドシートに送る'),
     h('div', { class: 'danger-zone' }, h('button', { class: 'btn danger', onclick: deleteCustomer }, 'このお客様を削除')));
   const dock = h('nav', { class: 'dock', 'aria-label': '入力の方法' }, h('div', { class: 'dock-in' },
     h('button', { class: 'dock-btn', onclick: () => { const p = document.getElementById('docs-panel'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, icon('card'), h('span', {}, '書類を撮影')),
@@ -523,13 +541,39 @@ function renderInviteCard() {
   const info = got
     ? h('p', { class: 'note' }, 'お客様がリンクから入力しました（' + fmtDate(got).replace(' 更新', '') + '）。黄色の欄を確認してください。')
     : null;
-  return h('section', { class: 'sec invite' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+  const g = state.data._gform;
+  const gInfo = g ? h('p', { class: g.status === 'sent' ? 'note' : 'warn' },
+      g.status === 'sent' ? 'スプレッドシート：送信済み（' + fmtDate(g.at).replace(' 更新', '') + '）' : 'スプレッドシート：' + g.status) : null;
+  const gBtn = null;
+  inviteCardEl = h('section', { class: 'sec invite' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('div', {}, h('strong', {}, 'お客様に入力してもらう'),
       h('p', { class: 'muted small', style: 'margin:2px 0 0' }, 'お客様専用のリンクを作って、LINEやメールで送れます。ログイン不要・7日間有効・送信後は使えなくなります。')),
     info,
-    h('button', { class: 'btn outline wide', type: 'button', onclick: makeInvite }, 'お客様用リンクを作る')));
+    h('button', { class: 'btn outline wide', type: 'button', onclick: makeInvite }, 'お客様用リンクを作る'),
+    gInfo, gBtn));
+  return inviteCardEl;
+}
+let inviteCardEl = null;
+async function sendSheet() {
+  const g = state.data._gform;
+  if (g && g.status === 'sent' && !confirm('すでにスプレッドシートへ送信済みです。もう一度送ると、行が2つになります。送りますか？')) return;
+  await flushSave();
+  const done = busy('スプレッドシートに送信中…');
+  try {
+    const res = await callAI({ mode: 'sheet', customer_id: state.id, secret: { ...secretVals } });
+    done();
+    if (res && res.ok) { state.data._gform = { status: 'sent', at: new Date().toISOString() }; toast('スプレッドシートに送信しました'); }
+    else { state.data._gform = { status: 'エラー：' + ((res && res.error) || '不明'), at: new Date().toISOString() }; toast('送信できませんでした：' + ((res && res.error) || ''), 6000); }
+    if (inviteCardEl && inviteCardEl.isConnected) inviteCardEl.replaceWith(renderInviteCard());
+  } catch (e) { done(); toast('送信できませんでした：' + e.message, 6000); }
 }
 async function makeInvite() {
+  if (!String(state.data.staff_name || '').trim()) {
+    if (confirm('「担当FP」がまだ入っていません。スプレッドシートの担当FP欄が空になります。先に入力しますか？')) {
+      const r = inputs.staff_name; if (r) { r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' }); r.input.focus(); }
+      return;
+    }
+  }
   await flushSave();
   const done = busy('リンクを作成中…');
   const { data: token, error } = await sb.rpc('create_onboarding_invite', { p_customer: state.id, p_days: 7 });
@@ -676,6 +720,21 @@ const STAFF = true;
 const D = () => state.data;
 function markDirty(k) { dirty.add(k); scheduleSave(); }
 
+
+/* ---------- イラスト（書類） ---------- */
+const DOC_ILL = {
+  passport: '<svg viewBox="0 0 120 84" aria-hidden="true"><rect x="34" y="6" width="52" height="72" rx="6" fill="#7A2E3A"/><rect x="34" y="6" width="8" height="72" rx="3" fill="#5E2230"/><circle cx="64" cy="34" r="12" fill="none" stroke="#E9C46A" stroke-width="2.5"/><circle cx="64" cy="34" r="5" fill="#E9C46A"/><rect x="50" y="56" width="28" height="4" rx="2" fill="#E9C46A"/><rect x="54" y="64" width="20" height="3" rx="1.5" fill="#E9C46A" opacity=".7"/></svg>',
+  license: '<svg viewBox="0 0 120 84" aria-hidden="true"><rect x="10" y="14" width="100" height="62" rx="8" fill="#FFFFFF" stroke="#BFD6CF" stroke-width="2"/><rect x="10" y="14" width="100" height="12" rx="6" fill="#7FB8A8"/><rect x="10" y="62" width="100" height="6" fill="#E9C46A"/><rect x="20" y="32" width="24" height="26" rx="3" fill="#D7E9E3"/><circle cx="32" cy="41" r="5" fill="#9CC5B9"/><path d="M24 55c2-6 5-8 8-8s6 2 8 8" fill="#9CC5B9"/><rect x="52" y="34" width="46" height="5" rx="2.5" fill="#2E7D6B"/><rect x="52" y="44" width="36" height="4" rx="2" fill="#BFD6CF"/><rect x="52" y="52" width="40" height="4" rx="2" fill="#BFD6CF"/></svg>',
+  mynumber: '<svg viewBox="0 0 120 84" aria-hidden="true"><rect x="10" y="14" width="100" height="62" rx="8" fill="#FFFFFF" stroke="#E7C9D0" stroke-width="2"/><path d="M10 22a8 8 0 018-8h84a8 8 0 018 8v6H10z" fill="#F4B6C2"/><rect x="76" y="34" width="24" height="28" rx="3" fill="#FBE3E8"/><circle cx="88" cy="44" r="5" fill="#E89AAB"/><path d="M80 59c2-6 5-8 8-8s6 2 8 8" fill="#E89AAB"/><rect x="20" y="36" width="46" height="5" rx="2.5" fill="#B24C66"/><rect x="20" y="46" width="38" height="4" rx="2" fill="#EBC7CF"/><rect x="20" y="54" width="42" height="4" rx="2" fill="#EBC7CF"/></svg>',
+  juminhyo: '<svg viewBox="0 0 120 84" aria-hidden="true"><path d="M36 6h38l14 14v58H36z" fill="#FFFFFF" stroke="#CFC6B6" stroke-width="2"/><path d="M74 6v14h14" fill="#F3EEE4" stroke="#CFC6B6" stroke-width="2"/><rect x="44" y="26" width="34" height="4" rx="2" fill="#8C7B64"/><rect x="44" y="36" width="36" height="3" rx="1.5" fill="#D9D0C1"/><rect x="44" y="43" width="30" height="3" rx="1.5" fill="#D9D0C1"/><rect x="44" y="50" width="34" height="3" rx="1.5" fill="#D9D0C1"/><circle cx="74" cy="66" r="7" fill="none" stroke="#D9534F" stroke-width="2.5"/></svg>',
+};
+const TIP_ILL = {
+  corners: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="15" width="24" height="18" rx="3" fill="#D7E9E3" stroke="#2E7D6B" stroke-width="2"/><path d="M5 13V5h8M35 5h8v8M5 35v8h8M43 35v8h-8" fill="none" stroke="#E07A5F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  light: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="#F2C14E"/><g stroke="#F2C14E" stroke-width="3" stroke-linecap="round"><path d="M24 5v6M24 37v6M5 24h6M37 24h6M10.5 10.5l4 4M33.5 33.5l4 4M10.5 37.5l4-4M33.5 14.5l4-4"/></g></svg>',
+  focus: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#2E7D6B" stroke-width="3"/><circle cx="24" cy="24" r="4" fill="#2E7D6B"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6" stroke="#2E7D6B" stroke-width="3" stroke-linecap="round"/></svg>',
+};
+function ill(svg, cls) { const s = h('span', { class: cls || 'ill' }); s.innerHTML = svg; return s; }  // 固定のイラストだけなので安全
+
 /* ---------- 本人確認書類（2点・パスポート優先） ---------- */
 const DOC_TYPES = { passport: 'パスポート', license: '運転免許証', mynumber: 'マイナンバーカード', juminhyo: '住民票' };
 const DOC_SLOTS = [
@@ -683,15 +742,15 @@ const DOC_SLOTS = [
   { slot: 'license_front', doc: 'license', label: '表', ai: 'license' },
   { slot: 'license_back', doc: 'license', label: '裏', ai: 'license_back' },
   { slot: 'mynumber_front', doc: 'mynumber', label: '表', ai: 'mynumber' },
-  { slot: 'mynumber_back', doc: 'mynumber', label: '裏', ai: null, note: '裏面の番号は担当者だけが確認します。' },
-  { slot: 'juminhyo', doc: 'juminhyo', label: '全体', ai: 'juminhyo', note: 'マイナンバーが載っていない住民票を撮影してください。' },
+  { slot: 'mynumber_back', doc: 'mynumber', label: '裏', ai: null, note: '担当者だけが確認します' },
+  { slot: 'juminhyo', doc: 'juminhyo', label: '全体', ai: 'juminhyo', note: 'マイナンバーの記載がないもの' },
 ];
 DOCS.passport = { label: 'パスポートの顔写真ページ（申込者）', set: { id_type: 'パスポート' },
   keys: ['first_romaji', 'last_romaji', 'gender', 'birth_date', 'nationality', 'id_number', 'id_country', 'id_issue_date', 'id_expiry'] };
 DOCS.license_back = { label: '運転免許証の裏面（申込者・住所変更などの記載欄）', set: {},
-  keys: ['address_ja', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
+  keys: ['address_ja', 'address_kana', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
 DOCS.juminhyo = { label: '住民票（申込者）', set: {},
-  keys: ['name_ja', 'birth_date', 'gender', 'address_ja', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
+  keys: ['name_ja', 'birth_date', 'gender', 'address_ja', 'address_kana', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
 
 const docsOf = d => (d && d._docs) || {};
 const docDone = (d, doc) => DOC_SLOTS.filter(x => x.doc === doc).every(x => docsOf(d)[x.slot]);
@@ -750,23 +809,23 @@ function renderDocsPanel() {
   const groups = Object.keys(DOC_TYPES).map(doc => {
     const isDone = docDone(d, doc);
     return h('div', { class: 'doc-group' + (isDone ? ' done' : '') },
-      h('div', { class: 'doc-name' }, h('span', {}, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ 撮影済み') : null),
+      h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null),
       ...DOC_SLOTS.filter(x => x.doc === doc).map(x => {
         const has = !!docsOf(d)[x.slot];
         return h('div', { class: 'doc-row' },
-          h('div', { class: 'doc-label' }, h('span', {}, x.label), h('small', { class: has ? 'doc-ok' : 'muted' }, has ? '撮影済み' : 'まだ'), x.note ? h('small', { class: 'hint' }, x.note) : null),
+          h('div', { class: 'doc-label' }, h('span', {}, x.label), h('small', { class: has ? 'doc-ok' : 'muted' }, has ? '撮影済み' : 'まだです'), x.note ? h('small', { class: 'hint' }, x.note) : null),
           h('div', { class: 'doc-actions' },
             STAFF && has ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => viewDoc(x.slot) }, '見る') : null,
             h('button', { class: 'btn sm ' + (has ? 'ghost' : 'outline'), type: 'button', onclick: () => captureDoc(x.slot) }, has ? '撮り直す' : '撮影する')));
       }));
   });
   const el = h('section', { class: 'sec docs', id: 'docs-panel' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('div', { class: 'doc-top' }, h('strong', {}, '本人確認書類（2点）'), badge),
-    h('p', { class: 'small', style: 'margin:0' }, 'パスポート・運転免許証・マイナンバーカード・住民票のうち2点を撮影してください。パスポートをお持ちの方は、必ずパスポートを含めてください。'),
+    h('div', { class: 'doc-top' }, h('strong', {}, '書類を2つ撮影'), badge),
     h('div', { class: 'field' }, h('label', { for: 'f-has_passport' }, hp.label), hpSel),
-    h('div', { class: 'shot-tips' },
-      h('div', { class: 'frame', 'aria-hidden': 'true' }, h('span', { class: 'card' }), h('span', { class: 'c tl' }), h('span', { class: 'c tr' }), h('span', { class: 'c bl' }), h('span', { class: 'c br' })),
-      h('ul', {}, h('li', {}, '四隅がすべて写るように（切れないように）'), h('li', {}, '明るい場所で、光の反射やかげがないように'), h('li', {}, '文字がぼやけていないか確認'))),
+    h('div', { class: 'tips' },
+      h('div', { class: 'tip' }, ill(TIP_ILL.corners, 'tip-ill'), h('span', {}, '四隅を入れる')),
+      h('div', { class: 'tip' }, ill(TIP_ILL.light, 'tip-ill'), h('span', {}, '明るい場所で')),
+      h('div', { class: 'tip' }, ill(TIP_ILL.focus, 'tip-ill'), h('span', {}, 'ピントを合わせる'))),
     ...groups,
     STAFF && Object.keys(docsOf(d)).length ? h('button', { class: 'btn danger sm', type: 'button', onclick: purgeDocs }, '書類の写真をすべて削除（ITA提出後に）') : null));
   return el;
@@ -783,6 +842,28 @@ async function purgeDocs() {
   catch (e) { done(); toast('削除できませんでした：' + e.message); }
 }
 
+
+
+/* ---------- 番号（ツールには保存しない：送信時にスプレッドシートへ直接） ---------- */
+const SECRET_FIELDS = [
+  { k: 'mynumber', label: 'マイナンバー（12桁）', type: 'tel' },
+  { k: 'card_number', label: 'カード番号', type: 'tel' },
+  { k: 'card_expiry', label: 'カード有効期限（月/年）', hint: '例：08/29' },
+  { k: 'account_number', label: '口座番号', type: 'tel' },
+];
+const secretVals = {};
+function secretCard(title) {
+  return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, title),
+    h('p', { class: 'small muted', style: 'margin:0' }, 'ここに入れた番号はツールには保存されず、送信の時にスプレッドシートへ直接送られます。画面を閉じると消えるので、送信の直前に入力してください。'),
+    ...SECRET_FIELDS.map(f => {
+      const id = 's-' + f.k;
+      const inp = h('input', { id, type: 'text', inputmode: f.type === 'tel' ? 'numeric' : null, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+      inp.value = secretVals[f.k] || '';
+      inp.addEventListener('input', () => { secretVals[f.k] = inp.value; });
+      return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+    })));
+}
 
 /* ---------- 便利機能：有効期限チェック・名字コピー・写真の撮り直し ---------- */
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -836,6 +917,8 @@ const SCRIPT = [
   { keys: ['employer_type', 'employer_name'], text: '働き方は「会社員・自営業など」で、勤務先は「会社名」です。' },
   { keys: ['industry', 'position'], text: '業種は「医療・不動産など」で、役職は「一般社員・管理職など」です。' },
   { keys: ['job_detail', 'employment_start'], text: '仕事の内容は「〇〇」で、今の勤務先では「〇年〇月」から働いています。' },
+  { keys: ['employer_address'], text: '勤務先の住所は「郵便番号と本社の住所」です。' },
+  { keys: ['employer_website'], text: '勤務先のホームページは「〇〇」です。（なければ「なし」）' },
   { keys: ['income_amount'], text: '年収は「〇〇万円」です。' },
   { keys: ['pep'], text: '政治家や官公庁の幹部などとの関係は「ありません」。' },
   { keys: ['us_status'], text: 'アメリカの国籍やグリーンカードは「持っていません」。' },
@@ -844,12 +927,15 @@ const SCRIPT = [
   { keys: ['ben_birth_date', 'ben_gender', 'ben_percent'], text: '受取人の生年月日は「〇年〇月〇日」、性別は「男性・女性」、受け取る割合は「100」パーセントです。' },
   { keys: ['ben_id_number'], text: '受取人の運転免許証の番号は「12桁の番号」です。（受取人の免許証を撮影した場合は不要）' },
   { keys: ['bank_name', 'bank_branch'], text: 'お支払いに使う銀行は「〇〇銀行」の「〇〇支店」です。' },
+  { keys: ['bank_branch_no'], text: '支店番号は「3桁の番号」です。' },
   { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
+  { keys: ['card_kind', 'card_brand', 'card_company'], text: 'お支払いのカードは「クレジット・デビット」の「VISAなど」で、カード会社は「〇〇」です。' },
   { keys: ['fund_method', 'fund_amount'], text: 'お支払いのお金は「給与・貯蓄など」からで、金額は「〇〇万円くらい」です。' },
   { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
-  { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P500・EVO」を「〇年」、月「〇〇ドル」です。' },
+  { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P・EVO・FIP・PLS」を「〇年」、月「〇〇ドル」です。' },
+  { keys: ['fund_choice'], text: 'ファンドは「〇〇」です。' },
   { keys: ['introducer_name'], text: '紹介者は「漢字のフルネーム」です。' },
-  { keys: ['staff_name'], text: '担当者は「〇〇」です。' },
+  { keys: ['staff_name'], text: '担当FPは「〇〇」です。' },
 ];
 // 撮影した書類から読み取れる項目（＝話さなくてよい項目）
 function coveredByDocs(values) {
