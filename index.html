@@ -213,7 +213,7 @@ const SECTIONS = [
     F('id_expiry', '有効期限', { type: 'date' }),
   ]},
   { id: 'contact', title: '連絡先', fields: [
-    F('email', 'メールアドレス', { type: 'email' }),
+    F('email', 'メールアドレス', { type: 'email', hint: 'お客様に手入力していただく項目です' }),
     F('phone_type', '電話の種類', { type: 'select', opts: ['携帯', '自宅', '勤務先'], def: '携帯' }),
     F('phone_cc', '国コード', { def: '+81' }),
     F('phone_area', '市外局番', { type: 'tel', hint: '先頭の0を除く（090 → 90）' }),
@@ -300,6 +300,13 @@ const SECTIONS = [
 const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
 FIELD_MAP.has_passport = F('has_passport', 'パスポートはお持ちですか？（あれば必ず撮影）', { type: 'select', opts: ['はい', 'いいえ'] });
 const ALL_KEYS = Object.keys(FIELD_MAP);
+const MANUAL_KEYS = new Set(['email', 'phone_area', 'phone_local', 'postal_code', 'id_number', 'ben_id_number',
+  'bank_branch_no', 'employer_website', 'gender', 'pep', 'us_status', 'employer_type', 'industry', 'position',
+  'ben_gender', 'ben_relation', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'birth_date', 'ben_birth_date',
+  'bank_open_date', 'ben_percent', 'product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name',
+  'id_type', 'ben_id_type', 'phone_type', 'pay_method', 'has_passport', 'id_issue_date', 'id_expiry',
+  'ben_id_issue_date', 'ben_id_expiry', 'employment_start']);
+const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
 
 // 写真の種類ごとに、読み取る項目
 const DOCS = {
@@ -324,7 +331,7 @@ let counters = [];
 let titleEl = null, saveEl = null;
 let saveTimer = null, savePromise = null;
 let dirty = new Set(), statusDirty = false;
-let rec = null, recording = false;
+let rec = null, recording = false, voiceStream = null;
 
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
@@ -781,27 +788,30 @@ function docPlan(docKey, d) {
 function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; fileInput.click(); }
 async function handleDocFile(slot, file) {
   const s = DOC_SLOTS.find(x => x.slot === slot); if (!s) return;
-  const done = busy(s.ai ? '保存して読み取り中…' : '保存中…');
+  const done = busy(s.ai ? '写真を確認して読み取り中…' : '保存中…');
   try {
     const image = await toJpegBase64(file, 2000);
+    let plan = null, read = null, readError = false;
+    if (s.ai) {
+      plan = docPlan(s.ai, D());
+      try {
+        read = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: [...fieldSpec(plan.keys), PHOTO_CHECK] });
+      } catch { readError = true; }
+      const problem = read && read.values && read.values.photo_problem;
+      if (problem) { done(); retakeSheet(slot, '写真に問題があるかもしれません：' + problem); return; }
+    }
     const storeBody = { mode: 'store', slot, image };
     if (STAFF) storeBody.customer_id = state.id;
-    const tasks = [callAI(storeBody)];
-    let plan = null;
-    if (s.ai) { plan = docPlan(s.ai, D()); tasks.push(callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: [...fieldSpec(plan.keys), PHOTO_CHECK] })); }
-    const [stored, read] = await Promise.allSettled(tasks);
+    await callAI(storeBody);
     done();
-    if (stored.status === 'rejected') { toast('写真を保存できませんでした：' + stored.reason.message, 6000); return; }
     const d = D(); d._docs = { ...docsOf(d), [slot]: new Date().toISOString() };
     refreshDocs();
-    if (read && read.status === 'fulfilled') {
-      const problem = read.value && read.value.values && read.value.values.photo_problem;
-      applyAI(read.value, plan.set, { emptyMsg: problem ? '写真を保存しました。' : slot === 'license_back'
+    if (read) {
+      applyAI(read, plan.set, { emptyMsg: slot === 'license_back'
         ? '裏面を保存しました ✓（住所変更の記載はありませんでした）'
         : '写真を保存しました ✓（自動で入る項目はありませんでした）' });
-      if (problem) setTimeout(() => retakeSheet(slot, '写真に問題があるかもしれません：' + problem), 400);
     }
-    else if (read) toast('写真は保存しました。文字の読み取りはできなかったので、手で入力してください。', 5000);
+    else if (readError) toast('写真は保存しました。文字の読み取りはできなかったので、手で入力してください。', 5000);
     else toast('写真を保存しました。');
   } catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
 }
@@ -903,11 +913,11 @@ function sameSurnameBtn() {
 function retakeSheet(slot, problem) {
   const close = () => back.remove();
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '撮り直しのお願い' },
-    h('h2', {}, '撮り直しをおすすめします'),
+    h('h2', {}, '写真を保存せず、撮り直しをお願いします'),
     h('p', { class: 'warn' }, problem),
     h('p', { class: 'small muted' }, '四隅がすべて写るように、明るい場所で、反射しないように撮ってください。'),
     h('button', { class: 'btn primary wide', type: 'button', onclick: () => { close(); captureDoc(slot); } }, '撮り直す'),
-    h('button', { class: 'btn ghost wide', type: 'button', onclick: close }, 'このまま使う')));
+    h('button', { class: 'btn ghost wide', type: 'button', onclick: close }, 'あとで撮り直す')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   document.body.append(back);
 }
@@ -920,27 +930,26 @@ const SCRIPT = [
   { keys: ['birth_date'], text: '生年月日は「〇年〇月〇日」です。' },
   { keys: ['gender'], text: '性別は「男性・女性」です。' },
   { keys: ['id_number'], text: '本人確認書類の番号は「〇〇」です。（書類を撮影した場合は不要）' },
-  { keys: ['email'], text: 'メールアドレスは「アルファベットを1文字ずつ」アットマーク「gmail」ドット「com」です。（例：エイチ・エー・エヌ…、数字は「いち・に」、記号は「ドット」「ハイフン」「アンダーバー」）' },
   { keys: ['phone_area', 'phone_local'], text: '携帯番号は「〇〇〇-〇〇〇〇-〇〇〇〇」です。' },
   { keys: ['address_ja', 'addr1', 'city', 'prefecture'], text: '住所は「都道府県から部屋番号まで」です。' },
   { keys: ['postal_code'], text: '郵便番号は「〇〇〇-〇〇〇〇」です。' },
-  { keys: ['employer_type', 'employer_name'], text: '働き方は「会社員・自営業など」で、勤務先は「会社名」です。' },
+  { keys: ['employer_type', 'employer_name'], text: '勤務先は「会社名」です。' },
   { keys: ['industry', 'position'], text: '業種は「医療・不動産など」で、役職は「一般社員・管理職など」です。' },
-  { keys: ['job_detail', 'employment_start'], text: '仕事の内容は「〇〇」で、今の勤務先では「〇年〇月」から働いています。' },
+  { keys: ['job_detail'], text: '仕事の内容は「〇〇」です。' },
   { keys: ['employer_address'], text: '勤務先の住所は「郵便番号と本社の住所」です。' },
   { keys: ['employer_website'], text: '勤務先のホームページは「〇〇」です。（なければ「なし」）' },
   { keys: ['income_amount'], text: '年収は「〇〇万円」です。' },
   { keys: ['pep'], text: '政治家や官公庁の幹部などとの関係は「ありません」。' },
   { keys: ['us_status'], text: 'アメリカの国籍やグリーンカードは「持っていません」。' },
-  { keys: ['ben_name_ja', 'ben_relation'], text: '受取人は「続柄（妻・夫・子など）」の「漢字のフルネーム」です。' },
+  { keys: ['ben_name_ja', 'ben_relation'], text: '受取人の名前は「漢字のフルネーム」です。' },
   { keys: ['ben_name_kana'], text: '受取人のふりがなは「〇〇 〇〇」です。' },
   { keys: ['ben_birth_date', 'ben_gender', 'ben_percent'], text: '受取人の生年月日は「〇年〇月〇日」、性別は「男性・女性」、受け取る割合は「100」パーセントです。' },
   { keys: ['ben_id_number'], text: '受取人の運転免許証の番号は「12桁の番号」です。（受取人の免許証を撮影した場合は不要）' },
   { keys: ['bank_name', 'bank_branch'], text: 'お支払いに使う銀行は「〇〇銀行」の「〇〇支店」です。' },
   { keys: ['bank_branch_no'], text: '支店番号は「3桁の番号」です。' },
   { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
-  { keys: ['card_kind', 'card_brand', 'card_company'], text: 'お支払いのカードは「クレジット・デビット」の「VISAなど」で、カード会社は「〇〇」です。' },
-  { keys: ['fund_method', 'fund_amount'], text: 'お支払いのお金は「給与・貯蓄など」からで、金額は「〇〇万円くらい」です。' },
+  { keys: ['card_company'], text: 'カード会社は「〇〇」です。' },
+  { keys: ['fund_method', 'fund_amount'], text: 'お支払いに使うお金の金額は「〇〇万円くらい」です。' },
   { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
   { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P・EVO・FIP・PLS」を「〇年」、月「〇〇ドル」です。' },
   { keys: ['fund_choice'], text: 'ファンドは「〇〇」です。' },
@@ -948,15 +957,8 @@ const SCRIPT = [
   { keys: ['staff_name'], text: '担当FPは「〇〇」です。' },
 ];
 // 撮影した書類から読み取れる項目（＝話さなくてよい項目）
-function coveredByDocs(values) {
-  const got = docsOf(values), keys = new Set();
-  for (const s of DOC_SLOTS) if (got[s.slot] && s.ai && DOCS[s.ai]) DOCS[s.ai].keys.forEach(k => keys.add(k));
-  if (got.passport) keys.add('name_kana');
-  return keys;
-}
 function scriptLines(values, available) {
-  const covered = coveredByDocs(values);
-  return SCRIPT.map(s => ({ ...s, need: s.keys.filter(k => available.includes(k) && !covered.has(k)) }))
+  return SCRIPT.map(s => ({ ...s, need: s.keys.filter(k => available.includes(k)) }))
     .filter(s => s.need.length && s.need.some(k => !String(values[k] ?? '').trim()))
     .map(s => s.text);
 }
@@ -968,7 +970,7 @@ function docSummary(values) {
 const CHUNK = 7;
 const voiceSkipped = new Set();
 let voiceChunkNow = [];
-const remainingLines = () => scriptLines(D(), ALL_KEYS).filter(t => !voiceSkipped.has(t));
+const remainingLines = () => scriptLines(D(), VOICE_KEYS).filter(t => !voiceSkipped.has(t));
 function scriptBox(values, available, step = 1) {
   const all = scriptLines(values, available).filter(t => !voiceSkipped.has(t));
   const lines = all.slice(0, CHUNK);
@@ -978,7 +980,7 @@ function scriptBox(values, available, step = 1) {
   const names = docSummary(values);
   box.append(h('div', { class: 'script-head' }, h('strong', {}, `読み上げ見本（ステップ${step}：${lines.length}項目／残り${all.length}項目）`), h('span', { class: 'muted small' }, '「」の中を自分の内容に変えて、上から順に読むだけでOK。終わったら次の項目が出ます'),
     h('span', { class: 'small' }, names.length
-      ? '撮影済みの書類（' + names.join('・') + '）でわかる項目は省いています。'
+      ? '撮影済みの書類（' + names.join('・') + '）から入力できた項目は省いています。'
       : '先に本人確認書類を撮影すると、読む項目が少なくなります。')));
   const ol = h('ol', {});
   for (const t of lines) {
@@ -991,72 +993,73 @@ function scriptBox(values, available, step = 1) {
 }
 
 /* ---------- 話して入力 ---------- */
-function stopVoice() { recording = false; if (rec) { try { rec.stop(); } catch {} rec = null; } }
+function stopVoice() {
+  recording = false;
+  if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop(); } catch {} rec = null; }
+  if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; }
+}
+function audioBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('録音データを読み込めませんでした'));
+    reader.readAsDataURL(blob);
+  });
+}
+function recordingFormat() {
+  if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== 'function') return '';
+  return ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
 function openVoice(step = 1) {
   if (typeof step !== 'number') step = 1;
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const useSR = !!SR && !IOS;  // iPhoneはキーボードの音声入力の方が精度が高いので、そちらを案内する
-  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：メールは hanako@example.com、携帯は090-1234-5678。勤務先は〇〇株式会社で事務、2018年4月から。年収は450万円。受益者は夫の山田太郎さんで100%。' });
-  ta.value = state.voiceDraft || '';
-  ta.addEventListener('input', () => { state.voiceDraft = ta.value; });
-  const label = h('p', { class: 'mic-label' }, useSR ? '押して話す' : '録音ボタンは使えません');
-  const status = h('p', { class: 'muted small', role: 'status' }, SR
-    ? '上の見本を読んでもらい、終わったらもう一度押して止めます。文字は直接なおせます。'
-    : 'この端末では録音ボタンが使えません。キーボードのマイクボタンで、下の欄に話してください。');
-  const kbdIcon = () => { const s = h('span', { class: 'kbd-mic', 'aria-hidden': 'true' }); s.append(icon('mic')); return s; };
-  const guide = IOS ? h('div', { class: 'kbd-guide' },
-    h('strong', {}, 'キーボードのマイクで話してください'),
-    h('ol', { class: 'kbd-steps' },
-      h('li', {}, h('span', { class: 'num' }, '1'), h('span', {}, '下の入力欄をタップ')),
-      h('li', {}, h('span', { class: 'num' }, '2'), h('span', {}, 'キーボードの '), kbdIcon(), h('span', {}, ' を押す')),
-      h('li', {}, h('span', { class: 'num' }, '3'), h('span', {}, '見本を上から読む → もう一度マイクを押して止める')),
-      h('li', {}, h('span', { class: 'num' }, '4'), h('span', {}, '下のボタンを押す')))) : null;
-  const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', hidden: !useSR }, icon('mic'));
-  let base = '', finalText = '';
-  const setRec = on => { mic.setAttribute('aria-pressed', String(on)); label.textContent = on ? '聞いています…押して止める' : '押して話す'; };
-  mic.addEventListener('click', () => {
-    if (recording) { stopVoice(); setRec(false); return; }
-    base = ta.value ? ta.value.replace(/\s*$/, '\n') : ''; finalText = '';
-    rec = new SR(); rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true;
-    rec.onresult = e => {
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalText += t + ' '; else interim += t;
-      }
-      ta.value = base + finalText + interim; state.voiceDraft = ta.value;
-    };
-    rec.onerror = e => {
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-      const fileMode = location.protocol === 'file:';
-      status.textContent = fileMode
-        ? 'ファイルを直接開いた状態では録音ボタンが使えません。下の欄をクリックして、キーボードの音声入力（Macは fn キーを2回）で話してください。'
-        : (e.error === 'not-allowed' || e.error === 'service-not-allowed')
-          ? 'マイクが許可されていません。ブラウザの設定でマイクを許可してください。'
-          : '録音がうまくいきませんでした（' + e.error + '）。下の欄にキーボードの音声入力で話してください。';
-      stopVoice(); setRec(false);
-    };
-    rec.onend = () => {  // スマホは途中で止まることがあるので、録音中なら自動で再開
-      if (recording && rec) { base = ta.value.replace(/\s*$/, ' '); finalText = ''; try { rec.start(); } catch { stopVoice(); setRec(false); } }
-      else setRec(false);
-    };
-    try { rec.start(); recording = true; setRec(true); } catch { status.textContent = '録音を始められませんでした。もう一度押してください。'; }
-  });
-  const close = () => { stopVoice(); back.remove(); };
-  const hasMore = () => remainingLines().length > voiceChunkNow.length;
-  const send = h('button', { class: 'btn primary wide', type: 'button' }, 'AIで項目に振り分ける');
-  send.addEventListener('click', async () => {
-    stopVoice();
-    const t = ta.value.trim();
-    if (!t) { status.textContent = '話した内容がまだありません。'; return; }
-    close();
-    const done = busy('振り分け中…');
+  const format = recordingFormat();
+  const canRecord = !!format && !!navigator.mediaDevices?.getUserMedia;
+  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：勤務先は〇〇株式会社で事務をしていて、年収は450万円くらいです。受取人は夫の山田太郎です。' });
+  ta.value = state.voiceDraft; ta.addEventListener('input', () => { state.voiceDraft = ta.value; });
+  const label = h('p', { class: 'mic-label' }, canRecord ? '押して録音を始める' : '音声入力または手入力');
+  const status = h('p', { class: 'muted small', role: 'status' }, canRecord
+    ? '見本を読んで、もう一度押して録音を止めます。文字になった内容を確認してから入力します。'
+    : 'この端末では録音できません。下の欄へ手入力するか、キーボードの音声入力をお使いください。');
+  const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', hidden: !canRecord }, icon('mic'));
+  let canceled = false, recordTimer = null;
+  const release = () => { clearTimeout(recordTimer); if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; } };
+  mic.addEventListener('click', async () => {
+    if (recording) { recording = false; mic.disabled = true; status.textContent = '音声を文字にしています…'; rec.stop(); return; }
+    mic.disabled = true;
     try {
-      const res = await callAI({ mode: 'voice', transcript: t, fields: fieldSpec(ALL_KEYS) });
-      done(); state.voiceDraft = ''; applyAI(res);
-      if (remainingLines().length) setTimeout(() => openVoice(step + 1), 700);
-    } catch (e) { done(); toast('振り分けに失敗しました：' + e.message, 5000); }
+      voiceStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      if (canceled) { release(); return; }
+      const chunks = [];
+      rec = new MediaRecorder(voiceStream, { mimeType: format });
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      rec.onerror = () => { stopVoice(); mic.disabled = false; send.disabled = false; status.textContent = '録音できませんでした。もう一度お試しください。'; };
+      rec.onstop = async () => {
+        const blob = new Blob(chunks, { type: format });
+        rec = null; recording = false; release(); mic.setAttribute('aria-pressed', 'false'); label.textContent = 'もう一度録音する';
+        if (canceled) return;
+        if (!blob.size || blob.size > 4_000_000) { mic.disabled = false; send.disabled = false; status.textContent = '録音が短すぎるか長すぎます。短く区切って録り直してください。'; return; }
+        try {
+          const result = await callAI({ mode: 'transcribe', audio: await audioBase64(blob), mediaType: format });
+          if (canceled) return;
+          ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + result.text;
+          state.voiceDraft = ta.value;
+          status.textContent = '文字になりました。内容を確認して、下のボタンを押してください。';
+        } catch (e) { if (!canceled) status.textContent = '文字起こしに失敗しました：' + e.message; }
+        finally { mic.disabled = false; send.disabled = false; }
+      };
+      rec.start(); recording = true; mic.disabled = false; send.disabled = true; mic.setAttribute('aria-pressed', 'true'); label.textContent = '録音中…押して止める';
+      recordTimer = setTimeout(() => { if (recording) mic.click(); }, 120000);
+    } catch { release(); mic.disabled = false; status.textContent = 'マイクを使えません。ブラウザで許可するか、下の欄に手入力してください。'; }
+  });
+  const close = () => { canceled = true; stopVoice(); clearTimeout(recordTimer); back.remove(); };
+  const hasMore = () => remainingLines().length > voiceChunkNow.length;
+  const send = h('button', { class: 'btn primary wide', type: 'button' }, '自動で項目に入れる');
+  send.addEventListener('click', async () => {
+    stopVoice(); const t = ta.value.trim();
+    if (!t) { status.textContent = '話した内容がまだありません。'; return; }
+    close(); const done = busy('項目に入れています…');
+    try { const res = await callAI({ mode: 'voice', transcript: t, fields: fieldSpec(VOICE_KEYS) }); done(); state.voiceDraft = ''; applyAI(res); if (remainingLines().length) setTimeout(() => openVoice(step + 1), 700); }
+    catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
   });
   const skip = h('button', { class: 'btn ghost wide', type: 'button' }, 'この項目は飛ばす（わからない・当てはまらない）');
   skip.addEventListener('click', () => {
@@ -1066,14 +1069,14 @@ function openVoice(step = 1) {
   });
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
-    scriptBox(D(), ALL_KEYS, step),
-    mic, useSR ? label : null, useSR ? status : guide, ta, send, skip,
+    scriptBox(D(), VOICE_KEYS, step),
+    mic, label, status, ta, send, skip,
+    h('p', { class: 'muted small' }, '録音は文字起こしのためOpenAIへ送ります。表示された文字を確認してから項目に入力します。'),
     h('p', { class: 'muted small' }, 'カード番号・マイナンバー・口座番号は話さないでください（話しても入力されません）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
   if (!voiceChunkNow.length) skip.hidden = true;
   document.body.append(back);
-  if (IOS) setTimeout(() => ta.focus(), 50);
 }
 
 boot();
