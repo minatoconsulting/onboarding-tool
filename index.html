@@ -162,6 +162,14 @@ a.btn.ghost{color:var(--muted)}
 .tip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;background:var(--paper);font-size:.78rem;font-weight:700;text-align:center}
 .tip-ill{width:34px;height:34px;display:inline-flex}
 .sec.secret{border:1px dashed var(--ai-line)}
+
+.kbd-guide{display:grid;gap:8px;padding:12px 14px;border-radius:12px;background:var(--seal-soft)}
+.kbd-guide strong{font-size:1rem}
+.kbd-steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.kbd-steps li{display:flex;align-items:center;gap:10px;font-size:.92rem}
+.kbd-steps .num{width:24px;height:24px;font-size:.78rem;background:var(--surface)}
+.kbd-mic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:var(--surface);border:1px solid var(--line);vertical-align:middle}
+.kbd-mic svg{width:16px;height:16px}
 </style>
 </head>
 <body>
@@ -654,7 +662,7 @@ async function callAI(body) {
   if (data && data.error) throw new Error(data.error);
   return data;
 }
-function applyAI(res, preset = {}) {
+function applyAI(res, preset = {}, opts = {}) {
   const vals = (res && res.values) || {};
   const guess = new Set((res && res.uncertain) || []);
   let n = 0, first = null;
@@ -669,7 +677,7 @@ function applyAI(res, preset = {}) {
     n++; first = first || k;
   }
   scheduleSave();
-  if (!n) { toast('読み取れる項目がありませんでした。明るい場所でもう一度お試しください。'); return; }
+  if (!n) { toast(opts.emptyMsg || '読み取れる項目がありませんでした。明るい場所でもう一度お試しください。', 5000); return; }
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
   warnExpiryToast();
   const r = inputs[first];
@@ -788,7 +796,9 @@ async function handleDocFile(slot, file) {
     refreshDocs();
     if (read && read.status === 'fulfilled') {
       const problem = read.value && read.value.values && read.value.values.photo_problem;
-      applyAI(read.value, plan.set);
+      applyAI(read.value, plan.set, { emptyMsg: problem ? '写真を保存しました。' : slot === 'license_back'
+        ? '裏面を保存しました ✓（住所変更の記載はありませんでした）'
+        : '写真を保存しました ✓（自動で入る項目はありませんでした）' });
       if (problem) setTimeout(() => retakeSheet(slot, '写真に問題があるかもしれません：' + problem), 400);
     }
     else if (read) toast('写真は保存しました。文字の読み取りはできなかったので、手で入力してください。', 5000);
@@ -985,14 +995,24 @@ function stopVoice() { recording = false; if (rec) { try { rec.stop(); } catch {
 function openVoice(step = 1) {
   if (typeof step !== 'number') step = 1;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const useSR = !!SR && !IOS;  // iPhoneはキーボードの音声入力の方が精度が高いので、そちらを案内する
   const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：メールは hanako@example.com、携帯は090-1234-5678。勤務先は〇〇株式会社で事務、2018年4月から。年収は450万円。受益者は夫の山田太郎さんで100%。' });
   ta.value = state.voiceDraft || '';
   ta.addEventListener('input', () => { state.voiceDraft = ta.value; });
-  const label = h('p', { class: 'mic-label' }, SR ? '押して話す' : '録音ボタンは使えません');
+  const label = h('p', { class: 'mic-label' }, useSR ? '押して話す' : '録音ボタンは使えません');
   const status = h('p', { class: 'muted small', role: 'status' }, SR
     ? '上の見本を読んでもらい、終わったらもう一度押して止めます。文字は直接なおせます。'
     : 'この端末では録音ボタンが使えません。キーボードのマイクボタンで、下の欄に話してください。');
-  const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', disabled: !SR }, icon('mic'));
+  const kbdIcon = () => { const s = h('span', { class: 'kbd-mic', 'aria-hidden': 'true' }); s.append(icon('mic')); return s; };
+  const guide = IOS ? h('div', { class: 'kbd-guide' },
+    h('strong', {}, 'キーボードのマイクで話してください'),
+    h('ol', { class: 'kbd-steps' },
+      h('li', {}, h('span', { class: 'num' }, '1'), h('span', {}, '下の入力欄をタップ')),
+      h('li', {}, h('span', { class: 'num' }, '2'), h('span', {}, 'キーボードの '), kbdIcon(), h('span', {}, ' を押す')),
+      h('li', {}, h('span', { class: 'num' }, '3'), h('span', {}, '見本を上から読む → もう一度マイクを押して止める')),
+      h('li', {}, h('span', { class: 'num' }, '4'), h('span', {}, '下のボタンを押す')))) : null;
+  const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', hidden: !useSR }, icon('mic'));
   let base = '', finalText = '';
   const setRec = on => { mic.setAttribute('aria-pressed', String(on)); label.textContent = on ? '聞いています…押して止める' : '押して話す'; };
   mic.addEventListener('click', () => {
@@ -1047,12 +1067,13 @@ function openVoice(step = 1) {
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
     scriptBox(D(), ALL_KEYS, step),
-    mic, label, status, ta, send, skip,
+    mic, useSR ? label : null, useSR ? status : guide, ta, send, skip,
     h('p', { class: 'muted small' }, 'カード番号・マイナンバー・口座番号は話さないでください（話しても入力されません）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
   if (!voiceChunkNow.length) skip.hidden = true;
   document.body.append(back);
+  if (IOS) setTimeout(() => ta.focus(), 50);
 }
 
 boot();
