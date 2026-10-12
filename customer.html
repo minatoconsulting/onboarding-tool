@@ -243,7 +243,14 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .progress li.later .num{border-color:var(--coral);color:var(--coral);border-width:2px}
 .sec.secret{border:1px dashed var(--ai-line)}
 .card-entry{display:grid;gap:12px}
-.voice-intro{margin:0 0 4px;font-weight:700;line-height:1.6}
+.voice-foot{margin:0;font-size:.72rem;line-height:1.55;color:var(--muted)}
+.photo-pick{display:grid;gap:10px}
+.field.bad input{border-color:var(--danger)}
+.field-err:empty{display:none}
+.sec.manual-box{border:2px solid var(--seal);box-shadow:0 0 0 4px var(--seal-soft)}
+.manual-tag{display:inline-block;font-size:.72rem;font-weight:800;color:var(--seal-ink);background:var(--seal);border-radius:999px;padding:2px 10px;margin-right:6px;vertical-align:middle}
+.btn.toggle[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
+.sheet p[role=status]:empty{display:none}
 .btn.line-btn{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
 .bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700}
 .bg-pill .spinner{flex:none;width:18px;height:18px}
@@ -313,12 +320,12 @@ const SECTIONS = [
     F('addr_country', '国', { def: '日本' }),
   ]},
   { id: 'work', title: 'お仕事・収入', fields: [
-    F('employer_type', '働き方', { hint: '例：会社員、自営業、公務員、専業主婦', chips: ['会社員', '自営業', '会社役員', '公務員', '専業主婦・主夫', 'パート・アルバイト', '年金生活'] }),
+    F('employer_type', '働き方', { chips: ['会社員', '自営業', '会社役員', '公務員', '専業主婦・主夫', 'パート・アルバイト', '年金生活'] }),
     F('employer_name', '勤務先の名前'),
     F('employer_address', '勤務先の住所', { hint: '郵便番号＋本社の住所' }),
     F('employer_website', '勤務先のホームページ', { hint: 'なければ「なし」' }),
     F('industry', '業種', { hint: '例：医療機関、不動産', chips: ['医療・福祉', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '金融・保険', '公務'] }),
-    F('position', '役職', { hint: '例：会社従業員、管理職', chips: ['一般社員', '管理職', '役員', '代表者'] }),
+    F('position', '役職', { chips: ['一般社員', '管理職', '役員', '代表者'] }),
     F('job_detail', 'お仕事の内容', { type: 'textarea', hint: '例：中央病院の看護師' }),
     F('employment_start', '今の勤務先で働き始めた日', { type: 'date' }),
     F('income_currency', '年収の通貨', { def: 'JPY' }),
@@ -362,12 +369,12 @@ const SECTIONS = [
     F('bank_branch', '支店名'),
     F('bank_branch_no', '支店番号', { type: 'tel', hint: '3桁の番号' }),
     F('bank_open_date', '入力した銀行口座を作った日（だいたいでOK）', { type: 'date', def: (new Date().getFullYear() - 5) + '-04-01', hint: '例：2015年4月1日。はっきり分からなければ、だいたいの年の4月1日でOK' }),
-    F('fund_method', '積立のお金は、どこから払いますか？', { hint: '毎月の積立に使うお金の元（もと）を選んでください。例：お給料から払う → 給与、貯金から払う → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
+    F('fund_method', '積立のお金は、どこから払いますか？', { def: '給与', hint: '毎月の積立に使うお金の元（もと）を選んでください。例：お給料から払う → 給与、貯金から払う → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
     F('fund_currency', '通貨', { def: 'JPY' }),
     F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50000' }),
     F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600000）' }),
     F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1000000' }),
-    F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ（複数選べます。もう一度タップで解除）', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
+    F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
 ];
 const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
@@ -490,7 +497,7 @@ function viewWelcome() {
       h('div', { class: 'need-grid' }, card('passport', 'あれば必ず'), card('license'), card('mynumber'), card('juminhyo')),
       h('p', { class: 'need-note' }, '免許証・マイナンバーカードは表と裏を撮ります'),
       h('ul', { class: 'need-more' },
-        h('li', {}, h('strong', {}, '💳 お支払いに使うカード'), h('span', {}, '番号の面を撮影します')),
+        h('li', {}, h('strong', {}, '💳 お支払いに使うクレジットカード'), h('span', {}, 'デビットカードでも可能です。番号の面を撮影します')),
         h('li', {}, h('strong', {}, '👤 受取人（受益者）の情報'), h('span', {}, '氏名・ふりがな・生年月日・続柄。受取人の免許証があれば撮影で入ります。決まっていなければ、あとで入力もできます')))),
     h('ol', { class: 'flow', 'aria-label': '流れ' },
       h('li', {}, ill(FLOW_ILL.shot, 'flow-ill'), h('span', { class: 'flow-label' }, '撮る')),
@@ -522,16 +529,17 @@ const HIDE = new Set(['first_romaji', 'last_romaji', 'prefecture', 'city', 'addr
   'ben_first_romaji', 'ben_last_romaji', 'birth_country', 'nationality', 'ben_birth_country', 'ben_nationality',
   'id_country', 'ben_id_country', 'phone_cc', 'income_currency', 'fund_currency', 'tax_country']);
 const MANUAL_GROUPS = [
-  { title: '数字・連絡先を手入力', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number', 'employer_website'] },
-  { title: '選択肢をタップ', note: '当てはまるものを選んでください。分からない項目は空欄で進められます。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type'] },
+  { title: '数字・連絡先', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number'] },
+  { title: '選択肢をタップ', note: '当てはまるものを選んでください。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type'] },
   { title: '日付を確認して入力', note: '書類を見ながら確認してください。分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
 ];
 // 受取人は手入力の欄、ご契約内容は担当者が先に入れるので、どちらも音声では聞かない
 const BEN_KEYS = SECTIONS.find(s => s.id === 'beneficiary').fields.map(f => f.k);
 const CONTRACT_KEYS = ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name', 'staff_name'];
 // 最初から値が入っているが、確認してもらうために手入力の欄に出し続ける項目
-const ALWAYS_SHOW = new Set(['bank_open_date']);
-const MANUAL_KEYS = new Set(['email', 'phone_type', 'fund_annual', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
+const ALWAYS_SHOW = new Set(['bank_open_date', 'fund_method']);
+// 勤務先の住所・ホームページは会社名から自動で調べるので、話す・手入力の対象にしない（確認画面で直せる）
+const MANUAL_KEYS = new Set(['email', 'phone_type', 'fund_annual', 'employer_address', 'employer_website', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
 const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
 const visibleFields = sec => sec.fields.filter(f => !HIDE.has(f.k));
 const STEPS = ['書類を撮る', '話して入力', '確認', '送信'];
@@ -582,7 +590,7 @@ function renderStep() {
   if (step === 1) {
     const st = docStatus(data);
     docsPanelEl = renderDocsPanel();
-    body = [h('p', { class: 'lead' }, '📷 書類2つと、お支払いに使うカードを撮りましょう。名前や住所、カード番号が自動で入ります。'), docsPanelEl];
+    body = [h('p', { class: 'lead' }, '📷 書類2つと、お支払いに使うクレジットカードを撮りましょう。名前や住所、カード番号が自動で入ります。'), docsPanelEl];
     if (!st.ok) {
       nextLabel = 'あとで撮影する';
       body.push(h('p', { class: 'muted small center' }, '手元に書類がなければ、先にほかの項目を入力できます。入力した内容は保存され、送信前に撮影すればOKです。'));
@@ -597,7 +605,7 @@ function renderStep() {
       go(3);
     };
     setTimeout(maybeLookupEmployer, 400);
-    body = [h('p', { class: 'lead' }, '🎤 話しやすい項目は音声で、数字や選択肢は下で入力します。'),
+    body = [h('p', { class: 'lead' }, '🎤 話しやすい項目は音声で入力します。'),
       rest.length
         ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
             h('strong', {}, `あと${rest.length}項目`),
@@ -657,15 +665,14 @@ function emailEntry() {
   input.addEventListener('input', () => {
     data.email = input.value.trim(); dirty.add('email'); scheduleSave();
   });
-  return h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('strong', {}, 'メールアドレスは手入力'),
-    h('p', { class: 'muted small', style: 'margin:0' }, '音声では読み上げず、ここに直接入力してください。送信前にも確認できます。'),
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), 'メールアドレス'),
     h('div', { class: 'field' }, h('label', { for: 'customer-email' }, 'メールアドレス'), input)));
 }
 function phoneEntry() {
   const typeField = renderField(FIELD_MAP.phone_type);
   inputs.phone_type.input.addEventListener('change', refreshStep);
-  const body = [h('strong', {}, '電話番号'), h('p', { class: 'muted small', style: 'margin:0' }, '「話して入力」で読み上げれば自動で入ります。ここに手で入力してもOKです。'), typeField];
+  const body = [h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), '電話番号'), typeField];
   if (data.phone_type === '携帯') {
     const input = h('input', { id: 'customer-phone', type: 'tel', inputmode: 'numeric', autocomplete: 'tel', pattern: '0[789]0[0-9]{8}', placeholder: '09012345678' });
     if (data.phone_area && data.phone_local) input.value = '0' + String(data.phone_area).replace(/^0/, '') + data.phone_local;
@@ -681,23 +688,29 @@ function phoneEntry() {
   } else {
     body.push(renderField(FIELD_MAP.phone_area), renderField(FIELD_MAP.phone_local));
   }
-  return h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' }, ...body));
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' }, ...body));
 }
 function beneficiaryEntry() {
   const fields = visibleFields(SECTIONS.find(s => s.id === 'beneficiary'));
-  return h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('strong', {}, '受取人（受益者）を手入力'),
-    h('p', { class: 'muted small', style: 'margin:0' }, '万一の時にお金を受け取る人です。指定しない場合は空欄のままで大丈夫です。受取人の免許証を撮影すると、名前や生年月日が自動で入ります。'),
-    h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力'),
-    sameSurnameBtn(),
-    ...fields.map(f => { const el = renderField(f); paint(f.k); return el; })));
+  const none = data.ben_none === 'はい';
+  const toggle = h('button', { class: 'btn outline wide toggle', type: 'button', 'aria-pressed': String(none), onclick: () => {
+    data.ben_none = none ? '' : 'はい'; dirty.add('ben_none'); scheduleSave(); refreshStep();
+  } }, none ? '✓ 受取人を指定しない（タップで取り消し）' : '受取人を指定しない');
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), '受取人（受益者）'),
+    h('p', { class: 'muted small', style: 'margin:0' }, '万一の時にお金を受け取る人です。受取人の免許証を撮影すると、名前や生年月日が自動で入ります。'),
+    toggle,
+    ...(none ? [h('p', { class: 'done-note', style: 'margin:0' }, '受取人は指定しません。あとで指定したくなったら、上のボタンをもう一度タップしてください。')] : [
+      h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力'),
+      sameSurnameBtn(),
+      ...fields.map(f => { const el = renderField(f); paint(f.k); return el; })])));
 }
 function manualEntry(group) {
   const hasBeneficiary = !!String(data.ben_name_ja || '').trim() || !!docsOf(data).ben_license;
   const fields = group.keys.filter(k => FIELD_MAP[k] && (ALWAYS_SHOW.has(k) || !String(data[k] ?? '').trim()) && (hasBeneficiary || !k.startsWith('ben_')));
   if (!fields.length) return null;
-  return h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('strong', {}, group.title), h('p', { class: 'muted small', style: 'margin:0' }, group.note),
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), group.title), h('p', { class: 'muted small', style: 'margin:0' }, group.note),
     ...fields.map(k => renderField(FIELD_MAP[k]))));
 }
 // 確認画面で「数字を確認」の印を付ける項目
@@ -727,11 +740,13 @@ function confirmCard(sec) {
     return h('section', { class: 'sec cf editing', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px;padding-bottom:6px' }, head), body);
   }
   return h('section', { class: 'sec cf', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px' }, head,
-    ...vis.filter(f => f.k !== 'phone_local').map(f => {
+    ...(sec.id === 'beneficiary' && data.ben_none === 'はい' ? [h('div', { class: 'cf-row' }, h('span', { class: 'cf-label' }, '受取人'), h('span', { class: 'cf-val' }, '指定しない'))] : vis).filter(f => !f.k || f.k !== 'phone_local').map(f => {
+      if (!f.k) return f;
       let v = String(data[f.k] ?? '').trim(), label = f.label;
       if (f.k === 'phone_area') { label = '電話番号'; v = phoneText(); }
       const num = NUM_CHECK.has(f.k), ai = aiKeys.has(f.k) || (f.k === 'phone_area' && aiKeys.has('phone_local'));
-      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '数字を確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力')); }),
+      const bad = fieldError(f.k);
+      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '数字を確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null)); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
     sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
     sec.id === 'payment' ? cardEntry() : null,
@@ -775,6 +790,11 @@ function renderField(f) {
   if (f.k === 'ben_name_kana') input.addEventListener('change', fillBenRomaji);
   if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
   if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
+  if (VALIDATE[f.k]) {
+    const msg = h('small', { class: 'err field-err', role: 'alert' });
+    const check = () => { const e = fieldError(f.k, input.value); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
+    input.addEventListener('input', check); wrap.append(msg); check();
+  }
   inputs[f.k] = { input, wrap, ok };
   return wrap;
 }
@@ -855,6 +875,8 @@ async function save(final = false) {
 window.addEventListener('pagehide', () => { if (saveTimer) save(); });
 
 async function submit() {
+  const bad = invalidKeys();
+  if (bad.length) { toast('⚠ ' + fieldError(bad[0]) + '。確認画面で直してください。', 6000); go(3); return; }
   if (bgTasks.size) { toast('写真の読み取り中です。終わるまで少しお待ちください。'); return; }
   const ds = docStatus(data);
   if (!ds.ok) { alert(!data.has_passport ? 'パスポートをお持ちか選択してください。' : ds.needPassport ? 'パスポートをお持ちの場合は、パスポートの写真が必要です。' : '本人確認書類を2点撮影してください（運転免許証・マイナンバーカードは表と裏の両方）。'); go(1); return; }
@@ -872,6 +894,7 @@ async function submit() {
   done();
   if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
   stopVoice();
+  forgetSecrets();
   viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, nextSteps());
 }
 
@@ -904,7 +927,7 @@ function applyAI(res, preset = {}, opts = {}) {
   refreshStep();
   const r = opts.since ? null : inputs[first]; if (r) r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
-function pickImage(doc) { fileInput.dataset.slot = ''; fileInput.dataset.doc = doc; fileInput.value = ''; fileInput.click(); }
+function pickImage(doc) { fileInput.dataset.slot = ''; fileInput.dataset.doc = doc; fileInput.value = ''; openPhotoPicker(); }
 fileInput.addEventListener('change', async () => {
   const f0 = fileInput.files && fileInput.files[0];
   if (fileInput.dataset.slot) { const slot = fileInput.dataset.slot; fileInput.dataset.slot = ''; fileInput.value = ''; if (f0) await handleDocFile(slot, f0); return; }
@@ -986,7 +1009,26 @@ function docPlan(docKey, d) {
   }
   return { label: cfg.label, keys, set };
 }
-function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; fileInput.click(); }
+function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; openPhotoPicker(); }
+/* ---------- 写真の選び方：スマホでは「写真を撮影」を一番上に ---------- */
+// ※スマホが出す選択メニュー（写真ライブラリ・Googleドライブ・ファイル）の並びはOSが決めるので、
+//   ツール側で「撮影」と「保存済みから選ぶ」の2つに分けて、撮影を先に出す
+function openPhotoPicker() {
+  if (!matchMedia('(pointer: coarse)').matches) { fileInput.removeAttribute('capture'); fileInput.click(); return; }
+  const pick = camera => {
+    back.remove();
+    if (camera) fileInput.setAttribute('capture', 'environment'); else fileInput.removeAttribute('capture');
+    fileInput.click();
+  };
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet photo-pick', role: 'dialog', 'aria-modal': 'true', 'aria-label': '写真の選び方' },
+    h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => pick(true) }, '📷 写真を撮影する'),
+    h('button', { class: 'btn outline wide', type: 'button', onclick: () => pick(false) }, '🖼 保存済みの写真から選ぶ'),
+    h('p', { class: 'muted small', style: 'margin:0;text-align:center' }, 'フォトライブラリー・Googleドライブ・ファイルは「保存済みの写真から選ぶ」から選べます'),
+    h('button', { class: 'btn ghost wide', type: 'button', onclick: () => back.remove() }, 'やめる')));
+  back.addEventListener('click', e => { if (e.target === back) back.remove(); });
+  document.body.append(back);
+}
+
 async function handleDocFile(slot, file) {
   const s = DOC_SLOTS.find(x => x.slot === slot); if (!s) return;
   const endBg = bgStart(DOC_TYPES[s.doc] + (s.doc === 'passport' || s.doc === 'juminhyo' ? '' : '（' + s.label + '）') + 'を' + (s.ai || s.secret ? '読み取り中' : '保存中'));
@@ -1013,7 +1055,9 @@ async function handleDocFile(slot, file) {
         if (r && r.number) {
           secretVals.mynumber = r.number; syncSecret('mynumber');
           secretMsg = r.check === false ? '⚠ 個人番号が正しくない可能性があります。送信前の画面でカードと見比べてください。' : '個人番号を読み取りました ✓ 送信前の画面で確認してください。';
-        } else secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。';
+        } else secretMsg = r && r.reason === 'refused'
+          ? '写真は保存しました。個人番号はAIが読み取りを行えなかったので、送信前の画面で手で入力してください。'
+          : '写真は保存しました。個人番号が読み取れませんでした。明るい場所で撮り直すか、送信前の画面で手で入力してください。';
       } catch { secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。'; }
     }
     done();
@@ -1034,10 +1078,10 @@ function refreshDocs() { if (docsPanelEl && docsPanelEl.isConnected) { const n =
 function cardDocGroup() {
   const got = !!secretVals.card_number;
   return h('div', { class: 'doc-group' + (got ? ' done' : '') },
-    h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'お支払いに使うカード'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
+    h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'お支払いに使うクレジットカード'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
     h('div', { class: 'doc-row' },
       h('div', { class: 'doc-label' }, h('span', {}, '番号が書いてある面'), h('small', { class: cardPending ? 'muted' : got ? 'doc-ok' : 'muted' }, cardPending ? '読み取り中…' : got ? '読み取り済み' : 'まだです'),
-        h('small', { class: 'hint' }, '写真は保存しません。番号は送信の時にスプレッドシートへ直接送ります')),
+        h('small', { class: 'hint' }, 'デビットカードでも可能です。写真は保存しません。番号は送信の時にスプレッドシートへ直接送ります')),
       h('div', { class: 'doc-actions' },
         h('button', { class: 'btn sm ' + (got ? 'ghost' : 'outline'), type: 'button', disabled: cardPending, onclick: () => pickImage('credit_card') }, cardPending ? '読み取り中' : got ? '撮り直す' : '撮影する'))));
 }
@@ -1097,6 +1141,11 @@ const SECRET_FIELDS = [
   { k: 'account_number', label: '口座番号', type: 'tel' },
 ];
 const secretVals = {};
+// お客様の画面では、番号をこのタブの中だけに一時保存（再読み込みしても消えない。タブを閉じると消える。データベースには入らない）
+const SECRET_KEY = !STAFF && typeof TOKEN === 'string' ? 'onboarding-secret-' + TOKEN.slice(0, 16) : null;
+if (SECRET_KEY) { try { Object.assign(secretVals, JSON.parse(sessionStorage.getItem(SECRET_KEY) || '{}')); } catch {} }
+function keepSecrets() { if (SECRET_KEY) { try { sessionStorage.setItem(SECRET_KEY, JSON.stringify(secretVals)); } catch {} } }
+function forgetSecrets() { if (SECRET_KEY) { try { sessionStorage.removeItem(SECRET_KEY); } catch {} } }
 let secretSeq = 0;
 function secretCard(title) {
   return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
@@ -1118,8 +1167,16 @@ function secretInput(f) {
   return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
 }
 function syncSecret(k, except) {
+  keepSecrets();
   document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
 }
+
+/* ---------- 入力チェック（決まった形でないとエラーを出す） ---------- */
+const VALIDATE = {
+  bank_branch_no: v => /^\d{3}$/.test(v) ? '' : '支店番号は3桁の数字です（例：123）',
+};
+const fieldError = (k, v = D()[k]) => { const s = String(v ?? '').trim(); return s && VALIDATE[k] ? VALIDATE[k](s) : ''; };
+const invalidKeys = () => Object.keys(VALIDATE).filter(k => fieldError(k));
 
 /* ---------- 口座番号は音声でもOK（ツールには保存せず、送信の時にスプレッドシートへ直接） ---------- */
 const ACCOUNT_SPEC = { k: 'account_number', label: '口座番号（普通預金の7桁の数字）' };
@@ -1223,7 +1280,7 @@ function expiryWarn() {
 }
 function warnExpiryToast() { const list = expiredList(D()); if (list.length) setTimeout(() => toast('⚠ ' + list[0], 6000), 4600); }
 function sameSurnameBtn() {
-  return h('button', { class: 'btn ghost sm', type: 'button', onclick: () => {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => {
     const d = D();
     const sur = String(d.name_ja || '').trim().split(/[\s\u3000]+/)[0];
     if (!sur && !d.last_romaji) { toast('先に申込者のお名前を入れてください'); return; }
@@ -1232,7 +1289,7 @@ function sameSurnameBtn() {
     if (d.nationality) setField('ben_nationality', d.nationality);
     if (d.birth_country) setField('ben_birth_country', d.birth_country);
     markDirty('ben_name_ja'); toast('名字・国籍を申込者と同じにしました');
-  } }, '名字を申込者と同じにする');
+  } }, '👪 名字を申込者と同じにする');
 }
 function retakeSheet(slot, problem) {
   const close = () => back.remove();
@@ -1344,7 +1401,7 @@ function openVoice(step = 1) {
   ta.value = voiceDraft; ta.addEventListener('input', () => { voiceDraft = ta.value; });
   const label = h('p', { class: 'mic-label' }, canRecord ? '押して録音を始める' : '音声入力または手入力');
   const status = h('p', { class: 'muted small', role: 'status' }, canRecord
-    ? '見本を読んで、もう一度押して録音を止めます。文字になった内容を確認してから入力します。'
+    ? ''
     : 'この端末では録音できません。下の欄へ手入力するか、キーボードの音声入力をお使いください。');
   const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', hidden: !canRecord }, icon('mic'));
   let canceled = false, recordTimer = null;
@@ -1395,12 +1452,11 @@ function openVoice(step = 1) {
   });
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
-    h('p', { class: 'voice-intro' }, 'お申込みをスムーズに進めるため、音声で入力します。下の見本の「」の部分をご自身の内容に変えて、上から順に読み上げてください。'),
     h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
     scriptBox(voiceValues(), VOICE_AVAIL, step),
     mic, label, status, ta, send, skip,
-    h('p', { class: 'muted small' }, '録音は文字起こしのためOpenAIへ送ります。表示された文字を確認してから項目に入力します。'),
-    h('p', { class: 'muted small' }, 'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
+    h('p', { class: 'voice-foot' }, '録音は文字起こしのためOpenAIへ送ります（OpenAIのAPIでは、送った音声が学習などほかの目的に使われることはありません）。表示された文字を確認してから項目に入力します。', h('br'),
+      'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
   if (!voiceChunkNow.length) skip.hidden = true;

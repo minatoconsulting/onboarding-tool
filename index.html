@@ -164,7 +164,14 @@ a.btn.ghost{color:var(--muted)}
 .tip-ill{width:34px;height:34px;display:inline-flex}
 .sec.secret{border:1px dashed var(--ai-line)}
 .card-entry{display:grid;gap:12px}
-.voice-intro{margin:0 0 4px;font-weight:700;line-height:1.6}
+.voice-foot{margin:0;font-size:.72rem;line-height:1.55;color:var(--muted)}
+.photo-pick{display:grid;gap:10px}
+.field.bad input{border-color:var(--danger)}
+.field-err:empty{display:none}
+.sec.manual-box{border:2px solid var(--seal);box-shadow:0 0 0 4px var(--seal-soft)}
+.manual-tag{display:inline-block;font-size:.72rem;font-weight:800;color:var(--seal-ink);background:var(--seal);border-radius:999px;padding:2px 10px;margin-right:6px;vertical-align:middle}
+.btn.toggle[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
+.sheet p[role=status]:empty{display:none}
 .bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700}
 .bg-pill .spinner{flex:none;width:18px;height:18px}
 .btn svg{width:20px;height:20px;flex:none}
@@ -217,7 +224,7 @@ const SECTIONS = [
     F('birth_country', '出生国', { def: '日本' }),
     F('nationality', '国籍', { def: '日本' }),
     F('industry', '職業 - 業種', { hint: '例：医療機関', chips: ['医療・福祉', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '金融・保険', '公務'] }),
-    F('position', '職業 - 役職', { hint: '例：会社従業員', chips: ['一般社員', '管理職', '役員', '代表者'] }),
+    F('position', '職業 - 役職', { chips: ['一般社員', '管理職', '役員', '代表者'] }),
     F('pep', '政府・政治家などとの関係', { type: 'select', opts: ['いいえ', 'はい'], def: 'いいえ', hint: '公的な重要ポジションの経験、またはその家族・近しい関係がありますか' }),
   ]},
   { id: 'idcard', title: '身分証明書', fields: [
@@ -274,7 +281,7 @@ const SECTIONS = [
     F('tax_country', '税務上の居住国', { def: '日本' }),
   ]},
   { id: 'funds', title: '勤務先・資金源', fields: [
-    F('employer_type', '勤務先情報', { hint: '例：会社員、自営業、公務員', chips: ['会社員', '自営業', '会社役員', '公務員', '専業主婦・主夫', 'パート・アルバイト', '年金生活'] }),
+    F('employer_type', '勤務先情報', { chips: ['会社員', '自営業', '会社役員', '公務員', '専業主婦・主夫', 'パート・アルバイト', '年金生活'] }),
     F('employer_name', '勤務先名'),
     F('employer_address', '勤務先の住所', { hint: '郵便番号＋本社の住所' }),
     F('employer_website', '勤務先のホームページ', { hint: 'なければ「なし」' }),
@@ -291,12 +298,12 @@ const SECTIONS = [
     F('bank_pref', '銀行の都道府県'),
     F('bank_postal', '銀行の郵便番号', { type: 'tel' }),
     F('bank_open_date', '口座開設日', { type: 'date', def: (new Date().getFullYear() - 5) + '-04-01', hint: '例：2015年4月1日。分からなければ、だいたいの年の4月1日' }),
-    F('fund_method', '資金源（積立のお金の出どころ）', { hint: '毎月の積立をどのお金から払うか。例：お給料から → 給与、貯金から → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
+    F('fund_method', '資金源（積立のお金の出どころ）', { def: '給与', hint: '毎月の積立をどのお金から払うか。例：お給料から → 給与、貯金から → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
     F('fund_currency', '資金源の通貨', { def: 'JPY' }),
     F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50000' }),
     F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600000）' }),
     F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1000000' }),
-    F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ（複数選べます。もう一度タップで解除）', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
+    F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
   { id: 'payment', title: '支払方法（カード）', note: 'カードを撮影すると、カード番号・有効期限・ブランドが自動で入ります（写真と番号はツールには保存しません）。', fields: [
     F('pay_method', '支払方法', { type: 'select', opts: ['クレジットカード', '銀行送金'], def: 'クレジットカード' }),
@@ -310,7 +317,7 @@ const SECTIONS = [
 const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
 FIELD_MAP.has_passport = F('has_passport', 'パスポートはお持ちですか？（あれば必ず撮影）', { type: 'select', opts: ['はい', 'いいえ'] });
 const ALL_KEYS = Object.keys(FIELD_MAP);
-const MANUAL_KEYS = new Set(['email', 'fund_annual', 'postal_code', 'id_number', 'ben_id_number',
+const MANUAL_KEYS = new Set(['email', 'fund_annual', 'employer_address', 'postal_code', 'id_number', 'ben_id_number',
   'bank_branch_no', 'employer_website', 'gender', 'pep', 'us_status', 'employer_type', 'industry', 'position',
   'ben_gender', 'ben_relation', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'birth_date', 'ben_birth_date',
   'bank_open_date', 'ben_percent', 'product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name',
@@ -537,6 +544,11 @@ function renderField(f) {
   });
   if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
   if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
+  if (VALIDATE[f.k]) {
+    const msg = h('small', { class: 'err field-err', role: 'alert' });
+    const check = () => { const e = fieldError(f.k, input.value); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
+    input.addEventListener('input', check); wrap.append(msg); check();
+  }
   inputs[f.k] = { input, wrap, ok };
   paintAI(f.k);
   return wrap;
@@ -725,7 +737,7 @@ function pickImage(doc) {
   fileInput.dataset.slot = '';
   fileInput.dataset.doc = doc;
   fileInput.value = '';
-  fileInput.click();
+  openPhotoPicker();
 }
 fileInput.addEventListener('change', async () => {
   const f0 = fileInput.files && fileInput.files[0];
@@ -815,7 +827,26 @@ function docPlan(docKey, d) {
   }
   return { label: cfg.label, keys, set };
 }
-function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; fileInput.click(); }
+function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; openPhotoPicker(); }
+/* ---------- 写真の選び方：スマホでは「写真を撮影」を一番上に ---------- */
+// ※スマホが出す選択メニュー（写真ライブラリ・Googleドライブ・ファイル）の並びはOSが決めるので、
+//   ツール側で「撮影」と「保存済みから選ぶ」の2つに分けて、撮影を先に出す
+function openPhotoPicker() {
+  if (!matchMedia('(pointer: coarse)').matches) { fileInput.removeAttribute('capture'); fileInput.click(); return; }
+  const pick = camera => {
+    back.remove();
+    if (camera) fileInput.setAttribute('capture', 'environment'); else fileInput.removeAttribute('capture');
+    fileInput.click();
+  };
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet photo-pick', role: 'dialog', 'aria-modal': 'true', 'aria-label': '写真の選び方' },
+    h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => pick(true) }, '📷 写真を撮影する'),
+    h('button', { class: 'btn outline wide', type: 'button', onclick: () => pick(false) }, '🖼 保存済みの写真から選ぶ'),
+    h('p', { class: 'muted small', style: 'margin:0;text-align:center' }, 'フォトライブラリー・Googleドライブ・ファイルは「保存済みの写真から選ぶ」から選べます'),
+    h('button', { class: 'btn ghost wide', type: 'button', onclick: () => back.remove() }, 'やめる')));
+  back.addEventListener('click', e => { if (e.target === back) back.remove(); });
+  document.body.append(back);
+}
+
 async function handleDocFile(slot, file) {
   const s = DOC_SLOTS.find(x => x.slot === slot); if (!s) return;
   const endBg = bgStart(DOC_TYPES[s.doc] + (s.doc === 'passport' || s.doc === 'juminhyo' ? '' : '（' + s.label + '）') + 'を' + (s.ai || s.secret ? '読み取り中' : '保存中'));
@@ -842,7 +873,9 @@ async function handleDocFile(slot, file) {
         if (r && r.number) {
           secretVals.mynumber = r.number; syncSecret('mynumber');
           secretMsg = r.check === false ? '⚠ 個人番号が正しくない可能性があります。送信前の画面でカードと見比べてください。' : '個人番号を読み取りました ✓ 送信前の画面で確認してください。';
-        } else secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。';
+        } else secretMsg = r && r.reason === 'refused'
+          ? '写真は保存しました。個人番号はAIが読み取りを行えなかったので、送信前の画面で手で入力してください。'
+          : '写真は保存しました。個人番号が読み取れませんでした。明るい場所で撮り直すか、送信前の画面で手で入力してください。';
       } catch { secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。'; }
     }
     done();
@@ -863,10 +896,10 @@ function refreshDocs() { if (docsPanelEl && docsPanelEl.isConnected) { const n =
 function cardDocGroup() {
   const got = !!secretVals.card_number;
   return h('div', { class: 'doc-group' + (got ? ' done' : '') },
-    h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'お支払いに使うカード'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
+    h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'お支払いに使うクレジットカード'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
     h('div', { class: 'doc-row' },
       h('div', { class: 'doc-label' }, h('span', {}, '番号が書いてある面'), h('small', { class: cardPending ? 'muted' : got ? 'doc-ok' : 'muted' }, cardPending ? '読み取り中…' : got ? '読み取り済み' : 'まだです'),
-        h('small', { class: 'hint' }, '写真は保存しません。番号は送信の時にスプレッドシートへ直接送ります')),
+        h('small', { class: 'hint' }, 'デビットカードでも可能です。写真は保存しません。番号は送信の時にスプレッドシートへ直接送ります')),
       h('div', { class: 'doc-actions' },
         h('button', { class: 'btn sm ' + (got ? 'ghost' : 'outline'), type: 'button', disabled: cardPending, onclick: () => pickImage('credit_card') }, cardPending ? '読み取り中' : got ? '撮り直す' : '撮影する'))));
 }
@@ -926,6 +959,11 @@ const SECRET_FIELDS = [
   { k: 'account_number', label: '口座番号', type: 'tel' },
 ];
 const secretVals = {};
+// お客様の画面では、番号をこのタブの中だけに一時保存（再読み込みしても消えない。タブを閉じると消える。データベースには入らない）
+const SECRET_KEY = !STAFF && typeof TOKEN === 'string' ? 'onboarding-secret-' + TOKEN.slice(0, 16) : null;
+if (SECRET_KEY) { try { Object.assign(secretVals, JSON.parse(sessionStorage.getItem(SECRET_KEY) || '{}')); } catch {} }
+function keepSecrets() { if (SECRET_KEY) { try { sessionStorage.setItem(SECRET_KEY, JSON.stringify(secretVals)); } catch {} } }
+function forgetSecrets() { if (SECRET_KEY) { try { sessionStorage.removeItem(SECRET_KEY); } catch {} } }
 let secretSeq = 0;
 function secretCard(title) {
   return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
@@ -947,8 +985,16 @@ function secretInput(f) {
   return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
 }
 function syncSecret(k, except) {
+  keepSecrets();
   document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
 }
+
+/* ---------- 入力チェック（決まった形でないとエラーを出す） ---------- */
+const VALIDATE = {
+  bank_branch_no: v => /^\d{3}$/.test(v) ? '' : '支店番号は3桁の数字です（例：123）',
+};
+const fieldError = (k, v = D()[k]) => { const s = String(v ?? '').trim(); return s && VALIDATE[k] ? VALIDATE[k](s) : ''; };
+const invalidKeys = () => Object.keys(VALIDATE).filter(k => fieldError(k));
 
 /* ---------- 口座番号は音声でもOK（ツールには保存せず、送信の時にスプレッドシートへ直接） ---------- */
 const ACCOUNT_SPEC = { k: 'account_number', label: '口座番号（普通預金の7桁の数字）' };
@@ -1052,7 +1098,7 @@ function expiryWarn() {
 }
 function warnExpiryToast() { const list = expiredList(D()); if (list.length) setTimeout(() => toast('⚠ ' + list[0], 6000), 4600); }
 function sameSurnameBtn() {
-  return h('button', { class: 'btn ghost sm', type: 'button', onclick: () => {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => {
     const d = D();
     const sur = String(d.name_ja || '').trim().split(/[\s\u3000]+/)[0];
     if (!sur && !d.last_romaji) { toast('先に申込者のお名前を入れてください'); return; }
@@ -1061,7 +1107,7 @@ function sameSurnameBtn() {
     if (d.nationality) setField('ben_nationality', d.nationality);
     if (d.birth_country) setField('ben_birth_country', d.birth_country);
     markDirty('ben_name_ja'); toast('名字・国籍を申込者と同じにしました');
-  } }, '名字を申込者と同じにする');
+  } }, '👪 名字を申込者と同じにする');
 }
 function retakeSheet(slot, problem) {
   const close = () => back.remove();
@@ -1173,7 +1219,7 @@ function openVoice(step = 1) {
   ta.value = state.voiceDraft; ta.addEventListener('input', () => { state.voiceDraft = ta.value; });
   const label = h('p', { class: 'mic-label' }, canRecord ? '押して録音を始める' : '音声入力または手入力');
   const status = h('p', { class: 'muted small', role: 'status' }, canRecord
-    ? '見本を読んで、もう一度押して録音を止めます。文字になった内容を確認してから入力します。'
+    ? ''
     : 'この端末では録音できません。下の欄へ手入力するか、キーボードの音声入力をお使いください。');
   const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', hidden: !canRecord }, icon('mic'));
   let canceled = false, recordTimer = null;
@@ -1224,12 +1270,11 @@ function openVoice(step = 1) {
   });
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
-    h('p', { class: 'voice-intro' }, 'お申込みをスムーズに進めるため、音声で入力します。下の見本の「」の部分をご自身の内容に変えて、上から順に読み上げてください。'),
     h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
     scriptBox(voiceValues(), VOICE_AVAIL, step),
     mic, label, status, ta, send, skip,
-    h('p', { class: 'muted small' }, '録音は文字起こしのためOpenAIへ送ります。表示された文字を確認してから項目に入力します。'),
-    h('p', { class: 'muted small' }, 'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
+    h('p', { class: 'voice-foot' }, '録音は文字起こしのためOpenAIへ送ります（OpenAIのAPIでは、送った音声が学習などほかの目的に使われることはありません）。表示された文字を確認してから項目に入力します。', h('br'),
+      'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
   if (!voiceChunkNow.length) skip.hidden = true;
