@@ -197,7 +197,7 @@ const CONFIG = {
 const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
 const ID_TYPES = ['運転免許証', 'パスポート', 'マイナンバーカード'];
 const SECTIONS = [
-  { id: 'prep', title: '担当者が先に入力（担当FP・ご契約内容）', note: 'お客様用リンクを作る前に入力してください。お客様の画面では入力欄に出ず、確認だけになります。', fields: [
+  { id: 'prep', title: '担当者が先に入力（担当FP・ご契約内容）', note: 'お客様用リンクを作る前に入力してください。お客様の画面では確認画面に出て、金額や商品が変わった時はお客様も「直す」で変更できます。', fields: [
     F('staff_name', '担当FP', { hint: '例：赤田' }),
     F('product_type', '契約商品', { type: 'select', opts: ['S&P', 'EVO', 'FIP', 'PLS'] }),
     F('contract_years', '契約年数', { type: 'select', opts: ['25年', '20年', '15年', '10年'] }),

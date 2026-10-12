@@ -682,7 +682,7 @@ function confirmCard(sec) {
   const head = h('div', { class: 'cf-head' }, h('strong', {}, sec.title),
     h('div', { class: 'doc-actions' },
       !isEdit && hasAI ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); }); rerender(); } }, '確認OK') : null,
-      sec.id === 'contract' ? null : h('button', { class: 'btn sm ' + (isEdit ? 'primary' : 'outline'), type: 'button', onclick: () => {
+      h('button', { class: 'btn sm ' + (isEdit ? 'primary' : 'outline'), type: 'button', onclick: () => {
         if (isEdit) vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); });
         editing = isEdit ? null : sec.id; rerender();
       } }, isEdit ? '完了' : '直す')));
@@ -697,7 +697,7 @@ function confirmCard(sec) {
     ...vis.map(f => { const v = String(data[f.k] ?? '').trim();
       return h('div', { class: 'cf-row' + (aiKeys.has(f.k) ? ' ai' : '') }, h('span', { class: 'cf-label' }, f.label), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力')); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
-    sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。違うところがあれば担当者にご連絡ください。') : null,
+    sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
     sec.id === 'payment' ? cardEntry() : null));
 }
 function renderSection(sec, idx) {
