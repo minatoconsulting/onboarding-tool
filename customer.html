@@ -237,6 +237,9 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .progress li.later .num{border-color:var(--coral);color:var(--coral);border-width:2px}
 .sec.secret{border:1px dashed var(--ai-line)}
 .card-entry{display:grid;gap:12px}
+.btn.line-btn{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
+.bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700}
+.bg-pill .spinner{flex:none;width:18px;height:18px}
 .btn svg{width:20px;height:20px;flex:none}
 a.btn{text-decoration:none}
 
@@ -260,6 +263,8 @@ const CONFIG = {
   FUNCTION_NAME: 'onboarding-extract',
   // サポート料（9,800円）の Stripe 支払いリンク。Stripeの管理画面で作った https://buy.stripe.com/... を貼る（空ならボタンを出さない）
   STRIPE_PAYMENT_LINK: 'https://buy.stripe.com/6oUdR9gqI65t1oLb7t7EQ00',
+  // 送信が終わった後に案内する公式LINE（友だち追加のリンク）
+  LINE_URL: 'https://line.me/R/ti/p/@092ulblk',
 };
 
 const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
@@ -314,7 +319,7 @@ const SECTIONS = [
   ]},
   { id: 'beneficiary', title: '受取人（受益者）', capture: 'ben_license', fields: [
     F('ben_name_ja', '氏名（漢字）'),
-    F('ben_name_kana', 'ふりがな', { hint: '例：やまだ たろう' }),
+    F('ben_name_kana', 'ふりがな', { hint: '例：やまだ たろう（姓と名の間にスペース）' }),
     F('ben_first_romaji', '名（ローマ字）', { hint: 'ふりがなからヘボン式で作る' }),
     F('ben_last_romaji', '姓（ローマ字）', { hint: 'ふりがなからヘボン式で作る' }),
     F('ben_gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
@@ -350,9 +355,9 @@ const SECTIONS = [
     F('bank_branch', '支店名'),
     F('bank_branch_no', '支店番号', { type: 'tel', hint: '3桁の番号' }),
     F('bank_open_date', '口座を作った日（だいたいでOK）', { type: 'date' }),
-    F('fund_method', 'お支払いのお金の出どころ', { hint: '例：給与、貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
+    F('fund_method', '積立のお金は、どこから払いますか？', { hint: '毎月の積立に使うお金の元（もと）を選んでください。例：お給料から払う → 給与、貯金から払う → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
     F('fund_currency', '通貨', { def: 'JPY' }),
-    F('fund_amount', '金額（円）', { type: 'number' }),
+    F('fund_amount', 'そのお金のおおよその金額（円）', { type: 'number', hint: '例：貯金500万円から払うなら 5000000。お給料から払うなら年収と同じでOK' }),
     F('fund_detail', 'くわしい説明（任意）', { type: 'textarea' }),
     F('purpose', '投資の目的', { hint: '例：老後資金、教育資金', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
@@ -422,7 +427,7 @@ async function boot() {
   if (!TOKEN) return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
   if (error) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。');
-  if (st === 'used') return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true, payBlock(true));
+  if (st === 'used') return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true, nextSteps(true));
   if (st === 'expired') return viewMessage('リンクの期限が切れています', 'お手数ですが、担当者に新しいリンクをご依頼ください。');
   if (st !== 'ok') return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: saved } = await sb.rpc('onboarding_invite_get', { p_token: TOKEN });
@@ -438,6 +443,16 @@ function viewMessage(title, body, ok = false, extra = null) {
     ok ? ill(DONE_ILL, 'done-ill') : h('div', { class: 'big-icon', 'aria-hidden': 'true' }, '!'), h('h1', {}, title), h('p', { class: 'muted' }, body), extra));
 }
 // サポート料の支払い（Stripeの画面を開く。カード番号はStripeが受け取り、このツールには来ない）
+function lineBlock() {
+  if (!CONFIG.LINE_URL) return null;
+  return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, '① 公式LINEに登録してください'),
+    h('p', { class: 'small muted', style: 'margin:0' }, '手続きの進み具合や今後のご連絡は、公式LINEでお知らせします。'),
+    h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener' }, 'LINEで友だち追加する')));
+}
+function nextSteps(again = false) {
+  return h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, lineBlock(), payBlock(again));
+}
 function payBlock(again = false) {
   if (!CONFIG.STRIPE_PAYMENT_LINK) return null;
   let href;
@@ -447,8 +462,8 @@ function payBlock(again = false) {
     if (email) url.searchParams.set('prefilled_email', email);
     href = url.toString();
   } catch { return null; }
-  return h('section', { class: 'sec', style: 'text-align:left;width:100%;max-width:440px' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('strong', {}, '最後に、サポート料 9,800円のお支払い'),
+  return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, (CONFIG.LINE_URL ? '② ' : '') + 'サポート料 9,800円のお支払い'),
     h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
     h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
 }
@@ -496,11 +511,14 @@ const HIDE = new Set(['first_romaji', 'last_romaji', 'prefecture', 'city', 'addr
   'ben_first_romaji', 'ben_last_romaji', 'birth_country', 'nationality', 'ben_birth_country', 'ben_nationality',
   'id_country', 'ben_id_country', 'phone_cc', 'income_currency', 'fund_currency', 'tax_country']);
 const MANUAL_GROUPS = [
-  { title: '数字・連絡先を手入力', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number', 'ben_id_number', 'bank_branch_no', 'employer_website'] },
-  { title: '選択肢をタップ', note: '当てはまるものを選んでください。分からない項目は空欄で進められます。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'ben_gender', 'ben_relation', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type', 'ben_id_type'] },
-  { title: '日付・契約内容を確認して入力', note: '書類や担当者と決めた内容を確認してください。分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'ben_birth_date', 'ben_id_issue_date', 'ben_id_expiry', 'bank_open_date', 'ben_percent', 'product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name'] },
+  { title: '数字・連絡先を手入力', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number', 'bank_branch_no', 'employer_website'] },
+  { title: '選択肢をタップ', note: '当てはまるものを選んでください。分からない項目は空欄で進められます。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type'] },
+  { title: '日付を確認して入力', note: '書類を見ながら確認してください。分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
 ];
-const MANUAL_KEYS = new Set(['email', 'phone_type', 'phone_area', 'phone_local', ...MANUAL_GROUPS.flatMap(g => g.keys)]);
+// 受取人は手入力の欄、ご契約内容は担当者が先に入れるので、どちらも音声では聞かない
+const BEN_KEYS = SECTIONS.find(s => s.id === 'beneficiary').fields.map(f => f.k);
+const CONTRACT_KEYS = ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name', 'staff_name'];
+const MANUAL_KEYS = new Set(['email', 'phone_type', 'phone_area', 'phone_local', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
 const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
 const visibleFields = sec => sec.fields.filter(f => !HIDE.has(f.k));
 const STEPS = ['書類を撮る', '話して入力', '確認', '送信'];
@@ -522,7 +540,21 @@ function viewForm(startStep = 1) {
   renderStep();
 }
 function go(n) { if (saveTimer) save(); step = Math.max(1, Math.min(4, n)); editing = null; saveProgress({ step }); renderStep(); window.scrollTo(0, 0); }
-function refreshStep() { if (mainEl && mainEl.isConnected && !editing) { const y = window.scrollY; renderStep(); window.scrollTo(0, y); } }
+// 入力中の欄があれば、画面の描き直しは入力が終わるまで待つ（裏で読み取りが終わった時に、打っている途中の欄が消えないように）
+const typingIn = () => { const a = document.activeElement; return !!(a && mainEl && mainEl.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
+let refreshWaiting = false;
+function refreshStep() {
+  if (!mainEl || !mainEl.isConnected || editing) return;
+  if (typingIn()) {
+    if (!refreshWaiting) {
+      refreshWaiting = true;
+      const later = () => setTimeout(() => { if (typingIn()) return; mainEl.removeEventListener('focusout', later); refreshWaiting = false; refreshStep(); }, 0);
+      mainEl.addEventListener('focusout', later);
+    }
+    return;
+  }
+  const y = window.scrollY; renderStep(); window.scrollTo(0, y);
+}
 function renderStep() {
   saveProgress({ step });
   const docsOk = docStatus(data).ok;
@@ -537,7 +569,7 @@ function renderStep() {
   if (step === 1) {
     const st = docStatus(data);
     docsPanelEl = renderDocsPanel();
-    body = [h('p', { class: 'lead' }, '📷 書類を2つ撮りましょう。名前や住所が自動で入ります。'), docsPanelEl];
+    body = [h('p', { class: 'lead' }, '📷 書類2つと、お支払いに使うカードを撮りましょう。名前や住所、カード番号が自動で入ります。'), docsPanelEl];
     if (!st.ok) {
       nextLabel = 'あとで撮影する';
       body.push(h('p', { class: 'muted small center' }, '手元に書類がなければ、先にほかの項目を入力できます。入力した内容は保存され、送信前に撮影すればOKです。'));
@@ -561,8 +593,8 @@ function renderStep() {
         : h('p', { class: 'done-note' }, '✓ 読み上げは完了です！'),
       emailEntry(),
       phoneEntry(),
-      h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' }, cardEntry('お支払いに使うカード'))),
       ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
+      beneficiaryEntry(),
       h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')];
   } else if (step === 3) {
     body = [h('p', { class: 'lead' }, '👀 違うところだけ「直す」で修正してください。'),
@@ -626,6 +658,15 @@ function phoneEntry() {
   }
   return h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' }, ...body));
 }
+function beneficiaryEntry() {
+  const fields = visibleFields(SECTIONS.find(s => s.id === 'beneficiary'));
+  return h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, '受取人（受益者）を手入力'),
+    h('p', { class: 'muted small', style: 'margin:0' }, '万一の時にお金を受け取る人です。指定しない場合は空欄のままで大丈夫です。受取人の免許証を撮影すると、名前や生年月日が自動で入ります。'),
+    h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力'),
+    sameSurnameBtn(),
+    ...fields.map(f => { const el = renderField(f); paint(f.k); return el; })));
+}
 function manualEntry(group) {
   const hasBeneficiary = !!String(data.ben_name_ja || '').trim() || !!docsOf(data).ben_license;
   const fields = group.keys.filter(k => FIELD_MAP[k] && !String(data[k] ?? '').trim() && (hasBeneficiary || !k.startsWith('ben_')));
@@ -641,7 +682,7 @@ function confirmCard(sec) {
   const head = h('div', { class: 'cf-head' }, h('strong', {}, sec.title),
     h('div', { class: 'doc-actions' },
       !isEdit && hasAI ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); }); rerender(); } }, '確認OK') : null,
-      h('button', { class: 'btn sm ' + (isEdit ? 'primary' : 'outline'), type: 'button', onclick: () => {
+      sec.id === 'contract' ? null : h('button', { class: 'btn sm ' + (isEdit ? 'primary' : 'outline'), type: 'button', onclick: () => {
         if (isEdit) vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); });
         editing = isEdit ? null : sec.id; rerender();
       } }, isEdit ? '完了' : '直す')));
@@ -656,6 +697,7 @@ function confirmCard(sec) {
     ...vis.map(f => { const v = String(data[f.k] ?? '').trim();
       return h('div', { class: 'cf-row' + (aiKeys.has(f.k) ? ' ai' : '') }, h('span', { class: 'cf-label' }, f.label), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力')); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
+    sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。違うところがあれば担当者にご連絡ください。') : null,
     sec.id === 'payment' ? cardEntry() : null));
 }
 function renderSection(sec, idx) {
@@ -682,11 +724,44 @@ function renderField(f) {
   ok.addEventListener('click', () => { aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); });
   const wrap = h('div', { class: 'field' }, h('div', { class: 'field-top' }, h('label', { for: id }, f.label), ok), input, chips, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
   input.addEventListener(f.type === 'select' ? 'change' : 'input', () => {
+    userEditAt[f.k] = Date.now();
     data[f.k] = input.value; dirty.add(f.k); aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); updateCounts(); scheduleSave();
   });
+  if (f.k === 'ben_name_kana') input.addEventListener('change', fillBenRomaji);
   if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
   inputs[f.k] = { input, wrap, ok };
   return wrap;
+}
+// ふりがな → ヘボン式ローマ字（パスポートと同じく長音は付けない：おお・おう → O、うう → U）
+const KANA_ROMA = { あ:'A',い:'I',う:'U',え:'E',お:'O',か:'KA',き:'KI',く:'KU',け:'KE',こ:'KO',が:'GA',ぎ:'GI',ぐ:'GU',げ:'GE',ご:'GO',
+  さ:'SA',し:'SHI',す:'SU',せ:'SE',そ:'SO',ざ:'ZA',じ:'JI',ず:'ZU',ぜ:'ZE',ぞ:'ZO',た:'TA',ち:'CHI',つ:'TSU',て:'TE',と:'TO',だ:'DA',ぢ:'JI',づ:'ZU',で:'DE',ど:'DO',
+  な:'NA',に:'NI',ぬ:'NU',ね:'NE',の:'NO',は:'HA',ひ:'HI',ふ:'FU',へ:'HE',ほ:'HO',ば:'BA',び:'BI',ぶ:'BU',べ:'BE',ぼ:'BO',ぱ:'PA',ぴ:'PI',ぷ:'PU',ぺ:'PE',ぽ:'PO',
+  ま:'MA',み:'MI',む:'MU',め:'ME',も:'MO',や:'YA',ゆ:'YU',よ:'YO',ら:'RA',り:'RI',る:'RU',れ:'RE',ろ:'RO',わ:'WA',を:'O',ん:'N',ぁ:'A',ぃ:'I',ぅ:'U',ぇ:'E',ぉ:'O',ゔ:'BU' };
+function kanaToRoma(text) {
+  const k = [...String(text).replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))];
+  let out = '';
+  for (let i = 0; i < k.length; i++) {
+    const c = k[i], next = k[i + 1];
+    if (c === 'ー') continue;
+    if (c === 'っ') { const r = KANA_ROMA[next] || ''; out += r.startsWith('CH') ? 'T' : r.charAt(0); continue; }
+    let r = KANA_ROMA[c]; if (!r) return '';
+    if ('ゃゅょ'.includes(next || '_') && r.endsWith('I') && r.length > 1) {
+      const v = { ゃ: 'A', ゅ: 'U', ょ: 'O' }[next];
+      r = /(SH|CH|J)I$/.test(r) ? r.slice(0, -1) + v : r.slice(0, -1) + 'Y' + v; i++;
+    }
+    if (c === 'ん' && /^[BMP]/.test(KANA_ROMA[next] || '')) r = 'M';
+    out += r;
+  }
+  return out.replace(/OU|OO/g, 'O').replace(/UU/g, 'U');
+}
+function fillBenRomaji() {
+  const parts = String(data.ben_name_kana || '').trim().split(/[\s　]+/);
+  if (parts.length !== 2) return;
+  const [last, first] = parts.map(kanaToRoma);
+  if (!last || !first) return;
+  if (!String(data.ben_last_romaji || '').trim() || aiKeys.has('ben_last_romaji')) setField('ben_last_romaji', last, true, true);
+  if (!String(data.ben_first_romaji || '').trim() || aiKeys.has('ben_first_romaji')) setField('ben_first_romaji', first, true, true);
+  scheduleSave();
 }
 function paint(k) {
   const r = inputs[k]; if (!r) return;
@@ -734,6 +809,7 @@ async function save(final = false) {
 window.addEventListener('pagehide', () => { if (saveTimer) save(); });
 
 async function submit() {
+  if (bgTasks.size) { toast('写真の読み取り中です。終わるまで少しお待ちください。'); return; }
   const ds = docStatus(data);
   if (!ds.ok) { alert(!data.has_passport ? 'パスポートをお持ちか選択してください。' : ds.needPassport ? 'パスポートをお持ちの場合は、パスポートの写真が必要です。' : '本人確認書類を2点撮影してください（運転免許証・マイナンバーカードは表と裏の両方）。'); go(1); return; }
   if (data.email) { const email = document.createElement('input'); email.type = 'email'; email.value = data.email; if (!email.checkValidity()) { toast('メールアドレスの形式を確認してください。'); go(2); return; } }
@@ -750,7 +826,7 @@ async function submit() {
   done();
   if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
   stopVoice();
-  viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, payBlock());
+  viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, nextSteps());
 }
 
 /* ---------- AI ---------- */
@@ -767,6 +843,7 @@ function applyAI(res, preset = {}, opts = {}) {
   for (const [k, v] of Object.entries(preset)) setField(k, v);
   for (const [k, raw] of Object.entries(vals)) {
     const f = FIELD_MAP[k]; if (!f || raw == null) continue;
+    if (opts.since && (userEditAt[k] || 0) > opts.since) continue;
     let v = String(raw).trim(); if (!v) continue;
     if (f.type === 'select' && !f.opts.includes(v)) continue;
     if (f.type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) continue;
@@ -778,7 +855,7 @@ function applyAI(res, preset = {}, opts = {}) {
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
   warnExpiryToast();
   refreshStep();
-  const r = inputs[first]; if (r) r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const r = opts.since ? null : inputs[first]; if (r) r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 function pickImage(doc) { fileInput.dataset.slot = ''; fileInput.dataset.doc = doc; fileInput.value = ''; fileInput.click(); }
 fileInput.addEventListener('change', async () => {
@@ -787,11 +864,11 @@ fileInput.addEventListener('change', async () => {
   if (fileInput.dataset.doc === 'credit_card') { fileInput.value = ''; if (f0) await scanCard(f0); return; }
   const file = f0, doc = DOCS[fileInput.dataset.doc];
   if (!file || !doc) return;
-  const done = busy('読み取り中…');
+  const done = bgStart('写真を読み取り中'), since = Date.now();
   try {
     const image = await toJpegBase64(file);
     const res = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: doc.label, fields: fieldSpec(doc.keys) });
-    done(); applyAI(res, doc.set);
+    done(); applyAI(res, doc.set, { since });
   } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
   finally { fileInput.value = ''; }
 });
@@ -865,7 +942,9 @@ function docPlan(docKey, d) {
 function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; fileInput.click(); }
 async function handleDocFile(slot, file) {
   const s = DOC_SLOTS.find(x => x.slot === slot); if (!s) return;
-  const done = busy(s.ai ? '写真を確認して読み取り中…' : '保存中…');
+  const endBg = bgStart(DOC_TYPES[s.doc] + (s.doc === 'passport' || s.doc === 'juminhyo' ? '' : '（' + s.label + '）') + 'を' + (s.ai ? '読み取り中' : '保存中'));
+  const since = Date.now(); pendingSlots.add(slot); refreshDocs();
+  const done = () => { endBg(); pendingSlots.delete(slot); refreshDocs(); };
   try {
     const image = await toJpegBase64(file, 2000);
     let plan = null, read = null, readError = false;
@@ -884,7 +963,7 @@ async function handleDocFile(slot, file) {
     const d = D(); d._docs = { ...docsOf(d), [slot]: new Date().toISOString() };
     refreshDocs();
     if (read) {
-      applyAI(read, plan.set, { emptyMsg: slot === 'license_back'
+      applyAI(read, plan.set, { since, emptyMsg: slot === 'license_back'
         ? '裏面を保存しました ✓（住所変更の記載はありませんでした）'
         : '写真を保存しました ✓（自動で入る項目はありませんでした）' });
     }
@@ -894,6 +973,17 @@ async function handleDocFile(slot, file) {
 }
 let docsPanelEl = null;
 function refreshDocs() { if (docsPanelEl && docsPanelEl.isConnected) { const n = renderDocsPanel(); docsPanelEl.replaceWith(n); docsPanelEl = n; } if (window.onDocsChanged) window.onDocsChanged(); }
+// お支払いに使うカード（書類と一緒に撮る。写真は保存しない）
+function cardDocGroup() {
+  const got = !!secretVals.card_number;
+  return h('div', { class: 'doc-group' + (got ? ' done' : '') },
+    h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'お支払いに使うカード'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
+    h('div', { class: 'doc-row' },
+      h('div', { class: 'doc-label' }, h('span', {}, '番号が書いてある面'), h('small', { class: cardPending ? 'muted' : got ? 'doc-ok' : 'muted' }, cardPending ? '読み取り中…' : got ? '読み取り済み' : 'まだです'),
+        h('small', { class: 'hint' }, '写真は保存しません。番号は送信の時にスプレッドシートへ直接送ります')),
+      h('div', { class: 'doc-actions' },
+        h('button', { class: 'btn sm ' + (got ? 'ghost' : 'outline'), type: 'button', disabled: cardPending, onclick: () => pickImage('credit_card') }, cardPending ? '読み取り中' : got ? '撮り直す' : '撮影する'))));
+}
 function renderDocsPanel() {
   const d = D(), st = docStatus(d);
   const left = Math.max(0, 2 - st.done.length);
@@ -908,12 +998,12 @@ function renderDocsPanel() {
     return h('div', { class: 'doc-group' + (isDone ? ' done' : '') },
       h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null),
       ...DOC_SLOTS.filter(x => x.doc === doc).map(x => {
-        const has = !!docsOf(d)[x.slot];
+        const has = !!docsOf(d)[x.slot], pend = pendingSlots.has(x.slot);
         return h('div', { class: 'doc-row' },
-          h('div', { class: 'doc-label' }, h('span', {}, x.label), h('small', { class: has ? 'doc-ok' : 'muted' }, has ? '撮影済み' : 'まだです'), x.note ? h('small', { class: 'hint' }, x.note) : null),
+          h('div', { class: 'doc-label' }, h('span', {}, x.label), h('small', { class: pend ? 'muted' : has ? 'doc-ok' : 'muted' }, pend ? '読み取り中…' : has ? '撮影済み' : 'まだです'), x.note ? h('small', { class: 'hint' }, x.note) : null),
           h('div', { class: 'doc-actions' },
             STAFF && has ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => viewDoc(x.slot) }, '見る') : null,
-            h('button', { class: 'btn sm ' + (has ? 'ghost' : 'outline'), type: 'button', onclick: () => captureDoc(x.slot) }, has ? '撮り直す' : '撮影する')));
+            h('button', { class: 'btn sm ' + (has ? 'ghost' : 'outline'), type: 'button', disabled: pend, onclick: () => captureDoc(x.slot) }, pend ? '読み取り中' : has ? '撮り直す' : '撮影する')));
       }));
   });
   const el = h('section', { class: 'sec docs', id: 'docs-panel' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
@@ -924,6 +1014,7 @@ function renderDocsPanel() {
       h('div', { class: 'tip' }, ill(TIP_ILL.light, 'tip-ill'), h('span', {}, '明るい場所で')),
       h('div', { class: 'tip' }, ill(TIP_ILL.focus, 'tip-ill'), h('span', {}, 'ピントを合わせる'))),
     ...groups,
+    cardDocGroup(),
     STAFF && Object.keys(docsOf(d)).length ? h('button', { class: 'btn danger sm', type: 'button', onclick: purgeDocs }, '書類の写真をすべて削除（ITA提出後に）') : null));
   return el;
 }
@@ -969,6 +1060,21 @@ function syncSecret(k, except) {
   document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
 }
 
+/* ---------- 裏で読み取り（読み取り中も、ほかの項目を入力できる） ---------- */
+const bgTasks = new Set();
+const pendingSlots = new Set();
+let cardPending = false, bgPill = null;
+const userEditAt = {};  // 手で直した時刻（読み取り中に手で入れた値は、あとから上書きしない）
+function bgStart(msg) {
+  const t = { msg }; bgTasks.add(t); paintBg();
+  return () => { bgTasks.delete(t); paintBg(); };
+}
+function paintBg() {
+  if (!bgTasks.size) { if (bgPill) { bgPill.remove(); bgPill = null; } return; }
+  if (!bgPill) { bgPill = h('div', { class: 'bg-pill', role: 'status' }); document.body.append(bgPill); }
+  bgPill.replaceChildren(h('span', { class: 'spinner' }), h('span', {}, [...bgTasks].map(t => t.msg).join('・') + '…（このまま他の項目を入力できます）'));
+}
+
 /* ---------- カード：写真から読み取り（写真も番号もツールには保存しない） ---------- */
 function cardScanBtn() {
   return h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('credit_card') }, icon('card2'), 'カードを撮影して自動入力');
@@ -981,7 +1087,9 @@ function cardEntry(title) {
     ...SECRET_FIELDS.filter(f => f.k.startsWith('card_')).map(secretInput));
 }
 async function scanCard(file) {
-  const done = busy('カードを読み取り中…');
+  const endBg = bgStart('カードを読み取り中'), since = Date.now();
+  cardPending = true; refreshDocs();
+  const done = () => { endBg(); cardPending = false; refreshDocs(); };
   try {
     const image = await toJpegBase64(file);
     const res = await callAI({ mode: 'card', image, mediaType: 'image/jpeg' });
@@ -989,14 +1097,12 @@ async function scanCard(file) {
     const c = (res && res.card) || {};
     if (c.number) secretVals.card_number = c.number;
     if (c.expiry) secretVals.card_expiry = c.expiry;
-    if (res && res.values && Object.keys(res.values).length) applyAI(res);
+    if (res && res.values && Object.keys(res.values).length) applyAI(res, {}, { since });
     syncSecret('card_number'); syncSecret('card_expiry');
     toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所で撮り直すか、手で入力してください。'
       : c.check === false ? '⚠ カード番号が正しくない可能性があります。カードと見比べて直してください。'
       : !c.expiry ? 'カード番号を入れました。有効期限は手で入力してください。'
       : 'カード番号と有効期限を入れました。カードと見比べて確認してください。', 6000);
-    const el = document.querySelector('[data-secret="card_number"]');
-    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
 }
 
@@ -1006,11 +1112,11 @@ async function lookupEmployer(auto = false) {
   const name = String(D().employer_name || '').trim();
   if (!name) { if (!auto) toast('先に勤務先の名前を入れてください。'); return; }
   employerLooked = name;
-  const done = busy('勤務先を調べています…（30秒ほどかかります）');
+  const done = bgStart('勤務先を調べています（30秒ほど）'), since = Date.now();
   try {
     const res = await callAI({ mode: 'company', name, area: String(D().address_ja || '').slice(0, 12), fields: fieldSpec(['employer_address', 'employer_website', 'industry']) });
     done();
-    applyAI(res, {}, { emptyMsg: '勤務先の情報が見つかりませんでした。正式な会社名で試すか、手で入力してください。' });
+    applyAI(res, {}, { since, emptyMsg: '勤務先の情報が見つかりませんでした。正式な会社名で試すか、手で入力してください。' });
   } catch (e) { done(); toast('調べられませんでした：' + e.message, 6000); }
 }
 // 名前があって住所もホームページも空なら、自動で1回だけ調べる
@@ -1086,7 +1192,7 @@ const SCRIPT = [
   { keys: ['bank_branch_no'], text: '支店番号は「3桁の番号」です。' },
   { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
   { keys: ['card_company'], text: 'カード会社は「〇〇」です。' },
-  { keys: ['fund_method', 'fund_amount'], text: 'お支払いに使うお金の金額は「〇〇万円くらい」です。' },
+  { keys: ['fund_method', 'fund_amount'], text: '積立に使うお金（お給料や貯金など）は「〇〇万円くらい」あります。' },
   { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
   { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P・EVO・FIP・PLS」を「〇年」、月「〇〇ドル」です。' },
   { keys: ['fund_choice'], text: 'ファンドは「〇〇」です。' },
