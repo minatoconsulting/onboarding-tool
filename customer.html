@@ -164,6 +164,7 @@ a.btn.ghost{color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
 .chip-btn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 12px;font-size:.84rem;cursor:pointer;min-height:34px}
 .chip-btn:active{background:var(--seal-soft);border-color:var(--seal)}
+.chip-btn.on{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
 .warn{margin:0;padding:10px 12px;border-radius:8px;background:#FDECEA;color:#8A2A1D;border:1px solid #F2B8AE;font-size:.88rem;display:grid;gap:4px}
 .warn p{margin:0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn{background:#3A1E1A;color:#F2B8AE;border-color:#6B3328}}
@@ -223,6 +224,11 @@ h1,h2,strong,.btn,.sec-title,.doc-title,.tb-title,.ptxt,.tip,.need-name,.flow-la
 .need-name{font-weight:700;font-size:.92rem}
 .need-tag{position:absolute;top:6px;right:6px;background:var(--accent);color:#3A2A00;font-family:var(--round);font-weight:800;font-size:.68rem;border-radius:999px;padding:2px 8px}
 .need-note{margin:0;font-size:.84rem;color:var(--muted);text-align:center}
+.need-more{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.need-more li{display:grid;gap:2px;background:var(--paper);border-radius:14px;padding:10px 12px;font-size:.84rem;color:var(--muted)}
+.need-more strong{color:var(--ink, inherit);font-size:.92rem}
+.cf-row.num-check .cf-val{font-size:1.12rem;font-weight:800;letter-spacing:.06em}
+.num-badge{display:inline-block;margin-left:6px;font-size:.7rem;font-weight:800;color:#7A4E00;background:#FFE9A8;border-radius:999px;padding:1px 8px;vertical-align:middle;white-space:nowrap}
 .flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:4px}
 .flow li{display:grid;justify-items:center;gap:4px}
 .flow-ill{width:52px;height:52px;border-radius:50%;background:var(--surface);display:grid;place-items:center;box-shadow:0 2px 10px rgba(46,125,107,.1);padding:10px}
@@ -237,8 +243,9 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .progress li.later .num{border-color:var(--coral);color:var(--coral);border-width:2px}
 .sec.secret{border:1px dashed var(--ai-line)}
 .card-entry{display:grid;gap:12px}
+.voice-intro{margin:0 0 4px;font-weight:700;line-height:1.6}
 .btn.line-btn{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
-.bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700}
+.bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700}
 .bg-pill .spinner{flex:none;width:18px;height:18px}
 .btn svg{width:20px;height:20px;flex:none}
 a.btn{text-decoration:none}
@@ -279,7 +286,7 @@ const SECTIONS = [
     F('birth_date', '生年月日', { type: 'date' }),
     F('birth_country', '生まれた国', { def: '日本' }),
     F('nationality', '国籍', { def: '日本' }),
-    F('pep', '政府や政治に関わる重要な役職の経験', { type: 'select', opts: ['いいえ', 'はい'], hint: 'ご本人やご家族が、政治家・官僚の幹部・国営企業の役員などの経験がある場合は「はい」' }),
+    F('pep', '政府や政治に関わる重要な役職の経験', { type: 'select', opts: ['いいえ', 'はい'], def: 'いいえ', hint: 'ご本人やご家族が、政治家・官僚の幹部・国営企業の役員などの経験がある場合は「はい」' }),
   ]},
   { id: 'idcard', title: '本人確認書類', fields: [
     F('id_type', '書類の種類', { type: 'select', opts: ID_TYPES, def: '運転免許証' }),
@@ -335,7 +342,7 @@ const SECTIONS = [
     F('ben_percent', '受け取る割合（%）', { type: 'number', def: '100' }),
   ]},
   { id: 'tax', title: '税金について', fields: [
-    F('us_status', 'アメリカとの関係', { type: 'select', opts: ['米国市民・米国居住者ではない', '米国市民・米国居住者である', '米国生まれだが市民権を放棄した'], hint: 'アメリカ国籍やグリーンカードがなければ「ではない」' }),
+    F('us_status', 'アメリカとの関係', { type: 'select', opts: ['米国市民・米国居住者ではない', '米国市民・米国居住者である', '米国生まれだが市民権を放棄した'], def: '米国市民・米国居住者ではない', hint: 'アメリカ国籍やグリーンカードがなければ「ではない」' }),
     F('tax_country', '税金を納めている国', { def: '日本' }),
   ]},
   { id: 'contract', title: 'ご契約内容（担当者と決めた内容）', fields: [
@@ -351,15 +358,16 @@ const SECTIONS = [
     F('card_company', 'カード会社', { hint: '例：楽天カード' }),
   ]},
   { id: 'funds', title: '資金について', fields: [
-    F('bank_name', 'お支払いに使う銀行', { hint: '例：三菱UFJ銀行' }),
+    F('bank_name', 'メインで使っている銀行', { hint: '例：三菱UFJ銀行' }),
     F('bank_branch', '支店名'),
     F('bank_branch_no', '支店番号', { type: 'tel', hint: '3桁の番号' }),
-    F('bank_open_date', '口座を作った日（だいたいでOK）', { type: 'date' }),
+    F('bank_open_date', '入力した銀行口座を作った日（だいたいでOK）', { type: 'date', def: (new Date().getFullYear() - 5) + '-04-01', hint: '例：2015年4月1日。はっきり分からなければ、だいたいの年の4月1日でOK' }),
     F('fund_method', '積立のお金は、どこから払いますか？', { hint: '毎月の積立に使うお金の元（もと）を選んでください。例：お給料から払う → 給与、貯金から払う → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
     F('fund_currency', '通貨', { def: 'JPY' }),
-    F('fund_amount', 'そのお金のおおよその金額（円）', { type: 'number', hint: '例：貯金500万円から払うなら 5000000。お給料から払うなら年収と同じでOK' }),
-    F('fund_detail', 'くわしい説明（任意）', { type: 'textarea' }),
-    F('purpose', '投資の目的', { hint: '例：老後資金、教育資金', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
+    F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50000' }),
+    F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600000）' }),
+    F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1000000' }),
+    F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ（複数選べます。もう一度タップで解除）', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
 ];
 const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
@@ -480,7 +488,10 @@ function viewWelcome() {
     h('section', { class: 'need' },
       h('div', { class: 'need-head' }, h('h2', {}, 'ご用意いただくもの'), h('span', { class: 'badge2' }, 'このうち2つ')),
       h('div', { class: 'need-grid' }, card('passport', 'あれば必ず'), card('license'), card('mynumber'), card('juminhyo')),
-      h('p', { class: 'need-note' }, '免許証・マイナンバーカードは表と裏を撮ります')),
+      h('p', { class: 'need-note' }, '免許証・マイナンバーカードは表と裏を撮ります'),
+      h('ul', { class: 'need-more' },
+        h('li', {}, h('strong', {}, '💳 お支払いに使うカード'), h('span', {}, '番号の面を撮影します')),
+        h('li', {}, h('strong', {}, '👤 受取人（受益者）の情報'), h('span', {}, '氏名・ふりがな・生年月日・続柄。受取人の免許証があれば撮影で入ります。決まっていなければ、あとで入力もできます')))),
     h('ol', { class: 'flow', 'aria-label': '流れ' },
       h('li', {}, ill(FLOW_ILL.shot, 'flow-ill'), h('span', { class: 'flow-label' }, '撮る')),
       h('li', { class: 'arrow', 'aria-hidden': 'true' }, '›'),
@@ -493,7 +504,7 @@ function viewWelcome() {
         h('li', {}, 'お申込み手続き（Investors Trust）のために、担当者が利用します。'),
         h('li', {}, '書類の写真は担当者だけが見られる場所に保存し、手続き後に削除します。'),
         h('li', {}, '書類と話した内容の整理にはAnthropic社のClaude、録音の文字起こしにはOpenAIの音声認識を使います。'),
-        h('li', {}, 'カード番号・口座番号・マイナンバーは音声で話さないでください。カードは撮影して読み取れます（写真は保存しません）。番号はツールに保存せず、送信の時にスプレッドシートへ直接送ります。'),
+        h('li', {}, 'カード番号・マイナンバーは音声で話さないでください（口座番号は話してOK）。カードは撮影して読み取れます（写真は保存しません）。番号はツールに保存せず、送信の時にスプレッドシートへ直接送ります。'),
         h('li', {}, 'サポート料のお支払いは、Stripe社の決済画面で行います。'),
         h('li', {}, 'このリンクはあなた専用です。'))),
     h('label', { class: 'check', for: 'agree' }, agree, '個人情報の取り扱いに同意します'),
@@ -511,14 +522,16 @@ const HIDE = new Set(['first_romaji', 'last_romaji', 'prefecture', 'city', 'addr
   'ben_first_romaji', 'ben_last_romaji', 'birth_country', 'nationality', 'ben_birth_country', 'ben_nationality',
   'id_country', 'ben_id_country', 'phone_cc', 'income_currency', 'fund_currency', 'tax_country']);
 const MANUAL_GROUPS = [
-  { title: '数字・連絡先を手入力', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number', 'bank_branch_no', 'employer_website'] },
+  { title: '数字・連絡先を手入力', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number', 'employer_website'] },
   { title: '選択肢をタップ', note: '当てはまるものを選んでください。分からない項目は空欄で進められます。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type'] },
   { title: '日付を確認して入力', note: '書類を見ながら確認してください。分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
 ];
 // 受取人は手入力の欄、ご契約内容は担当者が先に入れるので、どちらも音声では聞かない
 const BEN_KEYS = SECTIONS.find(s => s.id === 'beneficiary').fields.map(f => f.k);
 const CONTRACT_KEYS = ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name', 'staff_name'];
-const MANUAL_KEYS = new Set(['email', 'phone_type', 'phone_area', 'phone_local', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
+// 最初から値が入っているが、確認してもらうために手入力の欄に出し続ける項目
+const ALWAYS_SHOW = new Set(['bank_open_date']);
+const MANUAL_KEYS = new Set(['email', 'phone_type', 'fund_annual', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
 const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
 const visibleFields = sec => sec.fields.filter(f => !HIDE.has(f.k));
 const STEPS = ['書類を撮る', '話して入力', '確認', '送信'];
@@ -583,6 +596,7 @@ function renderStep() {
       if (phone && phone.value && !phone.checkValidity()) { toast('携帯番号は090などから始まる11桁で入力してください。'); phone.focus(); return; }
       go(3);
     };
+    setTimeout(maybeLookupEmployer, 400);
     body = [h('p', { class: 'lead' }, '🎤 話しやすい項目は音声で、数字や選択肢は下で入力します。'),
       rest.length
         ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
@@ -598,8 +612,19 @@ function renderStep() {
       h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')];
   } else if (step === 3) {
     body = [h('p', { class: 'lead' }, '👀 違うところだけ「直す」で修正してください。'),
+      h('p', { class: 'note' }, '🔢 特に電話番号・郵便番号・支店番号などの数字は、1文字ずつ確認してください（「数字を確認」の印が付いています）。'),
       expiryWarn(), ...SECTIONS.map(confirmCard)];
     setTimeout(maybeLookupEmployer, 400);
+    if (editing) {
+      const id = editing;
+      nextLabel = '直し終わった（確認を続ける）';
+      nextFn = () => {
+        const sec = SECTIONS.find(s => s.id === id);
+        if (sec) visibleFields(sec).forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); });
+        editing = null; renderStep();
+        const el = document.getElementById('cf-' + id); if (el) el.scrollIntoView({ block: 'start' });
+      };
+    }
   } else {
     const vis = SECTIONS.flatMap(visibleFields);
     const empty = vis.filter(f => !String(data[f.k] ?? '').trim()).length;
@@ -616,7 +641,7 @@ function renderStep() {
           h('button', { class: 'btn outline sm', type: 'button', onclick: () => go(1) }, '書類を撮影する')) : null,
         empty || unchecked ? h('p', { class: 'muted small', style: 'margin:0' }, '空欄があっても送信できます。担当者が確認します。') : null,
         h('label', { class: 'check', for: 'agree2' }, agree, '内容に間違いがないことを確認しました')))];
-    body.splice(1, 0, secretCard('🔒 カード番号・マイナンバー・口座番号'));
+    body.splice(1, 0, secretCard('🔒 カード番号・マイナンバー'));
     nextLabel = '送信する'; nextFn = submit; canNext = false;
     agree.addEventListener('change', () => { nextBtn.disabled = !agree.checked || !st.ok; });
   }
@@ -640,7 +665,7 @@ function emailEntry() {
 function phoneEntry() {
   const typeField = renderField(FIELD_MAP.phone_type);
   inputs.phone_type.input.addEventListener('change', refreshStep);
-  const body = [h('strong', {}, '電話番号は手入力'), typeField];
+  const body = [h('strong', {}, '電話番号'), h('p', { class: 'muted small', style: 'margin:0' }, '「話して入力」で読み上げれば自動で入ります。ここに手で入力してもOKです。'), typeField];
   if (data.phone_type === '携帯') {
     const input = h('input', { id: 'customer-phone', type: 'tel', inputmode: 'numeric', autocomplete: 'tel', pattern: '0[789]0[0-9]{8}', placeholder: '09012345678' });
     if (data.phone_area && data.phone_local) input.value = '0' + String(data.phone_area).replace(/^0/, '') + data.phone_local;
@@ -669,11 +694,18 @@ function beneficiaryEntry() {
 }
 function manualEntry(group) {
   const hasBeneficiary = !!String(data.ben_name_ja || '').trim() || !!docsOf(data).ben_license;
-  const fields = group.keys.filter(k => FIELD_MAP[k] && !String(data[k] ?? '').trim() && (hasBeneficiary || !k.startsWith('ben_')));
+  const fields = group.keys.filter(k => FIELD_MAP[k] && (ALWAYS_SHOW.has(k) || !String(data[k] ?? '').trim()) && (hasBeneficiary || !k.startsWith('ben_')));
   if (!fields.length) return null;
   return h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, group.title), h('p', { class: 'muted small', style: 'margin:0' }, group.note),
     ...fields.map(k => renderField(FIELD_MAP[k]))));
+}
+// 確認画面で「数字を確認」の印を付ける項目
+const NUM_CHECK = new Set(['phone_area', 'postal_code', 'id_number', 'bank_branch_no', 'ben_id_number']);
+function phoneText() {
+  const a = String(data.phone_area || '').replace(/^0/, ''), l = String(data.phone_local || '');
+  if (!a && !l) return '';
+  return '0' + a + '-' + (l.length === 8 ? l.slice(0, 4) + '-' + l.slice(4) : l);
 }
 function confirmCard(sec) {
   const vis = visibleFields(sec), isEdit = editing === sec.id;
@@ -691,14 +723,19 @@ function confirmCard(sec) {
     if (sec.id === 'beneficiary') { body.append(sameSurnameBtn()); body.append(h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力')); }
     vis.forEach(f => { body.append(renderField(f)); paint(f.k); });
     if (sec.id === 'payment') body.append(cardEntry());
+    if (sec.id === 'funds') body.append(accountEntry());
     return h('section', { class: 'sec cf editing', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px;padding-bottom:6px' }, head), body);
   }
   return h('section', { class: 'sec cf', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px' }, head,
-    ...vis.map(f => { const v = String(data[f.k] ?? '').trim();
-      return h('div', { class: 'cf-row' + (aiKeys.has(f.k) ? ' ai' : '') }, h('span', { class: 'cf-label' }, f.label), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力')); }),
+    ...vis.filter(f => f.k !== 'phone_local').map(f => {
+      let v = String(data[f.k] ?? '').trim(), label = f.label;
+      if (f.k === 'phone_area') { label = '電話番号'; v = phoneText(); }
+      const num = NUM_CHECK.has(f.k), ai = aiKeys.has(f.k) || (f.k === 'phone_area' && aiKeys.has('phone_local'));
+      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '数字を確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力')); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
     sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
-    sec.id === 'payment' ? cardEntry() : null));
+    sec.id === 'payment' ? cardEntry() : null,
+    sec.id === 'funds' ? accountEntry() : null));
 }
 function renderSection(sec, idx) {
   const count = h('span', { class: 'count' });
@@ -719,7 +756,15 @@ function renderField(f) {
   else if (f.type === 'textarea') input = h('textarea', { id, rows: '3' });
   else input = h('input', { id, type: f.type === 'number' ? 'text' : f.type, inputmode: f.type === 'number' ? 'decimal' : (f.type === 'tel' ? 'numeric' : null), autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
   input.value = data[f.k] ?? '';
-  const chips = f.chips ? h('div', { class: 'chips' }, ...f.chips.map(c => h('button', { class: 'chip-btn', type: 'button', onclick: () => { input.value = c; input.dispatchEvent(new Event(f.type === 'select' ? 'change' : 'input')); } }, c))) : null;
+  // multi の項目は、タップするたびに追加・解除（例：老後資金、資産形成）
+  const chipList = () => String(input.value).split(/[、,，]\s*/).map(x => x.trim()).filter(Boolean);
+  const chips = f.chips ? h('div', { class: 'chips' }, ...f.chips.map(c => h('button', { class: 'chip-btn', type: 'button', onclick: () => {
+    if (f.multi) { const list = chipList(), i = list.indexOf(c); i >= 0 ? list.splice(i, 1) : list.push(c); input.value = list.join('、'); }
+    else input.value = c;
+    input.dispatchEvent(new Event(f.type === 'select' ? 'change' : 'input'));
+  } }, c))) : null;
+  const paintChips = () => { if (!chips || !f.multi) return; const list = chipList(); chips.querySelectorAll('.chip-btn').forEach(b => { const on = list.includes(b.textContent); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); };
+  input.addEventListener('input', paintChips); paintChips();
   const ok = h('button', { class: 'ok-btn', type: 'button' }, '確認OK');
   ok.addEventListener('click', () => { aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); });
   const wrap = h('div', { class: 'field' }, h('div', { class: 'field-top' }, h('label', { for: id }, f.label), ok), input, chips, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
@@ -728,6 +773,7 @@ function renderField(f) {
     data[f.k] = input.value; dirty.add(f.k); aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); updateCounts(); scheduleSave();
   });
   if (f.k === 'ben_name_kana') input.addEventListener('change', fillBenRomaji);
+  if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
   if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
   inputs[f.k] = { input, wrap, ok };
   return wrap;
@@ -850,6 +896,7 @@ function applyAI(res, preset = {}, opts = {}) {
     if (f.type === 'number') v = v.replace(/[,，円\s]/g, '');
     setField(k, v, true, guess.has(k)); n++; first = first || k;
   }
+  if ('fund_amount' in vals) syncFundAnnual();
   updateCounts(); scheduleSave(300);
   if (!n) { toast(opts.emptyMsg || '読み取れる項目がありませんでした。明るい場所でもう一度お試しください。', 5000); refreshStep(); return; }
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
@@ -911,7 +958,7 @@ const DOC_SLOTS = [
   { slot: 'license_front', doc: 'license', label: '表', ai: 'license' },
   { slot: 'license_back', doc: 'license', label: '裏', ai: 'license_back' },
   { slot: 'mynumber_front', doc: 'mynumber', label: '表', ai: 'mynumber' },
-  { slot: 'mynumber_back', doc: 'mynumber', label: '裏', ai: null, note: '担当者だけが確認します' },
+  { slot: 'mynumber_back', doc: 'mynumber', label: '裏', ai: null, secret: 'mynumber', note: '個人番号を自動で読み取ります（番号はツールに保存しません）' },
   { slot: 'juminhyo', doc: 'juminhyo', label: '全体', ai: 'juminhyo', note: 'マイナンバーの記載がないもの' },
 ];
 DOCS.passport = { label: 'パスポートの顔写真ページ（申込者）', set: { id_type: 'パスポート' },
@@ -942,7 +989,7 @@ function docPlan(docKey, d) {
 function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; fileInput.click(); }
 async function handleDocFile(slot, file) {
   const s = DOC_SLOTS.find(x => x.slot === slot); if (!s) return;
-  const endBg = bgStart(DOC_TYPES[s.doc] + (s.doc === 'passport' || s.doc === 'juminhyo' ? '' : '（' + s.label + '）') + 'を' + (s.ai ? '読み取り中' : '保存中'));
+  const endBg = bgStart(DOC_TYPES[s.doc] + (s.doc === 'passport' || s.doc === 'juminhyo' ? '' : '（' + s.label + '）') + 'を' + (s.ai || s.secret ? '読み取り中' : '保存中'));
   const since = Date.now(); pendingSlots.add(slot); refreshDocs();
   const done = () => { endBg(); pendingSlots.delete(slot); refreshDocs(); };
   try {
@@ -959,6 +1006,16 @@ async function handleDocFile(slot, file) {
     const storeBody = { mode: 'store', slot, image };
     if (STAFF) storeBody.customer_id = state.id;
     await callAI(storeBody);
+    let secretMsg = '';
+    if (s.secret === 'mynumber') {
+      try {
+        const r = await callAI({ mode: 'mynumber', image, mediaType: 'image/jpeg' });
+        if (r && r.number) {
+          secretVals.mynumber = r.number; syncSecret('mynumber');
+          secretMsg = r.check === false ? '⚠ 個人番号が正しくない可能性があります。送信前の画面でカードと見比べてください。' : '個人番号を読み取りました ✓ 送信前の画面で確認してください。';
+        } else secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。';
+      } catch { secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。'; }
+    }
     done();
     const d = D(); d._docs = { ...docsOf(d), [slot]: new Date().toISOString() };
     refreshDocs();
@@ -968,7 +1025,7 @@ async function handleDocFile(slot, file) {
         : '写真を保存しました ✓（自動で入る項目はありませんでした）' });
     }
     else if (readError) toast('写真は保存しました。文字の読み取りはできなかったので、手で入力してください。', 5000);
-    else toast('写真を保存しました。');
+    else toast(secretMsg || '写真を保存しました。', secretMsg ? 6000 : 3500);
   } catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
 }
 let docsPanelEl = null;
@@ -1045,8 +1102,12 @@ function secretCard(title) {
   return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, title),
     h('p', { class: 'small muted', style: 'margin:0' }, 'ここに入れた番号はツールには保存されず、送信の時にスプレッドシートへ直接送られます。画面を閉じると消えるので、送信の直前に入力してください。'),
-    cardScanBtn(),
-    ...SECRET_FIELDS.map(secretInput)));
+    ...SECRET_FIELDS.filter(f => f.k !== 'account_number').map(secretInput)));
+}
+// 口座番号は銀行の情報と一緒に（ツールには保存しない）
+function accountEntry() {
+  const f = SECRET_FIELDS.find(x => x.k === 'account_number');
+  return secretInput({ ...f, label: '口座番号（7桁）', hint: 'ツールには保存せず、送信の時にスプレッドシートへ直接送ります。「話して入力」で読み上げても入ります' });
 }
 // 同じ番号の欄が画面に2つある時も、片方に入れたらもう片方にも入るようにする
 function secretInput(f) {
@@ -1058,6 +1119,26 @@ function secretInput(f) {
 }
 function syncSecret(k, except) {
   document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
+}
+
+/* ---------- 口座番号は音声でもOK（ツールには保存せず、送信の時にスプレッドシートへ直接） ---------- */
+const ACCOUNT_SPEC = { k: 'account_number', label: '口座番号（普通預金の7桁の数字）' };
+const VOICE_AVAIL = [...VOICE_KEYS, 'account_number'];
+const voiceValues = () => ({ ...D(), account_number: secretVals.account_number || '' });
+// 音声の結果から口座番号だけ取り出して、番号の欄（保存しない）へ
+function takeAccountFromVoice(res) {
+  const vals = (res && res.values) || {};
+  const n = String(vals.account_number || '').replace(/\D/g, '');
+  delete vals.account_number;
+  if (!n) return false;
+  secretVals.account_number = n; syncSecret('account_number');
+  return true;
+}
+// 積立に使えるお金：月の金額から年間を自動で出す
+function syncFundAnnual() {
+  const m = Number(String(D().fund_amount || '').replace(/[^\d.]/g, ''));
+  const v = m > 0 ? String(Math.round(m * 12)) : '';
+  if (String(D().fund_annual || '') !== v) setField('fund_annual', v);
 }
 
 /* ---------- 裏で読み取り（読み取り中も、ほかの項目を入力できる） ---------- */
@@ -1169,7 +1250,7 @@ const PHOTO_CHECK = { k: 'photo_problem', label: '写真の問題点', hint: '�
 /* ---------- 読み上げ見本（まだ空いている項目だけ表示） ---------- */
 const SCRIPT = [
   { keys: ['name_ja'], text: 'お名前は「漢字のフルネーム」です。' },
-  { keys: ['name_kana'], text: 'お名前のふりがなは「やまだ はなこ」です。' },
+  { keys: ['name_kana'], text: '名前のふりがなは「やまだ はなこ」です。' },
   { keys: ['birth_date'], text: '生年月日は「〇年〇月〇日」です。' },
   { keys: ['gender'], text: '性別は「男性・女性」です。' },
   { keys: ['id_number'], text: '本人確認書類の番号は「〇〇」です。（書類を撮影した場合は不要）' },
@@ -1188,11 +1269,13 @@ const SCRIPT = [
   { keys: ['ben_name_kana'], text: '受取人のふりがなは「〇〇 〇〇」です。' },
   { keys: ['ben_birth_date', 'ben_gender', 'ben_percent'], text: '受取人の生年月日は「〇年〇月〇日」、性別は「男性・女性」、受け取る割合は「100」パーセントです。' },
   { keys: ['ben_id_number'], text: '受取人の運転免許証の番号は「12桁の番号」です。（受取人の免許証を撮影した場合は不要）' },
-  { keys: ['bank_name', 'bank_branch'], text: 'お支払いに使う銀行は「〇〇銀行」の「〇〇支店」です。' },
+  { keys: ['bank_name', 'bank_branch'], text: 'メインで使っている銀行は「〇〇銀行」の「〇〇支店」です。' },
   { keys: ['bank_branch_no'], text: '支店番号は「3桁の番号」です。' },
+  { keys: ['account_number'], text: '口座番号は「7桁の番号」です。' },
   { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
   { keys: ['card_company'], text: 'カード会社は「〇〇」です。' },
-  { keys: ['fund_method', 'fund_amount'], text: '積立に使うお金（お給料や貯金など）は「〇〇万円くらい」あります。' },
+  { keys: ['fund_method', 'fund_amount'], text: '積立に使えるお金は「月〇万円くらい」あります。' },
+  { keys: ['savings_amount'], text: '貯金は「〇〇万円くらい」あります。' },
   { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
   { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P・EVO・FIP・PLS」を「〇年」、月「〇〇ドル」です。' },
   { keys: ['fund_choice'], text: 'ファンドは「〇〇」です。' },
@@ -1213,7 +1296,7 @@ function docSummary(values) {
 const CHUNK = 7;
 const voiceSkipped = new Set();
 let voiceChunkNow = [];
-const remainingLines = () => scriptLines(D(), VOICE_KEYS).filter(t => !voiceSkipped.has(t));
+const remainingLines = () => scriptLines(voiceValues(), VOICE_AVAIL).filter(t => !voiceSkipped.has(t));
 function scriptBox(values, available, step = 1) {
   const all = scriptLines(values, available).filter(t => !voiceSkipped.has(t));
   const lines = all.slice(0, CHUNK);
@@ -1257,7 +1340,7 @@ function openVoice(step = 1) {
   if (typeof step !== 'number') step = 1;
   const format = recordingFormat();
   const canRecord = !!format && !!navigator.mediaDevices?.getUserMedia;
-  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：勤務先は〇〇株式会社で事務をしていて、年収は450万円くらいです。受取人は夫の山田太郎です。' });
+  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：勤務先は〇〇株式会社で事務をしていて、年収は450万円くらいです。メインで使っている銀行は〇〇銀行です。' });
   ta.value = voiceDraft; ta.addEventListener('input', () => { voiceDraft = ta.value; });
   const label = h('p', { class: 'mic-label' }, canRecord ? '押して録音を始める' : '音声入力または手入力');
   const status = h('p', { class: 'muted small', role: 'status' }, canRecord
@@ -1301,10 +1384,10 @@ function openVoice(step = 1) {
     stopVoice(); const t = ta.value.trim();
     if (!t) { status.textContent = '話した内容がまだありません。'; return; }
     close(); const done = busy('項目に入れています…');
-    try { const res = await callAI({ mode: 'voice', transcript: t, fields: fieldSpec(VOICE_KEYS) }); done(); voiceDraft = ''; applyAI(res); if (remainingLines().length) setTimeout(() => openVoice(step + 1), 700); }
+    try { const res = await callAI({ mode: 'voice', transcript: t, fields: [...fieldSpec(VOICE_KEYS), ACCOUNT_SPEC] }); done(); const gotAccount = takeAccountFromVoice(res); voiceDraft = ''; if (gotAccount && !Object.keys(res.values || {}).length) toast('口座番号を入れました。送信前の画面で確認してください。'); else applyAI(res); if (remainingLines().length) setTimeout(() => openVoice(step + 1), 700); }
     catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
   });
-  const skip = h('button', { class: 'btn ghost wide', type: 'button' }, 'この項目は飛ばす（わからない・当てはまらない）');
+  const skip = h('button', { class: 'btn outline wide', type: 'button' }, '⏭ この項目は飛ばす（わからない・当てはまらない）');
   skip.addEventListener('click', () => {
     voiceChunkNow.forEach(t => voiceSkipped.add(t));
     close();
@@ -1312,10 +1395,12 @@ function openVoice(step = 1) {
   });
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
-    scriptBox(D(), VOICE_KEYS, step),
+    h('p', { class: 'voice-intro' }, 'お申込みをスムーズに進めるため、音声で入力します。下の見本の「」の部分をご自身の内容に変えて、上から順に読み上げてください。'),
+    h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
+    scriptBox(voiceValues(), VOICE_AVAIL, step),
     mic, label, status, ta, send, skip,
     h('p', { class: 'muted small' }, '録音は文字起こしのためOpenAIへ送ります。表示された文字を確認してから項目に入力します。'),
-    h('p', { class: 'muted small' }, 'カード番号・マイナンバー・口座番号は話さないでください（話しても入力されません）。')));
+    h('p', { class: 'muted small' }, 'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
   if (!voiceChunkNow.length) skip.hidden = true;
