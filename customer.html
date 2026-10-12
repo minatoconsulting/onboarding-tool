@@ -224,6 +224,7 @@ h1,h2,strong,.btn,.sec-title,.doc-title,.tb-title,.ptxt,.tip,.need-name,.flow-la
 .need-name{font-weight:700;font-size:.92rem}
 .need-tag{position:absolute;top:6px;right:6px;background:var(--accent);color:#3A2A00;font-family:var(--round);font-weight:800;font-size:.68rem;border-radius:999px;padding:2px 8px}
 .need-note{margin:0;font-size:.84rem;color:var(--muted);text-align:center}
+.for-name{margin:0;display:inline-block;justify-self:center;background:var(--seal-soft);color:var(--seal);font-weight:800;border-radius:999px;padding:6px 16px;font-size:.92rem}
 .need-more{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .need-more li{display:grid;gap:2px;background:var(--paper);border-radius:14px;padding:10px 12px;font-size:.84rem;color:var(--muted)}
 .need-more strong{color:var(--ink, inherit);font-size:.92rem}
@@ -490,6 +491,7 @@ function viewWelcome() {
   const card = (doc, tag) => h('div', { class: 'need-card' }, tag ? h('span', { class: 'need-tag' }, tag) : null, ill(DOC_ILL[doc], 'need-ill'), h('span', { class: 'need-name' }, DOC_TYPES[doc]));
   app.replaceChildren(h('main', { class: 'hero welcome' },
     ill(HERO_ILL, 'hero-ill'),
+    data.invite_for ? h('p', { class: 'for-name' }, String(data.invite_for).trim() + ' 様用のお申込みページです') : null,
     h('h1', {}, 'お申込みは', h('br'), 'スマホでかんたん'),
     h('p', { class: 'sub' }, '書類を撮影し、残りを音声と手入力で進めます。所要時間は入力内容によって変わります。'),
     h('section', { class: 'need' },
