@@ -236,6 +236,9 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .progress li.later{color:var(--coral);font-weight:700}
 .progress li.later .num{border-color:var(--coral);color:var(--coral);border-width:2px}
 .sec.secret{border:1px dashed var(--ai-line)}
+.card-entry{display:grid;gap:12px}
+.btn svg{width:20px;height:20px;flex:none}
+a.btn{text-decoration:none}
 
 .kbd-guide{display:grid;gap:8px;padding:12px 14px;border-radius:12px;background:var(--seal-soft)}
 .kbd-guide strong{font-size:1rem}
@@ -255,6 +258,8 @@ const CONFIG = {
   SUPABASE_URL: 'https://axaxqgvvezvhffopggba.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YXhxZ3Z2ZXp2aGZmb3BnZ2JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1Nzc5MTgsImV4cCI6MjEwMDE1MzkxOH0.l4HVsYvcFV-WyD86hjrfSS7Pgc9qCqgUlMaZWZD9vCg',
   FUNCTION_NAME: 'onboarding-extract',
+  // サポート料（9,800円）の Stripe 支払いリンク。Stripeの管理画面で作った https://buy.stripe.com/... を貼る（空ならボタンを出さない）
+  STRIPE_PAYMENT_LINK: 'https://buy.stripe.com/6oUdR9gqI65t1oLb7t7EQ00',
 };
 
 const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
@@ -417,7 +422,7 @@ async function boot() {
   if (!TOKEN) return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
   if (error) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。');
-  if (st === 'used') return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true);
+  if (st === 'used') return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true, payBlock(true));
   if (st === 'expired') return viewMessage('リンクの期限が切れています', 'お手数ですが、担当者に新しいリンクをご依頼ください。');
   if (st !== 'ok') return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: saved } = await sb.rpc('onboarding_invite_get', { p_token: TOKEN });
@@ -428,9 +433,24 @@ async function boot() {
   if (prog.agreed) { viewForm(prog.step || 1); toast('前回の続きから再開しました。入力した内容は保存されています。', 4500); }
   else viewWelcome();
 }
-function viewMessage(title, body, ok = false) {
+function viewMessage(title, body, ok = false, extra = null) {
   app.replaceChildren(h('main', { class: 'hero center' },
-    ok ? ill(DONE_ILL, 'done-ill') : h('div', { class: 'big-icon', 'aria-hidden': 'true' }, '!'), h('h1', {}, title), h('p', { class: 'muted' }, body)));
+    ok ? ill(DONE_ILL, 'done-ill') : h('div', { class: 'big-icon', 'aria-hidden': 'true' }, '!'), h('h1', {}, title), h('p', { class: 'muted' }, body), extra));
+}
+// サポート料の支払い（Stripeの画面を開く。カード番号はStripeが受け取り、このツールには来ない）
+function payBlock(again = false) {
+  if (!CONFIG.STRIPE_PAYMENT_LINK) return null;
+  let href;
+  try {
+    const url = new URL(CONFIG.STRIPE_PAYMENT_LINK);
+    const email = String((data && data.email) || '').trim();
+    if (email) url.searchParams.set('prefilled_email', email);
+    href = url.toString();
+  } catch { return null; }
+  return h('section', { class: 'sec', style: 'text-align:left;width:100%;max-width:440px' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, '最後に、サポート料 9,800円のお支払い'),
+    h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
+    h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
 }
 function viewWelcome() {
   const agree = h('input', { type: 'checkbox', id: 'agree' });
@@ -458,7 +478,8 @@ function viewWelcome() {
         h('li', {}, 'お申込み手続き（Investors Trust）のために、担当者が利用します。'),
         h('li', {}, '書類の写真は担当者だけが見られる場所に保存し、手続き後に削除します。'),
         h('li', {}, '書類と話した内容の整理にはAnthropic社のClaude、録音の文字起こしにはOpenAIの音声認識を使います。'),
-        h('li', {}, 'カード番号・口座番号・マイナンバーは音声で話さないでください。必要な場合は送信直前の専用欄に入力し、スプレッドシートへ送ります。'),
+        h('li', {}, 'カード番号・口座番号・マイナンバーは音声で話さないでください。カードは撮影して読み取れます（写真は保存しません）。番号はツールに保存せず、送信の時にスプレッドシートへ直接送ります。'),
+        h('li', {}, 'サポート料のお支払いは、Stripe社の決済画面で行います。'),
         h('li', {}, 'このリンクはあなた専用です。'))),
     h('label', { class: 'check', for: 'agree' }, agree, '個人情報の取り扱いに同意します'),
     start));
@@ -540,11 +561,13 @@ function renderStep() {
         : h('p', { class: 'done-note' }, '✓ 読み上げは完了です！'),
       emailEntry(),
       phoneEntry(),
+      h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' }, cardEntry('お支払いに使うカード'))),
       ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
       h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')];
   } else if (step === 3) {
     body = [h('p', { class: 'lead' }, '👀 違うところだけ「直す」で修正してください。'),
       expiryWarn(), ...SECTIONS.map(confirmCard)];
+    setTimeout(maybeLookupEmployer, 400);
   } else {
     const vis = SECTIONS.flatMap(visibleFields);
     const empty = vis.filter(f => !String(data[f.k] ?? '').trim()).length;
@@ -626,11 +649,14 @@ function confirmCard(sec) {
     const body = h('div', { class: 'sec-body' });
     if (sec.id === 'beneficiary') { body.append(sameSurnameBtn()); body.append(h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力')); }
     vis.forEach(f => { body.append(renderField(f)); paint(f.k); });
+    if (sec.id === 'payment') body.append(cardEntry());
     return h('section', { class: 'sec cf editing', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px;padding-bottom:6px' }, head), body);
   }
   return h('section', { class: 'sec cf', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px' }, head,
     ...vis.map(f => { const v = String(data[f.k] ?? '').trim();
-      return h('div', { class: 'cf-row' + (aiKeys.has(f.k) ? ' ai' : '') }, h('span', { class: 'cf-label' }, f.label), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力')); })));
+      return h('div', { class: 'cf-row' + (aiKeys.has(f.k) ? ' ai' : '') }, h('span', { class: 'cf-label' }, f.label), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力')); }),
+    vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
+    sec.id === 'payment' ? cardEntry() : null));
 }
 function renderSection(sec, idx) {
   const count = h('span', { class: 'count' });
@@ -658,6 +684,7 @@ function renderField(f) {
   input.addEventListener(f.type === 'select' ? 'change' : 'input', () => {
     data[f.k] = input.value; dirty.add(f.k); aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); updateCounts(); scheduleSave();
   });
+  if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
   inputs[f.k] = { input, wrap, ok };
   return wrap;
 }
@@ -723,7 +750,7 @@ async function submit() {
   done();
   if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
   stopVoice();
-  viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true);
+  viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, payBlock());
 }
 
 /* ---------- AI ---------- */
@@ -757,6 +784,7 @@ function pickImage(doc) { fileInput.dataset.slot = ''; fileInput.dataset.doc = d
 fileInput.addEventListener('change', async () => {
   const f0 = fileInput.files && fileInput.files[0];
   if (fileInput.dataset.slot) { const slot = fileInput.dataset.slot; fileInput.dataset.slot = ''; fileInput.value = ''; if (f0) await handleDocFile(slot, f0); return; }
+  if (fileInput.dataset.doc === 'credit_card') { fileInput.value = ''; if (f0) await scanCard(f0); return; }
   const file = f0, doc = DOCS[fileInput.dataset.doc];
   if (!file || !doc) return;
   const done = busy('読み取り中…');
@@ -921,17 +949,77 @@ const SECRET_FIELDS = [
   { k: 'account_number', label: '口座番号', type: 'tel' },
 ];
 const secretVals = {};
+let secretSeq = 0;
 function secretCard(title) {
   return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, title),
     h('p', { class: 'small muted', style: 'margin:0' }, 'ここに入れた番号はツールには保存されず、送信の時にスプレッドシートへ直接送られます。画面を閉じると消えるので、送信の直前に入力してください。'),
-    ...SECRET_FIELDS.map(f => {
-      const id = 's-' + f.k;
-      const inp = h('input', { id, type: 'text', inputmode: f.type === 'tel' ? 'numeric' : null, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
-      inp.value = secretVals[f.k] || '';
-      inp.addEventListener('input', () => { secretVals[f.k] = inp.value; });
-      return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
-    })));
+    cardScanBtn(),
+    ...SECRET_FIELDS.map(secretInput)));
+}
+// 同じ番号の欄が画面に2つある時も、片方に入れたらもう片方にも入るようにする
+function secretInput(f) {
+  const id = 's-' + f.k + '-' + (++secretSeq);
+  const inp = h('input', { id, type: 'text', inputmode: f.type === 'tel' ? 'numeric' : null, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'data-secret': f.k });
+  inp.value = secretVals[f.k] || '';
+  inp.addEventListener('input', () => { secretVals[f.k] = inp.value; syncSecret(f.k, inp); });
+  return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+}
+function syncSecret(k, except) {
+  document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
+}
+
+/* ---------- カード：写真から読み取り（写真も番号もツールには保存しない） ---------- */
+function cardScanBtn() {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('credit_card') }, icon('card2'), 'カードを撮影して自動入力');
+}
+function cardEntry(title) {
+  return h('div', { class: 'card-entry' },
+    title ? h('strong', {}, title) : null,
+    cardScanBtn(),
+    h('p', { class: 'small muted', style: 'margin:0' }, '写真は保存しません。カード番号と有効期限はツールに保存されず、送信の時にスプレッドシートへ直接送られます。'),
+    ...SECRET_FIELDS.filter(f => f.k.startsWith('card_')).map(secretInput));
+}
+async function scanCard(file) {
+  const done = busy('カードを読み取り中…');
+  try {
+    const image = await toJpegBase64(file);
+    const res = await callAI({ mode: 'card', image, mediaType: 'image/jpeg' });
+    done();
+    const c = (res && res.card) || {};
+    if (c.number) secretVals.card_number = c.number;
+    if (c.expiry) secretVals.card_expiry = c.expiry;
+    if (res && res.values && Object.keys(res.values).length) applyAI(res);
+    syncSecret('card_number'); syncSecret('card_expiry');
+    toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所で撮り直すか、手で入力してください。'
+      : c.check === false ? '⚠ カード番号が正しくない可能性があります。カードと見比べて直してください。'
+      : !c.expiry ? 'カード番号を入れました。有効期限は手で入力してください。'
+      : 'カード番号と有効期限を入れました。カードと見比べて確認してください。', 6000);
+    const el = document.querySelector('[data-secret="card_number"]');
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
+}
+
+/* ---------- 勤務先：会社名から本社の住所・ホームページをネットで調べる ---------- */
+let employerLooked = '';
+async function lookupEmployer(auto = false) {
+  const name = String(D().employer_name || '').trim();
+  if (!name) { if (!auto) toast('先に勤務先の名前を入れてください。'); return; }
+  employerLooked = name;
+  const done = busy('勤務先を調べています…（30秒ほどかかります）');
+  try {
+    const res = await callAI({ mode: 'company', name, area: String(D().address_ja || '').slice(0, 12), fields: fieldSpec(['employer_address', 'employer_website', 'industry']) });
+    done();
+    applyAI(res, {}, { emptyMsg: '勤務先の情報が見つかりませんでした。正式な会社名で試すか、手で入力してください。' });
+  } catch (e) { done(); toast('調べられませんでした：' + e.message, 6000); }
+}
+// 名前があって住所もホームページも空なら、自動で1回だけ調べる
+function maybeLookupEmployer() {
+  const d = D(), name = String(d.employer_name || '').trim();
+  if (name && name !== employerLooked && !String(d.employer_address || '').trim() && !String(d.employer_website || '').trim()) lookupEmployer(true);
+}
+function employerLookupBtn() {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => lookupEmployer() }, '🔍 会社名から本社の住所・ホームページを調べる');
 }
 
 /* ---------- 便利機能：有効期限チェック・名字コピー・写真の撮り直し ---------- */

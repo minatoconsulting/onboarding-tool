@@ -162,6 +162,9 @@ a.btn.ghost{color:var(--muted)}
 .tip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;background:var(--paper);font-size:.78rem;font-weight:700;text-align:center}
 .tip-ill{width:34px;height:34px;display:inline-flex}
 .sec.secret{border:1px dashed var(--ai-line)}
+.card-entry{display:grid;gap:12px}
+.btn svg{width:20px;height:20px;flex:none}
+a.btn{text-decoration:none}
 
 .kbd-guide{display:grid;gap:8px;padding:12px 14px;border-radius:12px;background:var(--seal-soft)}
 .kbd-guide strong{font-size:1rem}
@@ -288,7 +291,7 @@ const SECTIONS = [
     F('fund_detail', '詳しい説明', { type: 'textarea' }),
     F('purpose', '投資の目的', { hint: '例：老後資金、教育資金', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
-  { id: 'payment', title: '支払方法（カード）', note: 'カード番号・有効期限は、下の「スプレッドシートに送る」欄で入力します（ツールには保存しません）。', fields: [
+  { id: 'payment', title: '支払方法（カード）', note: 'カードを撮影すると、カード番号・有効期限・ブランドが自動で入ります（写真と番号はツールには保存しません）。', fields: [
     F('pay_method', '支払方法', { type: 'select', opts: ['クレジットカード', '銀行送金'], def: 'クレジットカード' }),
     F('card_kind', '使用カード', { type: 'select', opts: ['クレジット', 'デビット'] }),
     F('card_brand', 'カード種類', { type: 'select', opts: ['VISA', 'MASTER', 'JCB', 'AMEX', 'DINERS'] }),
@@ -492,6 +495,7 @@ function renderSection(sec, idx) {
   if (sec.id === 'beneficiary') body.append(sameSurnameBtn());
   if (sec.id === 'idcard') { const w = expiryWarn(); if (w) body.append(w); }
   for (const f of sec.fields) body.append(renderField(f));
+  if (sec.id === 'payment') body.append(cardEntry());
   const el = h('section', { class: 'sec' }, head, body);
   counters.push({ sec, el, count });
   return el;
@@ -513,6 +517,7 @@ function renderField(f) {
     state.data[f.k] = input.value; dirty.add(f.k);
     clearAI(f.k); afterChange(f.k); scheduleSave();
   });
+  if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
   inputs[f.k] = { input, wrap, ok };
   paintAI(f.k);
   return wrap;
@@ -701,6 +706,7 @@ function pickImage(doc) {
 fileInput.addEventListener('change', async () => {
   const f0 = fileInput.files && fileInput.files[0];
   if (fileInput.dataset.slot) { const slot = fileInput.dataset.slot; fileInput.dataset.slot = ''; fileInput.value = ''; if (f0) await handleDocFile(slot, f0); return; }
+  if (fileInput.dataset.doc === 'credit_card') { fileInput.value = ''; if (f0) await scanCard(f0); return; }
   const file = f0;
   const doc = DOCS[fileInput.dataset.doc];
   if (!file || !doc || !state) return;
@@ -872,17 +878,77 @@ const SECRET_FIELDS = [
   { k: 'account_number', label: '口座番号', type: 'tel' },
 ];
 const secretVals = {};
+let secretSeq = 0;
 function secretCard(title) {
   return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, title),
     h('p', { class: 'small muted', style: 'margin:0' }, 'ここに入れた番号はツールには保存されず、送信の時にスプレッドシートへ直接送られます。画面を閉じると消えるので、送信の直前に入力してください。'),
-    ...SECRET_FIELDS.map(f => {
-      const id = 's-' + f.k;
-      const inp = h('input', { id, type: 'text', inputmode: f.type === 'tel' ? 'numeric' : null, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
-      inp.value = secretVals[f.k] || '';
-      inp.addEventListener('input', () => { secretVals[f.k] = inp.value; });
-      return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
-    })));
+    cardScanBtn(),
+    ...SECRET_FIELDS.map(secretInput)));
+}
+// 同じ番号の欄が画面に2つある時も、片方に入れたらもう片方にも入るようにする
+function secretInput(f) {
+  const id = 's-' + f.k + '-' + (++secretSeq);
+  const inp = h('input', { id, type: 'text', inputmode: f.type === 'tel' ? 'numeric' : null, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'data-secret': f.k });
+  inp.value = secretVals[f.k] || '';
+  inp.addEventListener('input', () => { secretVals[f.k] = inp.value; syncSecret(f.k, inp); });
+  return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+}
+function syncSecret(k, except) {
+  document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
+}
+
+/* ---------- カード：写真から読み取り（写真も番号もツールには保存しない） ---------- */
+function cardScanBtn() {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('credit_card') }, icon('card2'), 'カードを撮影して自動入力');
+}
+function cardEntry(title) {
+  return h('div', { class: 'card-entry' },
+    title ? h('strong', {}, title) : null,
+    cardScanBtn(),
+    h('p', { class: 'small muted', style: 'margin:0' }, '写真は保存しません。カード番号と有効期限はツールに保存されず、送信の時にスプレッドシートへ直接送られます。'),
+    ...SECRET_FIELDS.filter(f => f.k.startsWith('card_')).map(secretInput));
+}
+async function scanCard(file) {
+  const done = busy('カードを読み取り中…');
+  try {
+    const image = await toJpegBase64(file);
+    const res = await callAI({ mode: 'card', image, mediaType: 'image/jpeg' });
+    done();
+    const c = (res && res.card) || {};
+    if (c.number) secretVals.card_number = c.number;
+    if (c.expiry) secretVals.card_expiry = c.expiry;
+    if (res && res.values && Object.keys(res.values).length) applyAI(res);
+    syncSecret('card_number'); syncSecret('card_expiry');
+    toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所で撮り直すか、手で入力してください。'
+      : c.check === false ? '⚠ カード番号が正しくない可能性があります。カードと見比べて直してください。'
+      : !c.expiry ? 'カード番号を入れました。有効期限は手で入力してください。'
+      : 'カード番号と有効期限を入れました。カードと見比べて確認してください。', 6000);
+    const el = document.querySelector('[data-secret="card_number"]');
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
+}
+
+/* ---------- 勤務先：会社名から本社の住所・ホームページをネットで調べる ---------- */
+let employerLooked = '';
+async function lookupEmployer(auto = false) {
+  const name = String(D().employer_name || '').trim();
+  if (!name) { if (!auto) toast('先に勤務先の名前を入れてください。'); return; }
+  employerLooked = name;
+  const done = busy('勤務先を調べています…（30秒ほどかかります）');
+  try {
+    const res = await callAI({ mode: 'company', name, area: String(D().address_ja || '').slice(0, 12), fields: fieldSpec(['employer_address', 'employer_website', 'industry']) });
+    done();
+    applyAI(res, {}, { emptyMsg: '勤務先の情報が見つかりませんでした。正式な会社名で試すか、手で入力してください。' });
+  } catch (e) { done(); toast('調べられませんでした：' + e.message, 6000); }
+}
+// 名前があって住所もホームページも空なら、自動で1回だけ調べる
+function maybeLookupEmployer() {
+  const d = D(), name = String(d.employer_name || '').trim();
+  if (name && name !== employerLooked && !String(d.employer_address || '').trim() && !String(d.employer_website || '').trim()) lookupEmployer(true);
+}
+function employerLookupBtn() {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => lookupEmployer() }, '🔍 会社名から本社の住所・ホームページを調べる');
 }
 
 /* ---------- 便利機能：有効期限チェック・名字コピー・写真の撮り直し ---------- */
