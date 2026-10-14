@@ -137,6 +137,9 @@ a.btn.ghost{color:var(--muted)}
 .big-icon{font-size:2.6rem;line-height:1}
 
 .script{border:1px dashed var(--seal);background:var(--seal-soft);border-radius:12px;padding:12px 14px;max-height:38vh;overflow:auto}
+.script-wrap{position:relative}
+.script-wrap.has-more::after{content:"";position:absolute;left:1px;right:1px;bottom:1px;height:56px;border-radius:0 0 12px 12px;background:linear-gradient(to bottom,transparent,var(--seal-soft) 75%);pointer-events:none}
+.script-more{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:1;padding:6px 16px;border-radius:999px;border:0;background:var(--seal);color:var(--seal-ink);font:inherit;font-size:.86rem;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,.18);cursor:pointer;white-space:nowrap}
 .script-head{display:grid;gap:2px;margin-bottom:6px}
 .script ol{margin:0;padding-left:1.4em;display:grid;gap:6px;font-size:.95rem;line-height:1.6}
 .script mark{background:var(--ai);color:var(--ai-ink);border-radius:4px;padding:0 2px}
@@ -474,7 +477,12 @@ function icon(name) {
 }
 function toast(msg, ms = 3500) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
-  const t = h('div', { class: 'toast', role: 'status' }, msg); document.body.append(t); setTimeout(() => t.remove(), ms);
+  const t = h('div', { class: 'toast', role: 'status' }, msg); document.body.append(t); placeToast(); setTimeout(() => t.remove(), ms);
+}
+// 「〇〇を読み取り中…」の表示が出ている間は、黒いお知らせをその上に出す（重ならないように）
+function placeToast() {
+  const t = document.querySelector('.toast'); if (!t) return;
+  t.style.bottom = bgPill ? (window.innerHeight - bgPill.getBoundingClientRect().top + 10) + 'px' : '';
 }
 function busy(msg) {
   const b = h('div', { class: 'busy', role: 'alert' }, h('div', { class: 'busy-card' }, h('span', { class: 'spinner' }), msg));
@@ -1501,9 +1509,10 @@ function bgStart(msg) {
   return () => { bgTasks.delete(t); paintBg(); };
 }
 function paintBg() {
-  if (!bgTasks.size) { if (bgPill) { bgPill.remove(); bgPill = null; } return; }
+  if (!bgTasks.size) { if (bgPill) { bgPill.remove(); bgPill = null; placeToast(); } return; }
   if (!bgPill) { bgPill = h('div', { class: 'bg-pill', role: 'status' }); document.body.append(bgPill); }
   bgPill.replaceChildren(h('span', { class: 'spinner' }), h('span', {}, [...bgTasks].map(t => t.msg).join('・') + '…', h('small', {}, 'このまま他の項目を入力・操作できます')));
+  placeToast();
 }
 
 /* ---------- カード：写真から読み取り（写真も番号もツールには保存しない） ---------- */
@@ -1689,7 +1698,20 @@ function scriptBox(values, available, step = 1) {
     ol.append(li);
   }
   box.append(ol);
-  return box;
+  // 見本の枠の下に、まだ読む項目が隠れている時は「続きがあります」を出す（下までスクロールすると消える）
+  const more = h('button', { class: 'script-more', type: 'button', hidden: true, onclick: () => box.scrollBy({ top: box.clientHeight * 0.8, behavior: 'smooth' }) });
+  const paintMore = () => {
+    const bottom = box.getBoundingClientRect().bottom - 4;
+    const hidden = [...ol.children].filter(li => li.getBoundingClientRect().bottom > bottom).length;
+    more.hidden = !hidden;
+    more.textContent = `▼ 続きがあります（あと${hidden}項目）`;
+    wrap.classList.toggle('has-more', !!hidden);
+  };
+  box.addEventListener('scroll', paintMore, { passive: true });
+  const wrap = h('div', { class: 'script-wrap' }, box, more);
+  setTimeout(paintMore, 60); setTimeout(paintMore, 500);
+  if (window.ResizeObserver) new ResizeObserver(paintMore).observe(box);
+  return wrap;
 }
 
 /* ---------- 話して入力 ---------- */
@@ -1721,7 +1743,7 @@ function openVoice(step = 1) {
   const canRecord = !!format && !!navigator.mediaDevices?.getUserMedia;
   const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：勤務先は〇〇株式会社で事務をしていて、年収は450万円くらいです。メインで使っている銀行は〇〇銀行です。' });
   ta.value = voiceDraft; ta.addEventListener('input', () => { voiceDraft = ta.value; });
-  const checkNote = h('p', { class: 'check-note', hidden: !voiceDraft.trim() }, '✏️ 文字になった内容をご確認ください。間違いがあれば、上の欄をタップして手入力で直してから、下のボタンを押してください。');
+  const checkNote = h('p', { class: 'check-note', hidden: !voiceDraft.trim() }, '✏️ 文字になった内容をご確認ください。間違いがあれば、下の欄をタップして手入力で直してから、下のボタンを押してください。');
   const label = h('p', { class: 'mic-label' }, canRecord ? '押して録音を始める' : '音声入力または手入力');
   const status = h('p', { class: 'muted small', role: 'status' }, canRecord
     ? ''
@@ -1747,10 +1769,13 @@ function openVoice(step = 1) {
         try {
           const result = await callAI({ mode: 'transcribe', audio: await audioBase64(blob), mediaType: format });
           if (canceled) return;
-          ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + result.text;
+          // 無音や雑音だけだと、文字起こしのヒント文「日本語の申込情報。…」が返ってくることがあるので取り除く
+          const heard = String(result.text || '').replace(/日本語の申込情報[^\n]*/g, '').trim();
+          if (!heard) { status.textContent = '声を認識できませんでした。もう一度録音してください。'; return; }
+          ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + heard;
           voiceDraft = ta.value;
           status.textContent = '';
-          checkNote.hidden = false; checkNote.after(mic, label);
+          checkNote.hidden = false;
         } catch (e) { if (!canceled) status.textContent = '文字起こしに失敗しました：' + e.message; }
         finally { mic.disabled = false; send.disabled = false; }
       };
@@ -1778,13 +1803,13 @@ function openVoice(step = 1) {
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
     h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
     scriptBox(voiceValues(), VOICE_AVAIL, step),
-    mic, label, status, ta, checkNote, send, skip,
+    mic, label, status, checkNote, ta, send, skip,
     h('p', { class: 'voice-foot' }, '録音は文字起こしのためOpenAIへ送ります（OpenAIのAPIでは、送った音声が学習などほかの目的に使われることはありません）。表示された文字を確認してから項目に入力します。', h('br'),
       'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
-  checkNote.textContent = `✏️ 文字になった内容をご確認ください。間違いがあれば、上の欄をタップして手入力で直してから、「${send.textContent}」を押してください。`;
-  if (voiceDraft.trim() && canRecord) { checkNote.after(mic, label); label.textContent = 'もう一度録音する'; }
+  checkNote.textContent = `✏️ 文字になった内容をご確認ください。間違いがあれば、下の欄をタップして手入力で直してから、「${send.textContent}」を押してください。`;
+  if (voiceDraft.trim() && canRecord) label.textContent = 'もう一度録音する';
   if (!voiceChunkNow.length) skip.hidden = true;
   document.body.append(back);
 }
