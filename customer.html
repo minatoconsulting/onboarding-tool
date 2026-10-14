@@ -163,10 +163,22 @@ a.btn.ghost{color:var(--muted)}
 .frame .bl{bottom:0;left:0;border-bottom-width:3px;border-left-width:3px}
 .frame .br{bottom:0;right:0;border-bottom-width:3px;border-right-width:3px}
 .doc-group{border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.doc-group.card-need{border:2px solid #A8564B;background:#F7E9E6}
+.doc-group.card-need .doc-title{color:#7E3328}
+.doc-group.card-need .doc-row{border-top-color:#E3C3BD}
+.doc-group.card-need .btn.outline{border-color:#A8564B;background:#A8564B;color:#fff}
+.card-need-msg{color:#8E3F35;font-weight:800}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .doc-group.card-need{background:#33201D;border-color:#C27368}:root:not([data-theme="light"]) .doc-group.card-need .doc-title{color:#F0B8AE}}
 .doc-group.done{border-color:var(--seal)}
 .doc-name{display:flex;justify-content:space-between;align-items:center;font-weight:700;padding:2px 0 4px}
 .doc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .doc-label{display:grid;gap:0}
+.doc-row.retake{margin:0 -8px;padding:8px;border-radius:10px;background:#FDECEA;border-top-color:transparent}
+.retake-msg{color:var(--danger);font-weight:700}
+.retake-banner{display:block;width:100%;margin:10px 0 0;padding:10px 12px;border-radius:10px;border:1.5px solid var(--danger);background:#FDECEA;color:#8A2A1D;font:inherit;font-size:.9rem;text-align:left;cursor:pointer}
+.retake-target{display:flex;align-items:center;gap:12px;margin:4px 0 10px;padding:12px;border-radius:12px;border:2px solid var(--danger);background:var(--surface)}
+.retake-target strong{display:block;font-size:1.15rem}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .doc-row.retake,:root:not([data-theme="light"]) .retake-banner{background:#3A1E1A;color:#F2B8AE}}
 .doc-actions{display:flex;gap:6px;flex:none}
 .doc-ok{color:var(--seal);font-weight:700;font-size:.8rem}
 
@@ -210,7 +222,7 @@ a.btn.ghost{color:var(--muted)}
 .jump-sec{display:block;font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:4px}
 .jump-list{display:flex;flex-wrap:wrap;gap:6px}
 .jump-chip{min-height:36px;padding:4px 12px;border-radius:999px;border:1.5px solid var(--danger);background:transparent;color:var(--danger);font-size:.85rem;font-weight:700;cursor:pointer}
-.field.flash,.cf.flash{animation:hpflash .9s 2;border-radius:10px}
+.doc-group.flash,.field.flash,.cf.flash{animation:hpflash .9s 2;border-radius:10px}
 html.big .wrap,html.big .progress,html.big .nav-wrap{zoom:1.15}
 
 .doc-name{gap:10px;justify-content:flex-start}
@@ -249,7 +261,9 @@ h1,h2,strong,.btn,.sec-title,.doc-title,.tb-title,.ptxt,.tip,.need-name,.flow-la
 .need-more li{display:grid;gap:2px;background:var(--paper);border-radius:14px;padding:10px 12px;font-size:.84rem;color:var(--muted)}
 .need-more strong{color:var(--ink, inherit);font-size:.92rem}
 .cf-row.num-check .cf-val{font-size:1.12rem;font-weight:800;letter-spacing:.06em}
-.num-badge{display:inline-block;margin-left:6px;font-size:.7rem;font-weight:800;color:#7A4E00;background:#FFE9A8;border-radius:999px;padding:1px 8px;vertical-align:middle;white-space:nowrap}
+.num-badge{display:block;width:fit-content;margin-top:3px;font-size:.72rem;font-weight:700;color:#6B4E00;background:#FFF3CC;border:1px solid #E8C860;border-radius:6px;padding:1px 7px;white-space:nowrap}
+.check-note{margin:8px 0 0;padding:10px 12px;border-radius:8px;background:#FFF3CC;border:1px solid #E8C860;color:#5A4200;font-size:.88rem;font-weight:700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .num-badge,:root:not([data-theme="light"]) .check-note{background:#382D10;color:#F2D58A;border-color:#8A6D1E}}
 .flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:4px}
 .flow li{display:grid;justify-items:center;gap:4px}
 .flow-ill{width:52px;height:52px;border-radius:50%;background:var(--surface);display:grid;place-items:center;box-shadow:0 2px 10px rgba(46,125,107,.1);padding:10px}
@@ -268,6 +282,14 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .photo-pick{display:grid;gap:10px}
 .field.bad input{border-color:var(--danger)}
 .field-err:empty{display:none}
+.mode-box{border:2px solid var(--seal)}
+.mode-q{display:block;font-size:1.08rem;margin-bottom:10px}
+.mode-opt{position:relative;display:grid;gap:2px;width:100%;margin:0 0 10px;padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);text-align:left;font:inherit;color:inherit;cursor:pointer}
+.mode-opt.rec{border-color:var(--seal);background:var(--seal-soft)}
+.mode-title{font-size:1.08rem;font-weight:800}
+.mode-desc{font-size:.85rem;color:var(--muted)}
+.mode-badge{position:absolute;top:-10px;right:12px;font-size:.74rem;font-weight:800;color:var(--seal-ink);background:var(--seal);border-radius:999px;padding:2px 10px}
+.type-sec{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line);font-weight:800;color:var(--seal)}
 .sec.manual-box{border:2px solid var(--seal);box-shadow:0 0 0 4px var(--seal-soft)}
 .manual-tag{display:inline-block;font-size:.72rem;font-weight:800;color:var(--seal-ink);background:var(--seal);border-radius:999px;padding:2px 10px;margin-right:6px;vertical-align:middle}
 .btn.toggle[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
@@ -461,6 +483,8 @@ const FLOW_ILL = {
 };
 
 /* ---------- 起動 ---------- */
+// 開き直した時に、ブラウザが前回のスクロール位置へ戻さないようにする
+try { history.scrollRestoration = 'manual'; } catch {}
 async function boot() {
   if (!TOKEN) return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
@@ -583,6 +607,8 @@ function viewForm(startStep = 1) {
   navEl = h('nav', { class: 'dock', 'aria-label': '進む・戻る' });
   app.replaceChildren(h('header', { class: 'topbar' }, h('h1', { class: 'tb-title' }, 'お申込み情報のご入力'), saveEl, big), progEl, mainEl, navEl);
   renderStep();
+  // 最初の画面で下までスクロールしていても、入力画面は一番上から見せる
+  window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0));
 }
 // 送信前の画面から、未入力・黄色の項目へ移動する（未入力は、その項目の入力欄を開く）
 function jumpToField(k, edit) {
@@ -656,14 +682,19 @@ function renderStep() {
   } else if (step === 2) {
     const rest = remainingLines();
     setTimeout(maybeLookupEmployer, 400);
-    body = [h('p', { class: 'lead' }, '🎤 話しやすい項目は音声で入力します。'),
-      rest.length
+    const mode = loadProgress().inputMode || '';
+    const modeSwitch = (to, text) => h('button', { class: 'btn ghost wide sm', type: 'button', onclick: () => setInputMode(to) }, text);
+    body = [h('p', { class: 'lead' }, mode === 'type' ? '⌨️ 残りの項目を入力します。' : mode ? '🎤 話しやすい項目は音声で入力します。' : '📝 残りの項目を入力します。'),
+      rest.length && !mode ? modeChooser()
+      : mode === 'type' && (rest.length || (typeKeysMemo && typeKeysMemo.length)) ? typeEntry(modeSwitch('voice', '🎤 やっぱり話して入力する（おすすめ）'))
+      : rest.length
         ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
             h('strong', {}, `あと${rest.length}項目`),
             h('ul', { class: 'mini' }, ...rest.slice(0, chunkSize(rest.length)).map(t => h('li', {}, t.replace(/（[^）]*）/g, '')))),
             rest.length > chunkSize(rest.length) ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - chunkSize(rest.length)}項目（読み上げは2回で終わります）`) : null,
-            h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => openVoice(1) }, icon('mic'), '話して入力をはじめる')))
-        : h('div', { class: 'done-note' }, '✓ 音声での入力は完了です！', h('span', { class: 'done-sub' }, 'お手数ですが、残りの項目は下の欄に手入力でお願いします。')),
+            h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => openVoice(1) }, icon('mic'), '話して入力をはじめる'),
+            modeSwitch('type', '⌨️ 声を出せない時は、文字で入力する')))
+        : h('div', { class: 'done-note' }, mode === 'type' ? '✓ 上の項目は入力済みです' : '✓ 音声での入力は完了です！', h('span', { class: 'done-sub' }, 'お手数ですが、残りの項目は下の欄に手入力でお願いします。')),
       emailEntry(),
       phoneEntry(),
       ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
@@ -671,7 +702,7 @@ function renderStep() {
       h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')];
   } else if (step === 3) {
     body = [h('p', { class: 'lead' }, '👀 違うところだけ「直す」で修正してください。'),
-      h('p', { class: 'note' }, '🔢 特に電話番号・郵便番号・支店番号などの数字は、1文字ずつ確認してください（「数字を確認」の印が付いています）。'),
+      h('p', { class: 'note' }, '🔢 特に電話番号・郵便番号・支店番号などの数字は、1文字ずつ確認してください（「⚠️ 間違いがないか確認」の印が付いています）。'),
       expiryWarn(), ...SECTIONS.map(confirmCard)];
     setTimeout(maybeLookupEmployer, 400);
     if (editing) {
@@ -771,6 +802,35 @@ function beneficiaryEntry() {
       sameSurnameBtn(),
       ...fields.map(f => { const el = renderField(f); paint(f.k); return el; })])));
 }
+/* ---------- 入力のしかた：話して入力（おすすめ）か、文字で入力（電車の中など）か ---------- */
+let typeKeysMemo = null;
+function setInputMode(mode) { saveProgress({ inputMode: mode }); typeKeysMemo = null; renderStep(); window.scrollTo(0, 0); }
+function modeChooser() {
+  return h('section', { class: 'sec mode-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', { class: 'mode-q' }, '入力のしかたを選んでください'),
+    h('button', { class: 'mode-opt rec', type: 'button', onclick: () => setInputMode('voice') },
+      h('span', { class: 'mode-badge' }, 'おすすめ'), h('span', { class: 'mode-title' }, '🎤 話して入力'), h('span', { class: 'mode-desc' }, '見本を読み上げるだけ。2回で終わるので早いです')),
+    h('button', { class: 'mode-opt', type: 'button', onclick: () => setInputMode('type') },
+      h('span', { class: 'mode-title' }, '⌨️ 文字で入力'), h('span', { class: 'mode-desc' }, '電車の中など、声を出せない時に')),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'あとから切り替えることもできます。')));
+}
+// 文字で入力：音声で聞く予定だった項目を、入力欄としてまとめて出す（選んだ時点で空いていた項目）
+function typeEntry(switchBtn) {
+  if (!typeKeysMemo) {
+    const avail = new Set(VOICE_KEYS);
+    typeKeysMemo = SECTIONS.flatMap(visibleFields).map(f => f.k)
+      .filter(k => avail.has(k) && !['phone_area', 'phone_local'].includes(k) && !String(data[k] ?? '').trim());
+  }
+  const groups = SECTIONS.map(sec => ({ sec, fs: visibleFields(sec).filter(f => typeKeysMemo.includes(f.k)) })).filter(g => g.fs.length);
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '文字で入力'), '残りの項目'),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'わからない項目は空欄のままで進めます。'),
+    ...groups.flatMap(g => {
+      const lastBank = [...g.fs].reverse().find(f => /^bank_/.test(f.k));
+      return [h('p', { class: 'type-sec' }, g.sec.title), ...g.fs.flatMap(f => f === lastBank ? [renderField(f), accountEntry()] : [renderField(f)])];
+    }),
+    switchBtn));
+}
 function manualEntry(group) {
   const hasBeneficiary = !!String(data.ben_name_ja || '').trim() || !!docsOf(data).ben_license;
   const fields = group.keys.filter(k => FIELD_MAP[k] && (ALWAYS_SHOW.has(k) || !String(data[k] ?? '').trim()) && (hasBeneficiary || !k.startsWith('ben_')));
@@ -779,7 +839,7 @@ function manualEntry(group) {
     h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), group.title), h('p', { class: 'muted small', style: 'margin:0' }, group.note),
     ...fields.map(k => renderField(FIELD_MAP[k]))));
 }
-// 確認画面で「数字を確認」の印を付ける項目
+// 確認画面で「間違いがないか確認」の印を付ける項目
 const NUM_CHECK = new Set(['phone_area', 'postal_code', 'id_number', 'bank_branch_no', 'ben_id_number']);
 function phoneText() {
   const a = String(data.phone_area || '').replace(/^0/, ''), l = String(data.phone_local || '');
@@ -813,7 +873,7 @@ function confirmCard(sec) {
       if (YEN.has(f.k) && v) { const m = manText(v); v = yenText(v) + '円' + (m ? '（' + m.replace(/^＝ /, '') + '）' : ''); }
       const num = NUM_CHECK.has(f.k), ai = aiKeys.has(f.k) || (f.k === 'phone_area' && aiKeys.has('phone_local'));
       const bad = fieldError(f.k) || (f.k === 'postal_code' ? zipWarning() : '') || (f.k === 'phone_area' && !mobileOk() ? '携帯番号は090・080・070から始まる11桁です' : '');
-      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '数字を確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null)); }),
+      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null)); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
     sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
     sec.id === 'payment' ? cardEntry() : null,
@@ -963,6 +1023,11 @@ async function submit() {
   if (!ds.ok) { alert(!data.has_passport ? 'パスポートをお持ちか選択してください。' : ds.needPassport ? 'パスポートをお持ちの場合は、パスポートの写真が必要です。' : '本人確認書類を2点撮影してください（運転免許証・マイナンバーカードは表と裏の両方）。'); go(1); return; }
   if (!mobileOk()) { toast('携帯番号の形式を確認してください（090・080・070から始まる11桁）。', 6000); go(2); setTimeout(() => { const p = document.getElementById('customer-phone'); if (p) { p.scrollIntoView({ block: 'center' }); p.focus(); } }, 60); return; }
   if (data.email) { const email = document.createElement('input'); email.type = 'email'; email.value = data.email; if (!email.checkValidity()) { toast('メールアドレスの形式を確認してください。'); go(2); return; } }
+  if (accountError() && !confirm(`口座番号が7桁ではありません（いま${accountDigits().length}桁）。\nこのまま送信しますか？\n\n「キャンセル」を押すと、口座番号の欄に戻ります。`)) {
+    editing = 'funds'; step = 3; renderStep();
+    setTimeout(() => { const el = document.querySelector('[data-secret="account_number"]'); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 60);
+    return;
+  }
   const done = busy('送信中…');
   // ① 最新の内容を保存 → ② スプレッドシートへ送信 → ③ 送信完了にする
   ALL_KEYS.forEach(k => dirty.add(k));
@@ -1126,7 +1191,7 @@ async function handleDocFile(slot, file) {
         read = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: [...fieldSpec(plan.keys), PHOTO_CHECK] });
       } catch { readError = true; }
       const problem = read && read.values && read.values.photo_problem;
-      if (problem) { done(); retakeSheet(slot, '写真に問題があるかもしれません：' + problem); return; }
+      if (problem) { retakeNeed[slot] = problem; done(); retakeSheet(slot, problem); return; }
     }
     const storeBody = { mode: 'store', slot, image };
     if (STAFF) storeBody.customer_id = state.id;
@@ -1140,9 +1205,10 @@ async function handleDocFile(slot, file) {
           secretMsg = r.check === false ? '⚠ 個人番号が正しくない可能性があります。送信前の画面でカードと見比べてください。' : '個人番号を読み取りました ✓ 送信前の画面で確認してください。';
         } else secretMsg = r && r.reason === 'refused'
           ? '写真は保存しました。個人番号はAIが読み取りを行えなかったので、送信前の画面で手で入力してください。'
-          : '写真は保存しました。個人番号が読み取れませんでした。明るい場所で撮り直すか、送信前の画面で手で入力してください。';
+          : '写真は保存しました。個人番号が読み取れませんでした。明るい場所でマイナンバーカードの「裏」を撮り直すか、送信前の画面で手で入力してください。';
       } catch { secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。'; }
     }
+    delete retakeNeed[slot];
     done();
     const d = D(); d._docs = { ...docsOf(d), [slot]: new Date().toISOString() };
     refreshDocs();
@@ -1160,13 +1226,22 @@ function refreshDocs() { if (docsPanelEl && docsPanelEl.isConnected) { const n =
 // お支払いに使うカード（書類と一緒に撮る。写真は保存しない）
 function cardDocGroup() {
   const got = !!secretVals.card_number;
-  return h('div', { class: 'doc-group' + (got ? ' done' : '') },
+  return h('div', { class: 'doc-group' + (got ? ' done' : ' card-need') },
     h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'お支払いに使うクレジットカード'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
     h('div', { class: 'doc-row' },
-      h('div', { class: 'doc-label' }, h('span', {}, '番号が書いてある面'), h('small', { class: cardPending ? 'muted' : got ? 'doc-ok' : 'muted' }, cardPending ? '読み取り中…' : got ? '読み取り済み' : 'まだです'),
+      h('div', { class: 'doc-label' }, h('span', {}, '番号が書いてある面'), h('small', { class: cardPending ? 'muted' : got ? 'doc-ok' : 'card-need-msg' }, cardPending ? '読み取り中…' : got ? '読み取り済み' : '⚠ まだ撮影していません'),
         h('small', { class: 'hint' }, 'デビットカードでも可能です。写真は保存しません。番号は送信の時にスプレッドシートへ直接送ります')),
       h('div', { class: 'doc-actions' },
         h('button', { class: 'btn sm ' + (got ? 'ghost' : 'outline'), type: 'button', disabled: cardPending, onclick: () => pickImage('credit_card') }, cardPending ? '読み取り中' : got ? '撮り直す' : '撮影する'))));
+}
+// パスポートの質問に答えたら、次に撮る書類まで画面を動かす（はい→パスポート、いいえ→運転免許証）
+function jumpToDoc(doc) {
+  setTimeout(() => {
+    const g = document.getElementById('grp-' + doc); if (!g) return;
+    const top = g.getBoundingClientRect().top + window.scrollY - 70;
+    window.scrollTo({ top, behavior: 'smooth' });
+    g.classList.remove('flash'); void g.offsetWidth; g.classList.add('flash');
+  }, 80);
 }
 function renderDocsPanel() {
   const d = D(), st = docStatus(d);
@@ -1178,22 +1253,27 @@ function renderDocsPanel() {
     h('p', { class: 'hp-q', id: 'hp-q' }, '🛂 パスポートはお持ちですか？'),
     h('p', { class: 'hp-sub' }, 'お持ちの場合は、必ずパスポートも撮影してください'),
     h('div', { class: 'hp-opts' }, ...hp.opts.map(o => h('button', { class: 'hp-opt' + (d.has_passport === o ? ' on' : ''), type: 'button', role: 'radio', 'aria-checked': String(d.has_passport === o),
-      onclick: () => { d.has_passport = o; markDirty('has_passport'); refreshDocs(); } }, o))));
+      onclick: () => { d.has_passport = o; markDirty('has_passport'); refreshDocs(); jumpToDoc(o === 'はい' ? 'passport' : 'license'); } }, o))));
   const groups = Object.keys(DOC_TYPES).map(doc => {
     const isDone = docDone(d, doc);
-    return h('div', { class: 'doc-group' + (isDone ? ' done' : '') },
+    return h('div', { class: 'doc-group' + (isDone ? ' done' : ''), id: 'grp-' + doc },
       h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null),
       ...DOC_SLOTS.filter(x => x.doc === doc).map(x => {
-        const has = !!docsOf(d)[x.slot], pend = pendingSlots.has(x.slot);
-        return h('div', { class: 'doc-row' },
-          h('div', { class: 'doc-label' }, h('span', {}, x.label), h('small', { class: pend ? 'muted' : has ? 'doc-ok' : 'muted' }, pend ? '読み取り中…' : has ? '撮影済み' : 'まだです'), x.note ? h('small', { class: 'hint' }, x.note) : null),
+        const has = !!docsOf(d)[x.slot], pend = pendingSlots.has(x.slot), redo = !pend && retakeNeed[x.slot];
+        return h('div', { class: 'doc-row' + (redo ? ' retake' : ''), id: 'slot-' + x.slot },
+          h('div', { class: 'doc-label' }, h('span', {}, x.label),
+            redo ? h('small', { class: 'retake-msg' }, '⚠ この写真を撮り直してください（' + redo + '）')
+              : h('small', { class: pend ? 'muted' : has ? 'doc-ok' : 'muted' }, pend ? '読み取り中…' : has ? '撮影済み' : 'まだです'),
+            x.note ? h('small', { class: 'hint' }, x.note) : null),
           h('div', { class: 'doc-actions' },
             STAFF && has ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => viewDoc(x.slot) }, '見る') : null,
-            h('button', { class: 'btn sm ' + (has ? 'ghost' : 'outline'), type: 'button', disabled: pend, onclick: () => captureDoc(x.slot) }, pend ? '読み取り中' : has ? '撮り直す' : '撮影する')));
+            h('button', { class: 'btn sm ' + (redo ? 'primary' : has ? 'ghost' : 'outline'), type: 'button', disabled: pend, onclick: () => captureDoc(x.slot) }, pend ? '読み取り中' : redo || has ? '撮り直す' : '撮影する')));
       }));
   });
   const el = h('section', { class: 'sec docs', id: 'docs-panel' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('div', { class: 'doc-top' }, h('strong', {}, '書類を2つ撮影'), badge),
+    ...DOC_SLOTS.filter(x => retakeNeed[x.slot] && !pendingSlots.has(x.slot)).map(x => h('button', { class: 'retake-banner', type: 'button', onclick: () => { const r = document.getElementById('slot-' + x.slot); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' }); } },
+      '⚠ 撮り直しが必要です：', h('strong', {}, slotName(x)), ' ›')),
     hpBox,
     h('div', { class: 'tips' },
       h('div', { class: 'tip' }, ill(TIP_ILL.corners, 'tip-ill'), h('span', {}, '四隅を入れる')),
@@ -1241,7 +1321,7 @@ function secretCard(title) {
 // 口座番号は銀行の情報と一緒に（ツールには保存しない）
 function accountEntry() {
   const f = SECRET_FIELDS.find(x => x.k === 'account_number');
-  return secretInput({ ...f, label: '口座番号（7桁）', hint: 'ツールには保存せず、送信の時にスプレッドシートへ直接送ります。「話して入力」で読み上げても入ります' });
+  return secretInput({ ...f, label: '口座番号（7桁）', badge: true, check: accountError, hint: 'ツールには保存せず、送信の時にスプレッドシートへ直接送ります。「話して入力」で読み上げても入ります' });
 }
 // 同じ番号の欄が画面に2つある時も、片方に入れたらもう片方にも入るようにする
 function secretInput(f) {
@@ -1249,7 +1329,19 @@ function secretInput(f) {
   const inp = h('input', { id, type: 'text', inputmode: f.type === 'tel' ? 'numeric' : null, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'data-secret': f.k });
   inp.value = secretVals[f.k] || '';
   inp.addEventListener('input', () => { secretVals[f.k] = inp.value; syncSecret(f.k, inp); });
-  return h('div', { class: 'field' }, h('label', { for: id }, f.label), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+  const wrap = h('div', { class: 'field' }, h('label', { for: id }, f.label, f.badge ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+  if (f.check) {
+    const msg = h('small', { class: 'err field-err', role: 'alert', 'data-secret-err': f.k });
+    wrap.append(msg);
+    const paintErr = () => { const e = f.check(secretVals[f.k]); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
+    inp.addEventListener('input', paintErr); paintErr();
+  }
+  return wrap;
+}
+const accountDigits = () => zen2han(secretVals.account_number).replace(/\D/g, '');
+function accountError(v = secretVals.account_number) {
+  const n = zen2han(v).replace(/\D/g, '').length;
+  return n && n !== 7 ? `口座番号は7桁です（いま${n}桁）。通帳やキャッシュカードで確認してください` : '';
 }
 function syncSecret(k, except) {
   keepSecrets();
@@ -1333,6 +1425,9 @@ function syncFundAnnual() {
 /* ---------- 裏で読み取り（読み取り中も、ほかの項目を入力できる） ---------- */
 const bgTasks = new Set();
 const pendingSlots = new Set();
+// 撮り直しが必要な写真（どの書類の、どの面か）
+const retakeNeed = {};
+const slotName = s => DOC_TYPES[s.doc] + (s.doc === 'passport' ? '（顔写真のページ）' : s.doc === 'juminhyo' ? '' : 'の「' + s.label + '」');
 let cardPending = false, bgPill = null;
 const userEditAt = {};  // 手で直した時刻（読み取り中に手で入れた値は、あとから上書きしない）
 function bgStart(msg) {
@@ -1369,7 +1464,7 @@ async function scanCard(file) {
     if (c.expiry) secretVals.card_expiry = c.expiry;
     if (res && res.values && Object.keys(res.values).length) applyAI(res, {}, { since });
     syncSecret('card_number'); syncSecret('card_expiry');
-    toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所で撮り直すか、手で入力してください。'
+    toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所でお支払い用のカード（番号が書いてある面）を撮り直すか、手で入力してください。'
       : c.check === false ? '⚠ カード番号が正しくない可能性があります。カードと見比べて直してください。'
       : !c.expiry ? 'カード番号を入れました。有効期限は手で入力してください。'
       : 'カード番号と有効期限を入れました。カードと見比べて確認してください。', 6000);
@@ -1424,12 +1519,15 @@ function sameSurnameBtn() {
   } }, '👪 名字を申込者と同じにする');
 }
 function retakeSheet(slot, problem) {
-  const close = () => back.remove();
+  const s = DOC_SLOTS.find(x => x.slot === slot);
+  const close = () => { back.remove(); setTimeout(() => { const r = document.getElementById('slot-' + slot); if (r) r.scrollIntoView({ block: 'center' }); }, 80); };
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '撮り直しのお願い' },
-    h('h2', {}, '写真を保存せず、撮り直しをお願いします'),
-    h('p', { class: 'warn' }, problem),
-    h('p', { class: 'small muted' }, '四隅がすべて写るように、明るい場所で、反射しないように撮ってください。'),
-    h('button', { class: 'btn primary wide', type: 'button', onclick: () => { close(); captureDoc(slot); } }, '撮り直す'),
+    h('h2', {}, '撮り直しをお願いします'),
+    h('div', { class: 'retake-target' }, s ? ill(DOC_ILL[s.doc], 'doc-ill') : null,
+      h('div', {}, h('small', { class: 'muted' }, '撮り直す写真'), h('strong', {}, s ? slotName(s) : '書類'))),
+    h('p', { class: 'warn' }, '理由：' + problem),
+    h('p', { class: 'small muted' }, 'この写真は保存していません。四隅がすべて写るように、明るい場所で、反射しないように撮ってください。'),
+    h('button', { class: 'btn primary wide', type: 'button', onclick: () => { back.remove(); captureDoc(slot); } }, (s ? slotName(s) : '') + 'を撮り直す'),
     h('button', { class: 'btn ghost wide', type: 'button', onclick: close }, 'あとで撮り直す')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   document.body.append(back);
@@ -1539,6 +1637,7 @@ function openVoice(step = 1) {
   const canRecord = !!format && !!navigator.mediaDevices?.getUserMedia;
   const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：勤務先は〇〇株式会社で事務をしていて、年収は450万円くらいです。メインで使っている銀行は〇〇銀行です。' });
   ta.value = voiceDraft; ta.addEventListener('input', () => { voiceDraft = ta.value; });
+  const checkNote = h('p', { class: 'check-note', hidden: !voiceDraft.trim() }, '✏️ 文字になった内容をご確認ください。間違いがあれば、上の欄をタップして手入力で直してから、下のボタンを押してください。');
   const label = h('p', { class: 'mic-label' }, canRecord ? '押して録音を始める' : '音声入力または手入力');
   const status = h('p', { class: 'muted small', role: 'status' }, canRecord
     ? ''
@@ -1566,7 +1665,8 @@ function openVoice(step = 1) {
           if (canceled) return;
           ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + result.text;
           voiceDraft = ta.value;
-          status.textContent = '文字になりました。内容を確認して、下のボタンを押してください。';
+          status.textContent = '文字になりました。';
+          checkNote.hidden = false;
         } catch (e) { if (!canceled) status.textContent = '文字起こしに失敗しました：' + e.message; }
         finally { mic.disabled = false; send.disabled = false; }
       };
@@ -1594,7 +1694,7 @@ function openVoice(step = 1) {
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
     h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
     scriptBox(voiceValues(), VOICE_AVAIL, step),
-    mic, label, status, ta, send, skip,
+    mic, label, status, ta, checkNote, send, skip,
     h('p', { class: 'voice-foot' }, '録音は文字起こしのためOpenAIへ送ります（OpenAIのAPIでは、送った音声が学習などほかの目的に使われることはありません）。表示された文字を確認してから項目に入力します。', h('br'),
       'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
