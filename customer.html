@@ -142,6 +142,15 @@ a.btn.ghost{color:var(--muted)}
 .script mark{background:var(--ai);color:var(--ai-ink);border-radius:4px;padding:0 2px}
 
 .doc-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hp-box{margin:14px 0;padding:14px;border-radius:12px;border:2px solid var(--seal);background:var(--seal-soft)}
+.hp-box.unset{border-color:var(--ai-line);background:var(--ai)}
+.hp-box.flash{animation:hpflash .9s 2}
+@keyframes hpflash{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--ai-line) 45%,transparent)}}
+.hp-q{margin:0;font-size:1.12rem;font-weight:800}
+.hp-sub{margin:2px 0 10px;font-size:.84rem;color:var(--muted)}
+.hp-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hp-opt{min-height:52px;border-radius:10px;border:2px solid var(--line);background:var(--surface);font-size:1.05rem;font-weight:700;cursor:pointer}
+.hp-opt.on{border-color:var(--seal);background:var(--seal);color:var(--seal-ink)}
 .doc-badge{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--ai-line);background:var(--ai);color:var(--ai-ink);white-space:nowrap}
 .doc-badge.ok{border-color:var(--seal);background:var(--seal);color:var(--seal-ink)}
 .shot-tips{display:flex;gap:14px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--paper);border:1px solid var(--line)}
@@ -171,6 +180,8 @@ a.btn.ghost{color:var(--muted)}
 
 .progress{list-style:none;margin:0;padding:10px 12px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:720px;margin-inline:auto}
 .progress li{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;color:var(--muted);text-align:center}
+.pstep{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-height:44px;padding:2px 0;border:0;border-radius:8px;background:transparent;font:inherit;color:inherit;cursor:pointer}
+.pstep:active{background:var(--seal-soft)}
 .progress li .num{width:26px;height:26px;font-size:.8rem}
 .progress li.now{color:var(--ink);font-weight:700}
 .progress li.now .num{border-color:var(--seal);color:var(--seal);border-width:2px}
@@ -183,14 +194,23 @@ a.btn.ghost{color:var(--muted)}
 .mini{margin:8px 0;padding-left:1.2em;display:grid;gap:4px;font-size:.9rem}
 .tall{min-height:58px;font-size:1.02rem}
 .done-note{margin:0 0 12px;padding:14px;border-radius:12px;background:var(--seal-soft);font-weight:700;color:var(--seal)}
+.done-sub{display:block;margin-top:4px;color:var(--ink);font-size:.95rem}
 .cf-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .cf-row{display:grid;grid-template-columns:minmax(110px,40%) 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:.92rem}
 .cf-row.ai .cf-val{background:var(--ai);border-radius:4px;padding:0 4px}
 .cf-label{color:var(--muted)}
 .cf-val{word-break:break-all}
-.cf-val.empty{color:var(--danger)}
+.cf-val.empty,.cf-row.num-check .cf-val.empty{justify-self:start;align-self:start;width:fit-content;height:fit-content;color:#fff;background:var(--danger);font-weight:800;font-size:.86rem;letter-spacing:0;padding:1px 10px;border-radius:999px}
 .cf.editing{border-color:var(--seal)}
 .sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.sum-block{padding-bottom:10px;border-bottom:1px solid var(--line)}
+.sum-block .sum-row{border-bottom:0}
+.sum-link{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit;min-height:44px}
+.jump-group{margin-top:8px}
+.jump-sec{display:block;font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:4px}
+.jump-list{display:flex;flex-wrap:wrap;gap:6px}
+.jump-chip{min-height:36px;padding:4px 12px;border-radius:999px;border:1.5px solid var(--danger);background:transparent;color:var(--danger);font-size:.85rem;font-weight:700;cursor:pointer}
+.field.flash,.cf.flash{animation:hpflash .9s 2;border-radius:10px}
 html.big .wrap,html.big .progress,html.big .nav-wrap{zoom:1.15}
 
 .doc-name{gap:10px;justify-content:flex-start}
@@ -253,7 +273,9 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .btn.toggle[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
 .sheet p[role=status]:empty{display:none}
 .btn.line-btn{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
-.bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700}
+.bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;width:calc(100% - 32px);max-width:560px;padding:8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700;line-height:1.45;pointer-events:none}
+.man{display:block;margin-top:4px;font-weight:700;color:var(--seal)}
+.bg-pill small{display:block;font-size:.76rem;font-weight:500;color:var(--muted)}
 .bg-pill .spinner{flex:none;width:18px;height:18px}
 .btn svg{width:20px;height:20px;flex:none}
 a.btn{text-decoration:none}
@@ -330,7 +352,7 @@ const SECTIONS = [
     F('job_detail', 'お仕事の内容', { type: 'textarea', hint: '例：中央病院の看護師' }),
     F('employment_start', '今の勤務先で働き始めた日', { type: 'date' }),
     F('income_currency', '年収の通貨', { def: 'JPY' }),
-    F('income_amount', '年収（円）', { type: 'number', hint: '例：450万円なら 4500000' }),
+    F('income_amount', '年収（円）', { type: 'number', hint: '例：450万円なら 4,500,000' }),
   ]},
   { id: 'beneficiary', title: '受取人（受益者）', capture: 'ben_license', fields: [
     F('ben_name_ja', '氏名（漢字）'),
@@ -363,7 +385,7 @@ const SECTIONS = [
   { id: 'payment', title: 'お支払いに使うカード', fields: [
     F('card_kind', '使用カード', { type: 'select', opts: ['クレジット', 'デビット'] }),
     F('card_brand', 'カード種類', { type: 'select', opts: ['VISA', 'MASTER', 'JCB', 'AMEX', 'DINERS'] }),
-    F('card_company', 'カード会社', { hint: '例：楽天カード' }),
+    F('card_company', 'カード会社', { hint: '例：楽天カード、イオンカード、三井住友カード、JCBカード など' }),
   ]},
   { id: 'funds', title: '資金について', fields: [
     F('bank_name', 'メインで使っている銀行', { hint: '例：三菱UFJ銀行' }),
@@ -372,9 +394,9 @@ const SECTIONS = [
     F('bank_open_date', '入力した銀行口座を作った日（だいたいでOK）', { type: 'date', def: (new Date().getFullYear() - 5) + '-04-01', hint: '例：2015年4月1日。はっきり分からなければ、だいたいの年の4月1日でOK' }),
     F('fund_method', '積立のお金は、どこから払いますか？', { def: '給与', hint: '毎月の積立に使うお金の元（もと）を選んでください。例：お給料から払う → 給与、貯金から払う → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
     F('fund_currency', '通貨', { def: 'JPY' }),
-    F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50000' }),
-    F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600000）' }),
-    F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1000000' }),
+    F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50,000' }),
+    F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600,000）' }),
+    F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1,000,000' }),
     F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
 ];
@@ -562,7 +584,33 @@ function viewForm(startStep = 1) {
   app.replaceChildren(h('header', { class: 'topbar' }, h('h1', { class: 'tb-title' }, 'お申込み情報のご入力'), saveEl, big), progEl, mainEl, navEl);
   renderStep();
 }
-function go(n) { if (saveTimer) save(); step = Math.max(1, Math.min(4, n)); editing = null; saveProgress({ step }); renderStep(); window.scrollTo(0, 0); }
+// 送信前の画面から、未入力・黄色の項目へ移動する（未入力は、その項目の入力欄を開く）
+function jumpToField(k, edit) {
+  const sec = SECTIONS.find(s => visibleFields(s).some(f => f.k === k));
+  go(3);
+  if (sec && edit) { editing = sec.id; renderStep(); }
+  setTimeout(() => {
+    const target = edit && inputs[k] ? inputs[k].wrap : sec && document.getElementById('cf-' + sec.id);
+    if (!target) return;
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
+  }, 60);
+}
+// 「話して入力」の画面を離れる時（次へ・戻る・上の番号のどれでも）、メールと携帯番号の形をチェックする
+function step2InputsOk() {
+  if (step !== 2) return true;
+  const email = document.getElementById('customer-email');
+  if (email && email.value && !email.checkValidity()) { toast('メールアドレスの形式を確認してください。'); email.scrollIntoView({ block: 'center' }); email.focus(); return false; }
+  const phone = document.getElementById('customer-phone');
+  if (phone && phone.value && !phone.checkValidity()) { toast('携帯番号は090・080・070から始まる11桁で入力してください。'); phone.scrollIntoView({ block: 'center' }); phone.focus(); return false; }
+  return true;
+}
+const MOBILE_RE = /^0[789]0\d{8}$/;
+function mobileOk(d = data) {
+  if (d.phone_type !== '携帯' || (!d.phone_area && !d.phone_local)) return true;
+  return MOBILE_RE.test('0' + String(d.phone_area || '').replace(/^0/, '') + String(d.phone_local || ''));
+}
+function go(n) { if (n !== step && !step2InputsOk()) return; if (saveTimer) save(); step = Math.max(1, Math.min(4, n)); editing = null; saveProgress({ step }); renderStep(); window.scrollTo(0, 0); }
 // 入力中の欄があれば、画面の描き直しは入力が終わるまで待つ（裏で読み取りが終わった時に、打っている途中の欄が消えないように）
 const typingIn = () => { const a = document.activeElement; return !!(a && mainEl && mainEl.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
 let refreshWaiting = false;
@@ -580,12 +628,14 @@ function refreshStep() {
 }
 function renderStep() {
   saveProgress({ step });
+  if (step >= 2) watchZip();
   const docsOk = docStatus(data).ok;
   progEl.replaceChildren(...STEPS.map((t, i) => {
     const later = i === 0 && step > 1 && !docsOk;
     const cls = i + 1 === step ? 'now' : later ? 'later' : (i + 1 < step ? 'done' : '');
     return h('li', { class: cls, 'aria-current': i + 1 === step ? 'step' : null },
-      h('span', { class: 'num' }, later ? '!' : (i + 1 < step ? '✓' : String(i + 1))), h('span', { class: 'ptxt' }, later ? 'あとで撮影' : t));
+      h('button', { class: 'pstep', type: 'button', 'aria-label': `${i + 1}. ${t}へ移動`, onclick: () => { if (i + 1 !== step || editing) go(i + 1); } },
+        h('span', { class: 'num' }, later ? '!' : (i + 1 < step ? '✓' : String(i + 1))), h('span', { class: 'ptxt' }, later ? 'あとで撮影' : t)));
   }));
   inputs = {};
   let body = [], nextLabel = '次へ', canNext = true, nextFn = () => go(step + 1), hint = null;
@@ -593,28 +643,27 @@ function renderStep() {
     const st = docStatus(data);
     docsPanelEl = renderDocsPanel();
     body = [h('p', { class: 'lead' }, '📷 書類2つと、お支払いに使うクレジットカードを撮りましょう。名前や住所、カード番号が自動で入ります。'), docsPanelEl];
-    if (!st.ok) {
+    if (!st.ok && st.done.length >= 2 && !data.has_passport) {
+      nextFn = () => {
+        toast('パスポートをお持ちか「はい」「いいえ」を選んでください。');
+        const box = document.getElementById('hp-box');
+        if (box) { box.scrollIntoView({ block: 'center', behavior: 'smooth' }); box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash'); }
+      };
+    } else if (!st.ok) {
       nextLabel = 'あとで撮影する';
       body.push(h('p', { class: 'muted small center' }, '手元に書類がなければ、先にほかの項目を入力できます。入力した内容は保存され、送信前に撮影すればOKです。'));
     }
   } else if (step === 2) {
     const rest = remainingLines();
-    nextFn = () => {
-      const email = document.getElementById('customer-email');
-      if (email && email.value && !email.checkValidity()) { toast('メールアドレスの形式を確認してください。'); email.focus(); return; }
-      const phone = document.getElementById('customer-phone');
-      if (phone && phone.value && !phone.checkValidity()) { toast('携帯番号は090などから始まる11桁で入力してください。'); phone.focus(); return; }
-      go(3);
-    };
     setTimeout(maybeLookupEmployer, 400);
     body = [h('p', { class: 'lead' }, '🎤 話しやすい項目は音声で入力します。'),
       rest.length
         ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
             h('strong', {}, `あと${rest.length}項目`),
-            h('ul', { class: 'mini' }, ...rest.slice(0, CHUNK).map(t => h('li', {}, t.replace(/（[^）]*）/g, '')))),
-            rest.length > CHUNK ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - CHUNK}項目`) : null,
+            h('ul', { class: 'mini' }, ...rest.slice(0, chunkSize(rest.length)).map(t => h('li', {}, t.replace(/（[^）]*）/g, '')))),
+            rest.length > chunkSize(rest.length) ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - chunkSize(rest.length)}項目（読み上げは2回で終わります）`) : null,
             h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => openVoice(1) }, icon('mic'), '話して入力をはじめる')))
-        : h('p', { class: 'done-note' }, '✓ 読み上げは完了です！'),
+        : h('div', { class: 'done-note' }, '✓ 音声での入力は完了です！', h('span', { class: 'done-sub' }, 'お手数ですが、残りの項目は下の欄に手入力でお願いします。')),
       emailEntry(),
       phoneEntry(),
       ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
@@ -637,15 +686,30 @@ function renderStep() {
     }
   } else {
     const vis = SECTIONS.flatMap(visibleFields);
+    const isEmpty = f => f.k && !String(data[f.k] ?? '').trim() && !(f.k === 'phone_local' && !String(data.phone_area ?? '').trim());
+    const emptyGroups = SECTIONS.filter(sec => !(sec.id === 'beneficiary' && data.ben_none === 'はい'))
+      .map(sec => ({ sec, list: visibleFields(sec).filter(isEmpty) })).filter(g => g.list.length);
+    const emptyList = emptyGroups.flatMap(g => g.list);
     const empty = vis.filter(f => !String(data[f.k] ?? '').trim()).length;
+    const aiList = vis.filter(f => aiKeys.has(f.k));
     const unchecked = [...aiKeys].filter(k => !HIDE.has(k)).length;
     const st = docStatus(data);
     const agree = h('input', { type: 'checkbox', id: 'agree2' });
     body = [h('p', { class: 'lead' }, '✨ あと少しです！送信して完了です。'),
       h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
         h('div', { class: 'sum-row' }, h('span', {}, '本人確認書類'), h('strong', { class: st.ok ? 'doc-ok' : 'err' }, st.ok ? '✓ そろっています' : '不足しています')),
-        h('div', { class: 'sum-row' }, h('span', {}, '未入力の項目'), h('strong', {}, `${empty}か所`)),
-        h('div', { class: 'sum-row' }, h('span', {}, '確認がまだの項目（黄色）'), h('strong', {}, `${unchecked}か所`)),
+        emptyList.length
+          ? h('div', { class: 'sum-block' },
+              h('button', { class: 'sum-row sum-link', type: 'button', onclick: () => jumpToField(emptyList[0].k, true) }, h('span', {}, '未入力の項目'), h('strong', { class: 'err' }, `${emptyList.length}か所 ›`)),
+              h('p', { class: 'muted small', style: 'margin:6px 0 4px' }, 'タップすると、その項目の入力画面に移ります'),
+              ...emptyGroups.map(g => h('div', { class: 'jump-group' }, h('span', { class: 'jump-sec' }, g.sec.title),
+                h('div', { class: 'jump-list' }, ...g.list.map(f => h('button', { class: 'jump-chip', type: 'button', onclick: () => jumpToField(f.k, true) }, f.k === 'phone_area' ? '電話番号' : f.label))))))
+          : h('div', { class: 'sum-row' }, h('span', {}, '未入力の項目'), h('strong', { class: 'doc-ok' }, '✓ ありません')),
+        aiList.length
+          ? h('div', { class: 'sum-block' },
+              h('button', { class: 'sum-row sum-link', type: 'button', onclick: () => jumpToField(aiList[0].k, false) }, h('span', {}, '自動で入力した項目（黄色の欄）'), h('strong', {}, `${unchecked}か所 ›`)),
+              h('p', { class: 'muted small', style: 'margin:6px 0 0' }, '書類の写真や音声から自動で入れた項目です。読み間違いがあるかもしれないので、念のため見直してください（このままでも送信できます）。'))
+          : null,
         expiryWarn(),
         !st.ok ? h('div', { class: 'warn' }, h('p', {}, !data.has_passport ? 'パスポートをお持ちか選択してください。' : st.needPassport ? 'パスポートの撮影がまだです。' : '本人確認書類の撮影がまだです（2つ必要）。'), h('p', { class: 'small' }, '入力内容は保存されています。書類が用意できたら、このリンクを開いて撮影すると送信できます。'),
           h('button', { class: 'btn outline sm', type: 'button', onclick: () => go(1) }, '書類を撮影する')) : null,
@@ -746,9 +810,10 @@ function confirmCard(sec) {
       if (!f.k) return f;
       let v = String(data[f.k] ?? '').trim(), label = f.label;
       if (f.k === 'phone_area') { label = '電話番号'; v = phoneText(); }
+      if (YEN.has(f.k) && v) { const m = manText(v); v = yenText(v) + '円' + (m ? '（' + m.replace(/^＝ /, '') + '）' : ''); }
       const num = NUM_CHECK.has(f.k), ai = aiKeys.has(f.k) || (f.k === 'phone_area' && aiKeys.has('phone_local'));
-      const bad = fieldError(f.k);
-      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '数字を確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null)); }),
+      const bad = fieldError(f.k) || (f.k === 'postal_code' ? zipWarning() : '') || (f.k === 'phone_area' && !mobileOk() ? '携帯番号は090・080・070から始まる11桁です' : '');
+      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '数字を確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null)); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
     sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
     sec.id === 'payment' ? cardEntry() : null,
@@ -772,7 +837,7 @@ function renderField(f) {
   if (f.type === 'select') input = h('select', { id }, h('option', { value: '' }, '選択してください'), ...f.opts.map(o => h('option', { value: o }, o)));
   else if (f.type === 'textarea') input = h('textarea', { id, rows: '3' });
   else input = h('input', { id, type: f.type === 'number' ? 'text' : f.type, inputmode: f.type === 'number' ? 'decimal' : (f.type === 'tel' ? 'numeric' : null), autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
-  input.value = data[f.k] ?? '';
+  input.value = YEN.has(f.k) ? yenText(data[f.k]) : (data[f.k] ?? '');
   // multi の項目は、タップするたびに追加・解除（例：老後資金、資産形成）
   const chipList = () => String(input.value).split(/[、,，]\s*/).map(x => x.trim()).filter(Boolean);
   const chips = f.chips ? h('div', { class: 'chips' }, ...f.chips.map(c => h('button', { class: 'chip-btn', type: 'button', onclick: () => {
@@ -787,10 +852,22 @@ function renderField(f) {
   const wrap = h('div', { class: 'field' }, h('div', { class: 'field-top' }, h('label', { for: id }, f.label), ok), input, chips, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
   input.addEventListener(f.type === 'select' ? 'change' : 'input', () => {
     userEditAt[f.k] = Date.now();
-    data[f.k] = input.value; dirty.add(f.k); aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); updateCounts(); scheduleSave();
+    data[f.k] = YEN.has(f.k) ? zen2han(input.value).replace(/[,，円\s]/g, '') : input.value; dirty.add(f.k); aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); updateCounts(); scheduleSave();
   });
   if (f.k === 'ben_name_kana') input.addEventListener('change', fillBenRomaji);
   if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
+  if (YEN.has(f.k)) {
+    const man = h('small', { class: 'man' });
+    const showMan = () => { man.textContent = manText(data[f.k]); };
+    input.addEventListener('input', showMan);
+    input.addEventListener('blur', () => { input.value = yenText(data[f.k]); });
+    wrap.insertBefore(man, input.nextSibling); showMan(); inputs[f.k + ':man'] = showMan;
+  }
+  if (f.k === 'postal_code') {
+    const zw = h('small', { class: 'err field-err zip-warn', role: 'alert' });
+    wrap.append(zw);
+    input.addEventListener('input', () => watchZip());
+  }
   if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
   if (VALIDATE[f.k]) {
     const msg = h('small', { class: 'err field-err', role: 'alert' });
@@ -838,7 +915,9 @@ function paint(k) {
 }
 function setField(k, v, ai = false, guess = false) {
   data[k] = v; dirty.add(k);
-  if (inputs[k]) inputs[k].input.value = v;
+  if (inputs[k]) inputs[k].input.value = YEN.has(k) ? yenText(v) : v;
+  if (inputs[k + ':man']) inputs[k + ':man']();
+  if (k === 'postal_code' || k === 'address_ja') watchZip();
   if (ai) { aiKeys.add(k); guess ? guessKeys.add(k) : guessKeys.delete(k); }
   paint(k);
 }
@@ -882,6 +961,7 @@ async function submit() {
   if (bgTasks.size) { toast('写真の読み取り中です。終わるまで少しお待ちください。'); return; }
   const ds = docStatus(data);
   if (!ds.ok) { alert(!data.has_passport ? 'パスポートをお持ちか選択してください。' : ds.needPassport ? 'パスポートをお持ちの場合は、パスポートの写真が必要です。' : '本人確認書類を2点撮影してください（運転免許証・マイナンバーカードは表と裏の両方）。'); go(1); return; }
+  if (!mobileOk()) { toast('携帯番号の形式を確認してください（090・080・070から始まる11桁）。', 6000); go(2); setTimeout(() => { const p = document.getElementById('customer-phone'); if (p) { p.scrollIntoView({ block: 'center' }); p.focus(); } }, 60); return; }
   if (data.email) { const email = document.createElement('input'); email.type = 'email'; email.value = data.email; if (!email.checkValidity()) { toast('メールアドレスの形式を確認してください。'); go(2); return; } }
   const done = busy('送信中…');
   // ① 最新の内容を保存 → ② スプレッドシートへ送信 → ③ 送信完了にする
@@ -919,6 +999,7 @@ function applyAI(res, preset = {}, opts = {}) {
     if (f.type === 'select' && !f.opts.includes(v)) continue;
     if (f.type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) continue;
     if (f.type === 'number') v = v.replace(/[,，円\s]/g, '');
+    if (k === 'postal_code') { v = zen2han(v).replace(/\D/g, ''); if (v.length !== 7) continue; v = v.slice(0, 3) + '-' + v.slice(3); }
     setField(k, v, true, guess.has(k)); n++; first = first || k;
   }
   if ('fund_amount' in vals) syncFundAnnual();
@@ -927,7 +1008,7 @@ function applyAI(res, preset = {}, opts = {}) {
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
   warnExpiryToast();
   refreshStep();
-  const r = opts.since ? null : inputs[first]; if (r) r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const r = opts.since || opts.noScroll ? null : inputs[first]; if (r) r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 function pickImage(doc) { fileInput.dataset.slot = ''; fileInput.dataset.doc = doc; fileInput.value = ''; openPhotoPicker(); }
 fileInput.addEventListener('change', async () => {
@@ -1093,9 +1174,11 @@ function renderDocsPanel() {
   const badge = st.ok ? h('span', { class: 'doc-badge ok' }, '2点そろいました')
     : h('span', { class: 'doc-badge' }, !d.has_passport && !left ? 'パスポートの確認が必要' : st.needPassport && !left ? 'パスポートが必要です' : `あと${left || 1}点`);
   const hp = FIELD_MAP.has_passport;
-  const hpSel = h('select', { id: 'f-has_passport' }, h('option', { value: '' }, '選択してください'), ...hp.opts.map(o => h('option', { value: o }, o)));
-  hpSel.value = d.has_passport || '';
-  hpSel.addEventListener('change', () => { d.has_passport = hpSel.value; markDirty('has_passport'); refreshDocs(); });
+  const hpBox = h('div', { class: 'hp-box' + (d.has_passport ? '' : ' unset'), id: 'hp-box', role: 'radiogroup', 'aria-labelledby': 'hp-q' },
+    h('p', { class: 'hp-q', id: 'hp-q' }, '🛂 パスポートはお持ちですか？'),
+    h('p', { class: 'hp-sub' }, 'お持ちの場合は、必ずパスポートも撮影してください'),
+    h('div', { class: 'hp-opts' }, ...hp.opts.map(o => h('button', { class: 'hp-opt' + (d.has_passport === o ? ' on' : ''), type: 'button', role: 'radio', 'aria-checked': String(d.has_passport === o),
+      onclick: () => { d.has_passport = o; markDirty('has_passport'); refreshDocs(); } }, o))));
   const groups = Object.keys(DOC_TYPES).map(doc => {
     const isDone = docDone(d, doc);
     return h('div', { class: 'doc-group' + (isDone ? ' done' : '') },
@@ -1111,7 +1194,7 @@ function renderDocsPanel() {
   });
   const el = h('section', { class: 'sec docs', id: 'docs-panel' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('div', { class: 'doc-top' }, h('strong', {}, '書類を2つ撮影'), badge),
-    h('div', { class: 'field' }, h('label', { for: 'f-has_passport' }, hp.label), hpSel),
+    hpBox,
     h('div', { class: 'tips' },
       h('div', { class: 'tip' }, ill(TIP_ILL.corners, 'tip-ill'), h('span', {}, '四隅を入れる')),
       h('div', { class: 'tip' }, ill(TIP_ILL.light, 'tip-ill'), h('span', {}, '明るい場所で')),
@@ -1176,7 +1259,54 @@ function syncSecret(k, except) {
 /* ---------- 入力チェック（決まった形でないとエラーを出す） ---------- */
 const VALIDATE = {
   bank_branch_no: v => /^\d{3}$/.test(v) ? '' : '支店番号は3桁の数字です（例：123）',
+  postal_code: v => /^\d{3}-?\d{4}$/.test(zen2han(v).trim()) ? '' : '郵便番号は7桁の数字です（例：460-0008）',
 };
+const zen2han = s => String(s ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[－ー‐―]/g, '-');
+
+/* ---------- 金額の表示（4000000 → 4,000,000／400万円） ---------- */
+const YEN = new Set(['income_amount', 'fund_amount', 'fund_annual', 'savings_amount']);
+const yenText = v => { const s = zen2han(v).replace(/[,，円\s]/g, ''); return /^\d+$/.test(s) ? Number(s).toLocaleString('ja-JP') : String(v ?? ''); };
+function manText(v) {
+  const n = Number(zen2han(v).replace(/[,，円\s]/g, ''));
+  if (!n) return '';
+  const oku = Math.floor(n / 1e8), man = Math.floor(n % 1e8 / 1e4), rest = n % 1e4;
+  return '＝ ' + (oku ? oku + '億' : '') + (man ? man.toLocaleString('ja-JP') + '万' : '') + (rest ? rest.toLocaleString('ja-JP') : '') + '円';
+}
+
+/* ---------- 郵便番号と住所の照合（日本郵便のデータを使う zipcloud で、番号から住所を引いて比べる） ---------- */
+const zipCache = {};
+let zipTimer = null;
+const zipDigits = (d = D()) => zen2han(d.postal_code).replace(/\D/g, '');
+const normAddr = s => zen2han(s).replace(/[\s　]/g, '').replace(/ヶ|ヵ|ケ/g, 'ケ').replace(/（.*$/, '').replace(/[0-9０-９一二三四五六七八九十]+丁目.*$/, '');
+function watchZip() {
+  clearTimeout(zipTimer);
+  zipTimer = setTimeout(async () => {
+    const code = zipDigits();
+    if (code.length === 7 && !(code in zipCache)) {
+      try { const r = await fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + code); const j = await r.json(); if (j.status === 200) zipCache[code] = (j.results || []).map(x => ({ pref: x.address1, city: x.address2, town: x.address3 })); }
+      catch {}
+    }
+    paintZip();
+  }, 400);
+}
+function zipWarning(d = D()) {
+  const code = zipDigits(d), hit = zipCache[code];
+  if (code.length !== 7 || !hit) return '';
+  if (!hit.length) return 'この郵便番号は見つかりませんでした。お手元の郵便物などで確認してください';
+  const addr = normAddr(d.address_ja);
+  if (!addr) return '';
+  const ok = hit.some(x => addr.includes(normAddr(x.city)) && (!x.town || addr.includes(normAddr(x.town)) || x.town.includes('以下に掲載がない')));
+  if (ok) return '';
+  const a = hit[0];
+  return `この郵便番号は「${a.pref}${a.city}${hit.length === 1 ? a.town.replace(/（.*$/, '') : ''}」の番号です。ご住所と合っているか確認してください`;
+}
+function paintZip() {
+  const r = inputs.postal_code;
+  if (r) { const el = r.wrap.querySelector('.zip-warn'); const w = fieldError('postal_code') ? '' : zipWarning(); if (el) el.textContent = w ? '⚠ ' + w : ''; if (w) r.wrap.classList.add('bad'); }
+  const now = zipWarning();
+  if (now !== lastZipWarn) { lastZipWarn = now; if (step === 3) refreshStep(); }
+}
+let lastZipWarn = '';
 const fieldError = (k, v = D()[k]) => { const s = String(v ?? '').trim(); return s && VALIDATE[k] ? VALIDATE[k](s) : ''; };
 const invalidKeys = () => Object.keys(VALIDATE).filter(k => fieldError(k));
 
@@ -1212,7 +1342,7 @@ function bgStart(msg) {
 function paintBg() {
   if (!bgTasks.size) { if (bgPill) { bgPill.remove(); bgPill = null; } return; }
   if (!bgPill) { bgPill = h('div', { class: 'bg-pill', role: 'status' }); document.body.append(bgPill); }
-  bgPill.replaceChildren(h('span', { class: 'spinner' }), h('span', {}, [...bgTasks].map(t => t.msg).join('・') + '…（このまま他の項目を入力できます）'));
+  bgPill.replaceChildren(h('span', { class: 'spinner' }), h('span', {}, [...bgTasks].map(t => t.msg).join('・') + '…', h('small', {}, 'このまま他の項目を入力・操作できます')));
 }
 
 /* ---------- カード：写真から読み取り（写真も番号もツールには保存しない） ---------- */
@@ -1332,7 +1462,7 @@ const SCRIPT = [
   { keys: ['bank_branch_no'], text: '支店番号は「3桁の番号」です。' },
   { keys: ['account_number'], text: '口座番号は「7桁の番号」です。' },
   { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
-  { keys: ['card_company'], text: 'カード会社は「〇〇」です。' },
+  { keys: ['card_company'], text: 'カード会社は「楽天カード・イオンカード・三井住友カードなど」です。' },
   { keys: ['fund_method', 'fund_amount'], text: '積立に使えるお金は「月〇万円くらい」あります。' },
   { keys: ['savings_amount'], text: '貯金は「〇〇万円くらい」あります。' },
   { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
@@ -1352,18 +1482,20 @@ function docSummary(values) {
   const names = Object.keys(DOC_TYPES).filter(doc => DOC_SLOTS.some(x => x.doc === doc && got[x.slot])).map(doc => DOC_TYPES[doc]);
   return names;
 }
-const CHUNK = 7;
 const voiceSkipped = new Set();
 let voiceChunkNow = [];
 const remainingLines = () => scriptLines(voiceValues(), VOICE_AVAIL).filter(t => !voiceSkipped.has(t));
+// 読み上げは2回で終わり：1回目は半分、2回目は残り全部
+const VOICE_ROUNDS = 2;
+const chunkSize = n => Math.max(1, Math.ceil(n / VOICE_ROUNDS));
 function scriptBox(values, available, step = 1) {
   const all = scriptLines(values, available).filter(t => !voiceSkipped.has(t));
-  const lines = all.slice(0, CHUNK);
+  const lines = step >= VOICE_ROUNDS ? all : all.slice(0, chunkSize(all.length));
   voiceChunkNow = lines;
   const box = h('div', { class: 'script' });
   if (!lines.length) { box.append(h('p', { class: 'small', style: 'margin:0' }, '入力が必要な項目は、すべて埋まっています。')); return box; }
   const names = docSummary(values);
-  box.append(h('div', { class: 'script-head' }, h('strong', {}, `読み上げ見本（ステップ${step}：${lines.length}項目／残り${all.length}項目）`), h('span', { class: 'muted small' }, '「」の中を自分の内容に変えて、上から順に読むだけでOK。終わったら次の項目が出ます'),
+  box.append(h('div', { class: 'script-head' }, h('strong', {}, `読み上げ見本（${Math.min(step, VOICE_ROUNDS)}回目／全${VOICE_ROUNDS}回：${lines.length}項目）`), h('span', { class: 'muted small' }, step >= VOICE_ROUNDS || lines.length === all.length ? '「」の中を自分の内容に変えて、上から順に読むだけでOK。これで読み上げは最後です' : '「」の中を自分の内容に変えて、上から順に読むだけでOK。終わったら残りの項目が出ます（あと1回）'),
     h('span', { class: 'small' }, names.length
       ? '撮影済みの書類（' + names.join('・') + '）から入力できた項目は省いています。'
       : '先に本人確認書類を撮影すると、読む項目が少なくなります。')));
@@ -1378,6 +1510,12 @@ function scriptBox(values, available, step = 1) {
 }
 
 /* ---------- 話して入力 ---------- */
+function voiceFinished() {
+  remainingLines().forEach(t => voiceSkipped.add(t));
+  refreshStep();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => toast('音声での入力は以上です。お手数ですが、残りは上から順に手入力でお願いします。', 6000), 600);
+}
 function stopVoice() {
   recording = false;
   if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop(); } catch {} rec = null; }
@@ -1437,20 +1575,20 @@ function openVoice(step = 1) {
     } catch { release(); mic.disabled = false; status.textContent = 'マイクを使えません。ブラウザで許可するか、下の欄に手入力してください。'; }
   });
   const close = () => { canceled = true; stopVoice(); clearTimeout(recordTimer); back.remove(); };
-  const hasMore = () => remainingLines().length > voiceChunkNow.length;
+  const hasMore = () => step < VOICE_ROUNDS && remainingLines().length > voiceChunkNow.length;
   const send = h('button', { class: 'btn primary wide', type: 'button' }, '自動で項目に入れる');
   send.addEventListener('click', async () => {
     stopVoice(); const t = ta.value.trim();
     if (!t) { status.textContent = '話した内容がまだありません。'; return; }
     close(); const done = busy('項目に入れています…');
-    try { const res = await callAI({ mode: 'voice', transcript: t, fields: [...fieldSpec(VOICE_KEYS), ACCOUNT_SPEC] }); done(); const gotAccount = takeAccountFromVoice(res); voiceDraft = ''; if (gotAccount && !Object.keys(res.values || {}).length) toast('口座番号を入れました。送信前の画面で確認してください。'); else applyAI(res); if (remainingLines().length) setTimeout(() => openVoice(step + 1), 700); }
+    try { const res = await callAI({ mode: 'voice', transcript: t, fields: [...fieldSpec(VOICE_KEYS), ACCOUNT_SPEC] }); done(); const gotAccount = takeAccountFromVoice(res); voiceDraft = ''; if (gotAccount && !Object.keys(res.values || {}).length) toast('口座番号を入れました。送信前の画面で確認してください。'); else applyAI(res, {}, { noScroll: true }); if (step < VOICE_ROUNDS && remainingLines().length) setTimeout(() => openVoice(step + 1), 700); else voiceFinished(); }
     catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
   });
   const skip = h('button', { class: 'btn outline wide', type: 'button' }, '⏭ この項目は飛ばす（わからない・当てはまらない）');
   skip.addEventListener('click', () => {
     voiceChunkNow.forEach(t => voiceSkipped.add(t));
     close();
-    if (remainingLines().length) openVoice(step + 1); else toast('読み上げる項目は以上です。');
+    if (step < VOICE_ROUNDS && remainingLines().length) openVoice(step + 1); else voiceFinished();
   });
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
