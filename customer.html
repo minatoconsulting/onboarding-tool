@@ -167,6 +167,13 @@ a.btn.ghost{color:var(--muted)}
 .doc-group.card-need .doc-title{color:#7E3328}
 .doc-group.card-need .doc-row{border-top-color:#E3C3BD}
 .doc-group.card-need .btn.outline{border-color:#A8564B;background:#A8564B;color:#fff}
+.zip-fix{display:flex;margin-top:6px}
+#cf-payment.card-need-box,.sec.secret.card-need-box{border:2px solid #A8564B;background:#F7E9E6}
+#cf-payment.card-need-box .card-entry,.sec.secret.card-need-box .card-entry{background:transparent}
+.card-need-box .card-scan{border-color:#A8564B;background:#A8564B;color:#fff}
+.card-need-note{margin:0;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #D9A79F;color:#8E3F35;font-weight:700;font-size:.88rem}
+.card-entry:not(.card-need-box) .card-need-note{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #cf-payment.card-need-box,:root:not([data-theme="light"]) .sec.secret.card-need-box{background:#33201D;border-color:#C27368}:root:not([data-theme="light"]) .card-need-note{background:#172128;color:#F0B8AE}}
 .card-need-msg{color:#8E3F35;font-weight:800}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .doc-group.card-need{background:#33201D;border-color:#C27368}:root:not([data-theme="light"]) .doc-group.card-need .doc-title{color:#F0B8AE}}
 .doc-group.done{border-color:var(--seal)}
@@ -690,8 +697,8 @@ function renderStep() {
       : rest.length
         ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
             h('strong', {}, `あと${rest.length}項目`),
-            h('ul', { class: 'mini' }, ...rest.slice(0, chunkSize(rest.length)).map(t => h('li', {}, t.replace(/（[^）]*）/g, '')))),
-            rest.length > chunkSize(rest.length) ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - chunkSize(rest.length)}項目（読み上げは2回で終わります）`) : null,
+            h('ul', { class: 'mini' }, ...firstRound(rest).map(t => h('li', {}, t.replace(/（[^）]*）/g, '')))),
+            rest.length > firstRound(rest).length ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - firstRound(rest).length}項目（読み上げは2回で終わります）`) : null,
             h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => openVoice(1) }, icon('mic'), '話して入力をはじめる'),
             modeSwitch('type', '⌨️ 声を出せない時は、文字で入力する')))
         : h('div', { class: 'done-note' }, mode === 'type' ? '✓ 上の項目は入力済みです' : '✓ 音声での入力は完了です！', h('span', { class: 'done-sub' }, 'お手数ですが、残りの項目は下の欄に手入力でお願いします。')),
@@ -751,6 +758,7 @@ function renderStep() {
     agree.addEventListener('change', () => { nextBtn.disabled = !agree.checked || !st.ok; });
   }
   mainEl.replaceChildren(...body.filter(Boolean));
+  paintCardNeed();
   const backBtn = step > 1 ? h('button', { class: 'btn wide', type: 'button', onclick: () => go(step - 1) }, '戻る') : h('span');
   const nextBtn = h('button', { class: 'btn primary wide', type: 'button', disabled: !canNext }, nextLabel);
   nextBtn.addEventListener('click', nextFn);
@@ -852,7 +860,7 @@ function confirmCard(sec) {
   const rerender = () => { const y = window.scrollY; renderStep(); window.scrollTo(0, y); };
   const head = h('div', { class: 'cf-head' }, h('strong', {}, sec.title),
     h('div', { class: 'doc-actions' },
-      !isEdit && hasAI ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); }); rerender(); } }, '確認OK') : null,
+      !isEdit && hasAI ? h('button', { class: 'btn ghost sm', type: 'button', title: '黄色の項目を見て、合っていれば押してください', onclick: () => { vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); }); rerender(); } }, '黄色は合っている') : null,
       h('button', { class: 'btn sm ' + (isEdit ? 'primary' : 'outline'), type: 'button', onclick: () => {
         if (isEdit) vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); });
         editing = isEdit ? null : sec.id; rerender();
@@ -907,7 +915,7 @@ function renderField(f) {
   } }, c))) : null;
   const paintChips = () => { if (!chips || !f.multi) return; const list = chipList(); chips.querySelectorAll('.chip-btn').forEach(b => { const on = list.includes(b.textContent); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); };
   input.addEventListener('input', paintChips); paintChips();
-  const ok = h('button', { class: 'ok-btn', type: 'button' }, '確認OK');
+  const ok = h('button', { class: 'ok-btn', type: 'button' }, '合っている');
   ok.addEventListener('click', () => { aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); });
   const wrap = h('div', { class: 'field' }, h('div', { class: 'field-top' }, h('label', { for: id }, f.label), ok), input, chips, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
   input.addEventListener(f.type === 'select' ? 'change' : 'input', () => {
@@ -971,7 +979,7 @@ function fillBenRomaji() {
 function paint(k) {
   const r = inputs[k]; if (!r) return;
   r.wrap.classList.toggle('ai', aiKeys.has(k));
-  r.ok.textContent = guessKeys.has(k) ? '推測・確認OK' : '確認OK';
+  r.ok.textContent = guessKeys.has(k) ? '推測です・合っている' : '合っている';
 }
 function setField(k, v, ai = false, guess = false) {
   data[k] = v; dirty.add(k);
@@ -1149,7 +1157,7 @@ function docStatus(d) {
 // パスポートがある時は、身分証明書とローマ字の名前はパスポートを優先（他の書類で上書きしない）
 function docPlan(docKey, d) {
   const cfg = DOCS[docKey];
-  let keys = cfg.keys.slice(), set = { ...cfg.set };
+  let keys = cfg.keys.filter(k => k !== 'postal_code'), set = { ...cfg.set };
   const passportFirst = !!docsOf(d).passport || d.id_type === 'パスポート';
   if (docKey !== 'passport' && docKey !== 'ben_license' && passportFirst) {
     keys = keys.filter(k => !/^id_/.test(k) && k !== 'first_romaji' && k !== 'last_romaji');
@@ -1345,6 +1353,7 @@ function accountError(v = secretVals.account_number) {
 }
 function syncSecret(k, except) {
   keepSecrets();
+  if (k === 'card_number') paintCardNeed();
   document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
 }
 
@@ -1365,36 +1374,93 @@ function manText(v) {
   return '＝ ' + (oku ? oku + '億' : '') + (man ? man.toLocaleString('ja-JP') + '万' : '') + (rest ? rest.toLocaleString('ja-JP') : '') + '円';
 }
 
-/* ---------- 郵便番号と住所の照合（日本郵便のデータを使う zipcloud で、番号から住所を引いて比べる） ---------- */
-const zipCache = {};
-let zipTimer = null;
+/* ---------- 郵便番号：日本郵便の郵便番号データ（zip/都道府県コード.json）で、住所から引く ---------- */
+// AIの推測は使わない。書類から住所が入ったら、ここで郵便番号を自動で入れる
+const PREFS = ['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県',
+  '新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県',
+  '鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
+const zipFiles = {};
+const loadPref = code => zipFiles[code] || (zipFiles[code] = fetch('zip/' + code + '.json').then(r => r.ok ? r.json() : null).catch(() => null)
+  .then(j => { if (!j) delete zipFiles[code]; return j; }));
+const normA = s => zen2han(s).replace(/[\s　]/g, '').replace(/[ヶヵケ]/g, 'ケ').replace(/[のノ之]/g, 'ノ');
+const KNUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+const kanjiNum = s => { let n = 0, cur = 0; for (const c of s) { if (c === '十') { n += (cur || 1) * 10; cur = 0; } else cur = KNUM[c] || 0; } return n + cur; };
+// 「1~19丁目」「20丁目」「1,2丁目」「100~200番地」などの補足に、番地・丁目の数字が入るか
+function noteHas(note, n) {
+  let found = false, any = false;
+  for (const m of note.matchAll(/(\d+)(?:~(\d+))?(?=[^\d~]|$)/g)) { any = true; const lo = +m[1], hi = m[2] ? +m[2] : lo; if (n >= lo && n <= hi) found = true; }
+  return { any, found };
+}
+async function zipFromAddress(addr) {
+  let a = normA(addr);
+  const pi = PREFS.findIndex(p => a.startsWith(p));
+  if (pi < 0) return null;
+  a = a.slice(PREFS[pi].length);
+  const d = await loadPref(String(pi + 1).padStart(2, '0'));
+  if (!d) return null;
+  let city = null, clen = 0;
+  for (const c of Object.keys(d)) for (const v of [normA(c), normA(c).replace(/^.+?郡/, '')]) if (v && a.startsWith(v) && v.length > clen) { city = c; clen = v.length; }
+  if (!city) return null;
+  const hadOaza = /^大字/.test(a.slice(clen));
+  let rest = a.slice(clen).replace(/^大字|^字/, '');
+  const rows = d[city];
+  let tlen = 0;
+  for (const r of rows) { const t = normA(r[0]); if (t && rest.startsWith(t) && t.length > tlen) tlen = t.length; }
+  // 京都の「〇〇通〇〇上ル〇〇町」のように、町名の前に通り名がある住所は、途中に出てくる町名で探す
+  if (!tlen) {
+    let at = -1;
+    for (const r of rows) { const t = normA(r[0]); const i = t.length >= 2 ? rest.indexOf(t) : -1; if (i >= 0 && t.length > tlen) { tlen = t.length; at = i; } }
+    if (at > 0) rest = rest.slice(at);
+  }
+  let cands = tlen ? rows.filter(r => normA(r[0]).length === tlen && rest.startsWith(normA(r[0]))) : rows.filter(r => !r[0]);
+  if (cands.some(r => r[2] === '大字')) { const f = cands.filter(r => (r[2] === '大字') === hadOaza); if (f.length) cands = f; }
+  if (!cands.length) cands = rows.filter(r => !r[0]);
+  if (new Set(cands.map(r => r[1])).size > 1) {
+    const after = rest.slice(tlen);
+    const m = after.match(/^(\d+)/) || after.match(/^([一二三四五六七八九十]+)丁目/);
+    const n = m ? (/\d/.test(m[1]) ? +m[1] : kanjiNum(m[1])) : null;
+    if (n != null) {
+      const hit = cands.filter(r => r[2] && !/除く/.test(r[2]) && noteHas(r[2], n).found);
+      const general = cands.filter(r => !r[2] || /除く/.test(r[2]) || !noteHas(r[2], n).any);
+      cands = hit.length ? hit : general.length ? general : cands;
+    }
+  }
+  const zips = [...new Set(cands.map(r => r[1]))];
+  return { zips, place: PREFS[pi] + city + (tlen ? cands[0][0] : '') };
+}
+const fmtZip = z => z.slice(0, 3) + '-' + z.slice(3);
 const zipDigits = (d = D()) => zen2han(d.postal_code).replace(/\D/g, '');
-const normAddr = s => zen2han(s).replace(/[\s　]/g, '').replace(/ヶ|ヵ|ケ/g, 'ケ').replace(/（.*$/, '').replace(/[0-9０-９一二三四五六七八九十]+丁目.*$/, '');
+let zipTimer = null, zipResult = null, zipAddrSeen = null;
 function watchZip() {
   clearTimeout(zipTimer);
   zipTimer = setTimeout(async () => {
-    const code = zipDigits();
-    if (code.length === 7 && !(code in zipCache)) {
-      try { const r = await fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + code); const j = await r.json(); if (j.status === 200) zipCache[code] = (j.results || []).map(x => ({ pref: x.address1, city: x.address2, town: x.address3 })); }
-      catch {}
+    const addr = String(D().address_ja || '').trim();
+    const changed = addr !== zipAddrSeen;
+    if (changed) { zipAddrSeen = addr; zipResult = addr ? await zipFromAddress(addr) : null; }
+    // 住所が変わった時：郵便番号が空か、AIが入れた番号なら、住所から引いた番号に入れ替える
+    if (changed && zipResult && zipResult.zips.length === 1) {
+      const z = zipResult.zips[0];
+      if (zipDigits() !== z && (!zipDigits() || aiKeys.has('postal_code'))) { setField('postal_code', fmtZip(z), true, false); scheduleSave(); if (step === 3) refreshStep(); }
     }
     paintZip();
-  }, 400);
+  }, 300);
 }
 function zipWarning(d = D()) {
-  const code = zipDigits(d), hit = zipCache[code];
-  if (code.length !== 7 || !hit) return '';
-  if (!hit.length) return 'この郵便番号は見つかりませんでした。お手元の郵便物などで確認してください';
-  const addr = normAddr(d.address_ja);
-  if (!addr) return '';
-  const ok = hit.some(x => addr.includes(normAddr(x.city)) && (!x.town || addr.includes(normAddr(x.town)) || x.town.includes('以下に掲載がない')));
-  if (ok) return '';
-  const a = hit[0];
-  return `この郵便番号は「${a.pref}${a.city}${hit.length === 1 ? a.town.replace(/（.*$/, '') : ''}」の番号です。ご住所と合っているか確認してください`;
+  if (!zipResult || !zipResult.zips.length || String(d.address_ja || '').trim() !== zipAddrSeen) return '';
+  const code = zipDigits(d);
+  if (code.length !== 7 || zipResult.zips.includes(code)) return '';
+  return `ご住所（${zipResult.place}）の郵便番号は「${zipResult.zips.slice(0, 4).map(fmtZip).join('」「')}」${zipResult.zips.length > 1 ? 'のどれか' : ''}です。お手元の郵便物などで確認してください`;
 }
 function paintZip() {
   const r = inputs.postal_code;
-  if (r) { const el = r.wrap.querySelector('.zip-warn'); const w = fieldError('postal_code') ? '' : zipWarning(); if (el) el.textContent = w ? '⚠ ' + w : ''; if (w) r.wrap.classList.add('bad'); }
+  if (r) {
+    const el = r.wrap.querySelector('.zip-warn'); const w = fieldError('postal_code') ? '' : zipWarning();
+    if (el) {
+      el.replaceChildren(w ? '⚠ ' + w : '');
+      if (w && zipResult.zips.length === 1) el.append(h('button', { class: 'btn outline sm zip-fix', type: 'button', onclick: () => { setField('postal_code', fmtZip(zipResult.zips[0])); markDirty('postal_code'); } }, fmtZip(zipResult.zips[0]) + ' にする'));
+    }
+    if (w) r.wrap.classList.add('bad');
+  }
   const now = zipWarning();
   if (now !== lastZipWarn) { lastZipWarn = now; if (step === 3) refreshStep(); }
 }
@@ -1442,11 +1508,18 @@ function paintBg() {
 
 /* ---------- カード：写真から読み取り（写真も番号もツールには保存しない） ---------- */
 function cardScanBtn() {
-  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('credit_card') }, icon('card2'), 'カードを撮影して自動入力');
+  return h('button', { class: 'btn outline wide card-scan', type: 'button', onclick: () => pickImage('credit_card') }, icon('card2'), 'カードを撮影して自動入力');
+}
+// カード番号が空の間は、カードの欄全体を赤くする
+function paintCardNeed() {
+  const need = !String(secretVals.card_number || '').trim();
+  document.querySelectorAll('#cf-payment, .card-entry').forEach(el => el.classList.toggle('card-need-box', need));
+  document.querySelectorAll('[data-card-need]').forEach(el => { el.hidden = !need; });
 }
 function cardEntry(title) {
   return h('div', { class: 'card-entry' },
     title ? h('strong', {}, title) : null,
+    h('p', { class: 'card-need-note', 'data-card-need': '' }, '⚠ カード番号がまだ入っていません。カードを撮影するか、下の欄に入力してください。'),
     cardScanBtn(),
     h('p', { class: 'small muted', style: 'margin:0' }, '写真は保存しません。カード番号と有効期限はツールに保存されず、送信の時にスプレッドシートへ直接送られます。'),
     ...SECRET_FIELDS.filter(f => f.k.startsWith('card_')).map(secretInput));
@@ -1585,10 +1658,22 @@ let voiceChunkNow = [];
 const remainingLines = () => scriptLines(voiceValues(), VOICE_AVAIL).filter(t => !voiceSkipped.has(t));
 // 読み上げは2回で終わり：1回目は半分、2回目は残り全部
 const VOICE_ROUNDS = 2;
-const chunkSize = n => Math.max(1, Math.ceil(n / VOICE_ROUNDS));
+// 1回目に読む数：半分。ただし銀行まわり（銀行名・支店・支店番号・口座番号・口座を作った時期）は分けずに2回目へまとめる
+const BANK_LINES = new Set(SCRIPT.filter(x => x.keys.some(k => /^bank_|^account_number$/.test(k))).map(x => x.text));
+function chunkSize(n, all = []) {
+  let size = Math.max(1, Math.ceil(n / VOICE_ROUNDS));
+  const first = all.findIndex(t => BANK_LINES.has(t));
+  if (first >= 0 && first < size && all.slice(size).some(t => BANK_LINES.has(t))) {
+    const rest = all.filter(t => !BANK_LINES.has(t));
+    size = Math.max(1, Math.min(rest.length, size));
+    return { size, lines: rest.slice(0, size) };
+  }
+  return { size, lines: all.slice(0, size) };
+}
+const firstRound = all => chunkSize(all.length, all).lines;
 function scriptBox(values, available, step = 1) {
   const all = scriptLines(values, available).filter(t => !voiceSkipped.has(t));
-  const lines = step >= VOICE_ROUNDS ? all : all.slice(0, chunkSize(all.length));
+  const lines = step >= VOICE_ROUNDS ? all : firstRound(all);
   voiceChunkNow = lines;
   const box = h('div', { class: 'script' });
   if (!lines.length) { box.append(h('p', { class: 'small', style: 'margin:0' }, '入力が必要な項目は、すべて埋まっています。')); return box; }
@@ -1612,7 +1697,6 @@ function voiceFinished() {
   remainingLines().forEach(t => voiceSkipped.add(t));
   refreshStep();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => toast('音声での入力は以上です。お手数ですが、残りは上から順に手入力でお願いします。', 6000), 600);
 }
 function stopVoice() {
   recording = false;
@@ -1665,8 +1749,8 @@ function openVoice(step = 1) {
           if (canceled) return;
           ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + result.text;
           voiceDraft = ta.value;
-          status.textContent = '文字になりました。';
-          checkNote.hidden = false;
+          status.textContent = '';
+          checkNote.hidden = false; checkNote.after(mic, label);
         } catch (e) { if (!canceled) status.textContent = '文字起こしに失敗しました：' + e.message; }
         finally { mic.disabled = false; send.disabled = false; }
       };
@@ -1699,6 +1783,8 @@ function openVoice(step = 1) {
       'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
   back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
+  checkNote.textContent = `✏️ 文字になった内容をご確認ください。間違いがあれば、上の欄をタップして手入力で直してから、「${send.textContent}」を押してください。`;
+  if (voiceDraft.trim() && canRecord) { checkNote.after(mic, label); label.textContent = 'もう一度録音する'; }
   if (!voiceChunkNow.length) skip.hidden = true;
   document.body.append(back);
 }
