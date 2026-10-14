@@ -409,7 +409,7 @@ const SECTIONS = [
   ]},
   { id: 'contract', title: 'ご契約内容（担当者と決めた内容）', fields: [
     F('product_type', '契約商品', { type: 'select', opts: ['S&P', 'EVO', 'FIP', 'PLS'] }),
-    F('contract_years', '契約年数', { type: 'select', opts: ['25年', '20年', '15年', '10年'] }),
+    F('contract_years', '契約年数', { type: 'number', chips: ['25年', '20年', '15年', '10年'], hint: '数字＋年（例：15年）' }),
     F('monthly_usd', '月々の金額（米ドル）', { type: 'number', hint: '数字のみ。例：月200ドル → 200' }),
     F('fund_choice', 'ファンド選択', { hint: '担当者と決めたもの', chips: ['BTC100％', 'BTC75％ ETH25％', 'BTC50％ GOLD50％', '分散ファンド'] }),
     F('introducer_name', '紹介者（漢字フルネーム）'),
@@ -701,7 +701,8 @@ function renderStep() {
     const modeSwitch = (to, text) => h('button', { class: 'btn ghost wide sm', type: 'button', onclick: () => setInputMode(to) }, text);
     body = [h('p', { class: 'lead' }, mode === 'type' ? '⌨️ 残りの項目を入力します。' : mode ? '🎤 話しやすい項目は音声で入力します。' : '📝 残りの項目を入力します。'),
       rest.length && !mode ? modeChooser()
-      : mode === 'type' && (rest.length || (typeKeysMemo && typeKeysMemo.length)) ? typeEntry(modeSwitch('voice', '🎤 やっぱり話して入力する（おすすめ）'))
+      : mode === 'type' && (rest.length || (typeKeysMemo && typeKeysMemo.length))
+        ? typeEntry(h('button', { class: 'btn outline wide', type: 'button', onclick: () => setInputMode('voice') }, icon('mic'), '話して入力に切り替える（おすすめ）'), modeSwitch('voice', '🎤 やっぱり話して入力する（おすすめ）'))
       : rest.length
         ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
             h('strong', {}, `あと${rest.length}項目`),
@@ -767,7 +768,9 @@ function renderStep() {
   }
   mainEl.replaceChildren(...body.filter(Boolean));
   paintCardNeed();
-  const backBtn = step > 1 ? h('button', { class: 'btn wide', type: 'button', onclick: () => go(step - 1) }, '戻る') : h('span');
+  // 「話して入力」「文字で入力」を選んだ後に戻るを押したら、まず入力のしかたを選ぶ画面へ戻す
+  const backToChooser = step === 2 && !!loadProgress().inputMode && remainingLines().length > 0;
+  const backBtn = step > 1 ? h('button', { class: 'btn wide', type: 'button', onclick: () => backToChooser ? setInputMode('') : go(step - 1) }, '戻る') : h('span');
   const nextBtn = h('button', { class: 'btn primary wide', type: 'button', disabled: !canNext }, nextLabel);
   nextBtn.addEventListener('click', nextFn);
   navEl.replaceChildren(h('div', { class: 'nav-wrap' }, hint ? h('p', { class: 'nav-hint' }, hint) : null, h('div', { class: 'dock-in nav-in' }, backBtn, nextBtn)));
@@ -831,7 +834,7 @@ function modeChooser() {
     h('p', { class: 'muted small', style: 'margin:0' }, 'あとから切り替えることもできます。')));
 }
 // 文字で入力：音声で聞く予定だった項目を、入力欄としてまとめて出す（選んだ時点で空いていた項目）
-function typeEntry(switchBtn) {
+function typeEntry(topSwitch, switchBtn) {
   if (!typeKeysMemo) {
     const avail = new Set(VOICE_KEYS);
     typeKeysMemo = SECTIONS.flatMap(visibleFields).map(f => f.k)
@@ -841,6 +844,7 @@ function typeEntry(switchBtn) {
   return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, h('span', { class: 'manual-tag' }, '文字で入力'), '残りの項目'),
     h('p', { class: 'muted small', style: 'margin:0' }, 'わからない項目は空欄のままで進めます。'),
+    topSwitch,
     ...groups.flatMap(g => {
       const lastBank = [...g.fs].reverse().find(f => /^bank_/.test(f.k));
       return [h('p', { class: 'type-sec' }, g.sec.title), ...g.fs.flatMap(f => f === lastBank ? [renderField(f), accountEntry()] : [renderField(f)])];
@@ -948,7 +952,13 @@ function renderField(f) {
   if (VALIDATE[f.k]) {
     const msg = h('small', { class: 'err field-err', role: 'alert' });
     const check = () => { const e = fieldError(f.k, input.value); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
-    input.addEventListener('input', check); wrap.append(msg); check();
+    input.addEventListener('input', check); wrap.append(msg); check(); wrap.check = check;
+  }
+  if (f.k === 'product_type') input.addEventListener('change', paintYears);
+  if (f.k === 'contract_years') {
+    // 「12」と入れたら「12年」にそろえる
+    input.addEventListener('change', () => { const n = yearsNum(input.value); if (/^\d+$/.test(n) && input.value !== n + '年') { input.value = n + '年'; input.dispatchEvent(new Event('input')); } });
+    setTimeout(paintYears, 0);
   }
   inputs[f.k] = { input, wrap, ok };
   return wrap;
@@ -1080,6 +1090,7 @@ function applyAI(res, preset = {}, opts = {}) {
     if (f.type === 'select' && !f.opts.includes(v)) continue;
     if (f.type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) continue;
     if (f.type === 'number') v = v.replace(/[,，円\s]/g, '');
+    if (k === 'contract_years' && /^\d+$/.test(yearsNum(v))) v = yearsNum(v) + '年';
     if (k === 'postal_code') { v = zen2han(v).replace(/\D/g, ''); if (v.length !== 7) continue; v = v.slice(0, 3) + '-' + v.slice(3); }
     setField(k, v, true, guess.has(k)); n++; first = first || k;
   }
@@ -1365,8 +1376,29 @@ function syncSecret(k, except) {
   document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
 }
 
+/* ---------- 契約年数：EVOは25・20・15・10年から選ぶ。S&Pは5〜20年（1年刻み）、FIP・PLSは手入力 ---------- */
+const YEARS_HINT = { 'S&P': '5〜20年の間で、1年刻みで入力できます（例：12）', EVO: '下の25年・20年・15年・10年から選んでください', FIP: '年数を数字で入力してください（例：10）', PLS: '年数を数字で入力してください（例：10）' };
+const yearsNum = v => String(v ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[年\s]/g, '');
+function yearsError(v) {
+  const s = yearsNum(v);
+  if (!/^\d+$/.test(s)) return '年数は数字で入力してください（例：15）';
+  const n = +s, p = D().product_type;
+  if (p === 'S&P' && (n < 5 || n > 20)) return 'S&Pは5〜20年の間で選べます';
+  if (p === 'EVO' && ![10, 15, 20, 25].includes(n)) return 'EVOは25年・20年・15年・10年のどれかです';
+  if (n < 1 || n > 50) return '年数を確認してください';
+  return '';
+}
+function paintYears() {
+  const r = inputs.contract_years; if (!r) return;
+  const p = D().product_type, chips = r.wrap.querySelector('.chips'), hint = r.wrap.querySelector('.hint');
+  if (chips) chips.style.display = p === 'EVO' ? '' : 'none';
+  if (hint) hint.textContent = YEARS_HINT[p] || '先に契約商品を選んでください';
+  if (r.wrap.check) r.wrap.check();
+}
+
 /* ---------- 入力チェック（決まった形でないとエラーを出す） ---------- */
 const VALIDATE = {
+  contract_years: yearsError,
   bank_branch_no: v => /^\d{3}$/.test(v) ? '' : '支店番号は3桁の数字です（例：123）',
   postal_code: v => /^\d{3}-?\d{4}$/.test(zen2han(v).trim()) ? '' : '郵便番号は7桁の数字です（例：460-0008）',
 };
