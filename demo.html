@@ -504,6 +504,8 @@ const DOCS = {
 
 const app = document.getElementById('app');
 const fileInput = document.getElementById('file-input');
+// 担当FPごとの入口リンク（customer.html?fp=...）。担当者がリンクを送らなくても、お客様が自分で申込みを始められる
+const ENTRY_CODE = (new URLSearchParams(location.search).get('fp') || '').slice(0, 40);
 const TOKEN = 'demo-trial';
 const sb = DEMO_SB;
 let data = {}, aiKeys = new Set(), guessKeys = new Set(), dirty = new Set();
@@ -566,6 +568,7 @@ const FLOW_ILL = {
 // 開き直した時に、ブラウザが前回のスクロール位置へ戻さないようにする
 try { history.scrollRestoration = 'manual'; } catch {}
 async function boot() {
+  if (!TOKEN && ENTRY_CODE) return bootEntry();
   if (!TOKEN) return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
   if (error) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。');
@@ -577,8 +580,41 @@ async function boot() {
   for (const f of Object.values(FIELD_MAP)) if (f.def) data[f.k] = f.def;
   Object.assign(data, saved || {});
   const prog = loadProgress();
-  if (prog.agreed) { viewForm(prog.step || 1); toast('前回の続きから再開しました。入力した内容は保存されています。', 4500); }
+  if (prog.fresh) { saveProgress({ fresh: false }); viewForm(1); }
+  else if (prog.agreed) { viewForm(prog.step || 1); toast('前回の続きから再開しました。入力した内容は保存されています。', 4500); }
   else viewWelcome();
+}
+// 入口リンクから開いた時：この端末で途中のお申込みがあれば続きへ。なければ最初の画面を出し、「はじめる」でお客様専用のリンクを作る
+const ENTRY_LS = 'onboarding-entry-' + ENTRY_CODE;
+const openToken = t => location.replace(location.pathname + '?t=' + encodeURIComponent(t));
+async function bootEntry() {
+  let saved = ''; try { saved = localStorage.getItem(ENTRY_LS) || ''; } catch {}
+  if (saved) {
+    const { data: st } = await sb.rpc('onboarding_invite_status', { p_token: saved });
+    if (st === 'ok') return openToken(saved);
+    try { localStorage.removeItem(ENTRY_LS); } catch {}
+  }
+  const { data: info, error } = await sb.rpc('onboarding_entry_info', { p_code: ENTRY_CODE });
+  if (error) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。');
+  if (!info) return viewMessage('リンクが正しくありません', '担当者から案内されたリンクを、もう一度開いてください。');
+  if (!info.active) return viewMessage('現在、受付を停止しています', 'お手数ですが、担当者にご連絡ください。');
+  data = { staff_name: info.staff_name || '' };
+  viewWelcome(startEntry);
+}
+async function startEntry() {
+  const done = busy('準備中…');
+  const { data: token, error } = await sb.rpc('onboarding_entry_start', { p_code: ENTRY_CODE });
+  if (error || !token || token.length < 30) {
+    done();
+    if (token === 'busy') return toast('ただいま混み合っています。時間をおいて、もう一度お試しください。', 6000);
+    if (token === 'stopped') return viewMessage('現在、受付を停止しています', 'お手数ですが、担当者にご連絡ください。');
+    return toast('はじめられませんでした。電波の良い場所で、もう一度お試しください。', 6000);
+  }
+  try {
+    localStorage.setItem(ENTRY_LS, token);
+    localStorage.setItem('onboarding-progress-' + token.slice(0, 16), JSON.stringify({ agreed: true, step: 1, fresh: true }));
+  } catch {}
+  openToken(token);
 }
 function viewMessage(title, body, ok = false, extra = null) {
   app.replaceChildren(h('main', { class: 'hero center' },
@@ -615,15 +651,17 @@ function payBlock(again = false, no = '') {
     h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
     h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
 }
-function viewWelcome() {
+function viewWelcome(onStart = null) {
   const agree = h('input', { type: 'checkbox', id: 'agree' });
   const start = h('button', { class: 'btn primary wide tall', type: 'button', disabled: true }, 'はじめる');
   agree.addEventListener('change', () => { start.disabled = !agree.checked; });
-  start.addEventListener('click', () => { saveProgress({ agreed: true }); viewForm(1); });
+  start.addEventListener('click', onStart || (() => { saveProgress({ agreed: true }); viewForm(1); }));
+  const staffName = onStart && String(data.staff_name || '').trim();
   const card = (doc, tag) => h('div', { class: 'need-card' }, tag ? h('span', { class: 'need-tag' }, tag) : null, ill(DOC_ILL[doc], 'need-ill'), h('span', { class: 'need-name' }, DOC_TYPES[doc]));
   app.replaceChildren(h('main', { class: 'hero welcome' },
     ill(HERO_ILL, 'hero-ill'),
     data.invite_for ? h('p', { class: 'for-name' }, String(data.invite_for).trim() + ' 様用のお申込みページです') : null,
+    staffName ? h('p', { class: 'for-name' }, '担当：' + staffName) : null,
     h('h1', {}, 'お申込みは', h('br'), 'スマホでかんたん'),
     h('p', { class: 'sub' }, '書類を撮影し、残りを音声と手入力で進めます。所要時間は入力内容によって変わります。'),
     h('section', { class: 'need' },
@@ -647,7 +685,7 @@ function viewWelcome() {
         h('li', {}, '書類と話した内容の整理にはAnthropic社のClaude、録音の文字起こしにはOpenAIの音声認識を使います。'),
         h('li', {}, 'カード番号・マイナンバーは音声で話さないでください（口座番号は話してOK）。カードは撮影して読み取れます（写真は保存しません）。番号はツールに保存せず、送信の時にスプレッドシートへ直接送ります。'),
         h('li', {}, 'サポート料のお支払いは、Stripe社の決済画面で行います。'),
-        h('li', {}, 'このリンクはあなた専用です。'))),
+        h('li', {}, onStart ? '「はじめる」を押すと、あなた専用のお申込みページができます。途中でやめても、同じスマホでこのリンクを開けば続きから入力できます。' : 'このリンクはあなた専用です。'))),
     h('label', { class: 'check', for: 'agree' }, agree, '個人情報の取り扱いに同意します'),
     start));
 }
@@ -668,6 +706,9 @@ const MANUAL_GROUPS = [
   { title: '選択肢をタップ', note: '当てはまるものを選んでください。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type'] },
   { title: '日付を確認して入力', note: '分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
 ];
+// 入口リンクから自分で申し込んだお客様は、ご契約内容も自分で選ぶ（担当者が後で確認する）
+const isSelfEntry = () => data._entry === 'self';
+const CONTRACT_GROUP = { title: 'ご契約内容', note: '担当者と決めた内容を選んでください。分からない項目は空欄で大丈夫です（担当者が確認します）。', keys: ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name'] };
 // 受取人は手入力の欄、ご契約内容は担当者が先に入れるので、どちらも音声では聞かない
 const BEN_KEYS = SECTIONS.find(s => s.id === 'beneficiary').fields.map(f => f.k);
 const CONTRACT_KEYS = ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name', 'staff_name'];
@@ -792,6 +833,7 @@ function renderStep() {
         emailEntry(),
         mode === 'voice' && data.phone_area && data.phone_local && mobileOk() ? null : phoneEntry(),
         ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
+        isSelfEntry() ? manualEntry(CONTRACT_GROUP) : null,
         beneficiaryEntry(),
         h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')])];
   } else if (step === 3) {
@@ -977,7 +1019,7 @@ function confirmCard(sec) {
       return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null,
         f.k === 'employer_address' ? h('small', { class: 'muted', style: 'display:block;font-size:.8rem;font-weight:400;letter-spacing:0' }, 'お申込みには本社の住所が必要です。支店や営業所の住所なら「直す」で本社の住所に変えてください。') : null)); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
-    sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
+    sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, isSelfEntry() ? '分からない項目は空欄のままで大丈夫です。送信後に担当者が確認します。' : '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
     sec.id === 'payment' ? cardEntry() : null,
     sec.id === 'funds' ? accountEntry() : null));
 }

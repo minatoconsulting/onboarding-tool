@@ -444,7 +444,7 @@ async function viewList() {
       h('button', { class: 'btn ghost sm', onclick: async () => { await sb.auth.signOut(); viewLogin(); } }, 'ログアウト')),
     h('main', { class: 'wrap' },
       h('button', { class: 'btn primary wide', onclick: newCustomer }, '新しいお客様を追加'),
-      search, ul));
+      entryCard(), search, ul));
   const { data, error } = await sb.from(CONFIG.TABLE).select('id,status,data,updated_at').order('updated_at', { ascending: false }).limit(300);
   if (error) { ul.replaceChildren(h('li', { class: 'err pad' }, '一覧を読み込めませんでした：' + error.message)); return; }
   const { data: isStaff } = await sb.rpc('is_onboarding_staff');
@@ -457,10 +457,51 @@ async function viewList() {
     for (const r of rows) ul.append(h('li', {}, h('button', { class: 'row', onclick: () => viewCustomer(r) },
       h('span', { class: 'row-name' }, nameOf(r.data)),
       h('span', { class: 'chip ' + statusClass(r.status) }, r.status),
-      h('span', { class: 'row-date' }, fmtDate(r.updated_at) + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '') + (r.data && r.data._gform ? (r.data._gform.status === 'sent' ? '・シート送信済み' : '・シート未送信') : '')))));
+      h('span', { class: 'row-date' }, fmtDate(r.updated_at) + (r.data && r.data._entry === 'self' ? '・自分で申込み' : '') + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '') + (r.data && r.data._gform ? (r.data._gform.status === 'sent' ? '・シート送信済み' : '・シート未送信') : '')))));
   };
   search.addEventListener('input', draw);
   draw();
+}
+/* ---------- 自分で申し込んでもらう入口リンク（担当FPごとに1本・ずっと使える） ---------- */
+// お客様がこのリンクを開いて「はじめる」を押すと、この一覧に自動で追加される（担当者がリンクを作って送らなくてよい）
+function entryCard() {
+  const body = h('div', { class: 'sec-body', style: 'padding-top:12px' }, h('p', { class: 'muted small', style: 'margin:0' }, '読み込み中…'));
+  const det = h('details', { class: 'sec invite' },
+    h('summary', { class: 'sec-body', style: 'padding:14px 16px;cursor:pointer' }, h('strong', {}, 'お客様が自分で申し込むリンク')), body);
+  let link = null;
+  const load = async (staffName = null) => {
+    const { data: r, error } = await sb.rpc('onboarding_my_entry_link', { p_staff_name: staffName });
+    if (error || !r) { body.replaceChildren(h('p', { class: 'err small', style: 'margin:0' }, 'リンクを読み込めませんでした' + (error ? '：' + error.message : ''))); return; }
+    link = r; draw();
+  };
+  const set = async args => {
+    const { data: r, error } = await sb.rpc('onboarding_entry_link_set', args);
+    if (error || !r) { toast('変更できませんでした' + (error ? '：' + error.message : '')); return; }
+    link = r; draw();
+  };
+  const draw = () => {
+    const url = new URL('customer.html', location.href); url.search = '?fp=' + link.code;
+    const msg = 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます。\n' + url;
+    const nameIn = h('input', { type: 'text', value: link.staff_name || '', placeholder: '例：赤田', 'aria-label': '担当FP' });
+    const copy = async (text, label) => {
+      try { await navigator.clipboard.writeText(text); } catch { const t = h('textarea'); t.value = text; document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
+      toast(label + 'をコピーしました');
+    };
+    body.replaceChildren(
+      h('p', { class: 'muted small', style: 'margin:0' }, 'このリンクをLINEやSNS・名刺のQRなどに載せておくと、お客様が自分で申込みを始められます。申込みはこの一覧に「自分で申込み」と付いて入ります。ご契約内容もお客様が入力するので、届いたら確認してください。'),
+      h('label', { class: 'lbl' }, '担当FP（申込みに入る名前）', nameIn),
+      !link.staff_name ? h('p', { class: 'warn small', style: 'margin:0' }, '担当FPの名前を入れて「保存」を押してください。') : null,
+      h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { if (nameIn.value.trim()) load(nameIn.value.trim()).then(() => toast('保存しました')); } }, '担当FPを保存'),
+      link.active ? null : h('p', { class: 'warn', style: 'margin:0' }, '受付を停止中です。お客様が開いても申込みできません。'),
+      h('p', { class: 'small', style: 'margin:0;word-break:break-all' }, String(url)),
+      h('button', { class: 'btn primary wide', type: 'button', onclick: () => copy(msg, '案内文') }, '案内文ごとコピー'),
+      h('button', { class: 'btn outline wide', type: 'button', onclick: () => copy(String(url), 'リンク') }, 'リンクだけコピー'),
+      h('div', { class: 'doc-actions' },
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => set({ p_active: !link.active }) }, link.active ? '受付を止める' : '受付を再開する'),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { if (confirm('リンクを作り直すと、今のリンクは使えなくなります。作り直しますか？')) set({ p_renew: true }); } }, 'リンクを作り直す')));
+  };
+  det.addEventListener('toggle', () => { if (det.open && !link) load(); }, { once: false });
+  return det;
 }
 async function newCustomer() {
   const { data, error } = await sb.from(CONFIG.TABLE).insert({ data: defaults() }).select('id,status,data,updated_at').single();
@@ -598,9 +639,10 @@ function updateCounts() {
 /* ---------- お客様用リンク ---------- */
 function renderInviteCard() {
   const got = state.data._customer_updated_at;
+  const self = state.data._entry === 'self';
   const info = got
-    ? h('p', { class: 'note' }, 'お客様がリンクから入力しました（' + fmtDate(got).replace(' 更新', '') + '）。黄色の欄を確認してください。')
-    : null;
+    ? h('p', { class: 'note' }, 'お客様が' + (self ? '自分で申し込むリンク' : 'リンク') + 'から入力しました（' + fmtDate(got).replace(' 更新', '') + '）。黄色の欄を確認してください。' + (self ? 'ご契約内容（商品・年数・金額・ファンド）もお客様が入力しています。' : ''))
+    : self ? h('p', { class: 'note' }, 'お客様が自分で申し込むリンクから始めた申込みです（まだ入力はありません）。') : null;
   const g = state.data._gform;
   const gInfo = g ? h('p', { class: g.status === 'sent' ? 'note' : 'warn' },
       g.status === 'sent' ? 'スプレッドシート：送信済み（' + fmtDate(g.at).replace(' 更新', '') + '）' : 'スプレッドシート：' + g.status) : null;
