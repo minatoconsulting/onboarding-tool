@@ -379,7 +379,7 @@ const SECTIONS = [
     F('employer_name', '勤務先の名前'),
     F('employer_address', '勤務先の住所（本社の住所）', { hint: 'お申込みには本社の住所が必要です。働いている場所が支店や営業所でも、本社の住所を入れてください（郵便番号＋住所）' }),
     F('employer_website', '勤務先のホームページ', { hint: 'なければ「なし」' }),
-    F('industry', '業種', { hint: '例：医療機関、不動産', chips: ['医療・福祉', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '金融・保険', '公務'] }),
+    F('industry', '業種', { hint: '例：医療機関、不動産', chips: ['医療・福祉', '保育・児童福祉', '教育', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '飲食', '運輸・物流', '金融・保険', '公務'] }),
     F('position', '役職', { chips: ['一般社員', '管理職', '役員', '代表者'] }),
     F('job_detail', 'お仕事の内容', { type: 'textarea', hint: '例：中央病院の看護師' }),
     F('employment_start', '今の勤務先で働き始めた日（だいたいでOK）', { type: 'date' }),
@@ -658,7 +658,7 @@ function mobileOk(d = data) {
   if (d.phone_type !== '携帯' || (!d.phone_area && !d.phone_local)) return true;
   return MOBILE_RE.test('0' + String(d.phone_area || '').replace(/^0/, '') + String(d.phone_local || ''));
 }
-function go(n) { if (n !== step && !step2InputsOk()) return; if (saveTimer) save(); step = Math.max(1, Math.min(4, n)); editing = null; saveProgress({ step }); renderStep(); window.scrollTo(0, 0); }
+function go(n) { if (n !== step && !step2InputsOk()) return; if (saveTimer) save(); if (n !== step) manualShown.clear(); step = Math.max(1, Math.min(4, n)); editing = null; saveProgress({ step }); renderStep(); window.scrollTo(0, 0); }
 // 入力中の欄があれば、画面の描き直しは入力が終わるまで待つ（裏で読み取りが終わった時に、打っている途中の欄が消えないように）
 const typingIn = () => { const a = document.activeElement; return !!(a && mainEl && mainEl.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
 let refreshWaiting = false;
@@ -862,9 +862,12 @@ function typeEntry(topSwitch, switchBtn) {
     }),
     switchBtn));
 }
+// 手入力の欄に一度出した項目は、入力して埋まっても画面を描き直した時に消さない（入力した直後に欄が消えないように）
+const manualShown = new Set();
 function manualEntry(group) {
   const hasBeneficiary = !!String(data.ben_name_ja || '').trim() || !!docsOf(data).ben_license;
-  const fields = group.keys.filter(k => FIELD_MAP[k] && (ALWAYS_SHOW.has(k) || !String(data[k] ?? '').trim()) && (hasBeneficiary || !k.startsWith('ben_')));
+  const fields = group.keys.filter(k => FIELD_MAP[k] && (ALWAYS_SHOW.has(k) || manualShown.has(k) || !String(data[k] ?? '').trim()) && (hasBeneficiary || !k.startsWith('ben_')));
+  fields.forEach(k => manualShown.add(k));
   if (!fields.length) return null;
   return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), group.title), h('p', { class: 'muted small', style: 'margin:0' }, group.note),
