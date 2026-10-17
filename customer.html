@@ -341,7 +341,7 @@ const ID_TYPES = ['運転免許証', 'パスポート', 'マイナンバーカ�
 const SECTIONS = [
   { id: 'me', title: 'お名前・生年月日', fields: [
     F('name_ja', '氏名（漢字）', { hint: '例：山田 花子' }),
-    F('name_kana', 'ふりがな', { hint: '例：やまだ はなこ' }),
+    F('name_kana', 'ふりがな', { hint: '例：やまだ はなこ（姓と名の間にスペース）' }),
     F('first_romaji', '名（ローマ字）', { hint: '例：HANAKO（ふりがながあれば、そこからヘボン式で作る）' }),
     F('last_romaji', '姓（ローマ字）', { hint: '例：YAMADA（ふりがながあれば、そこからヘボン式で作る）' }),
     F('gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
@@ -377,7 +377,7 @@ const SECTIONS = [
   { id: 'work', title: 'お仕事・収入', fields: [
     F('employer_type', '働き方', { chips: ['会社員', '自営業', '会社役員', '公務員', '専業主婦・主夫', 'パート・アルバイト', '年金生活'] }),
     F('employer_name', '勤務先の名前'),
-    F('employer_address', '勤務先の住所', { hint: '郵便番号＋本社の住所' }),
+    F('employer_address', '勤務先の住所（本社の住所）', { hint: 'お申込みには本社の住所が必要です。働いている場所が支店や営業所でも、本社の住所を入れてください（郵便番号＋住所）' }),
     F('employer_website', '勤務先のホームページ', { hint: 'なければ「なし」' }),
     F('industry', '業種', { hint: '例：医療機関、不動産', chips: ['医療・福祉', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '金融・保険', '公務'] }),
     F('position', '役職', { chips: ['一般社員', '管理職', '役員', '代表者'] }),
@@ -592,15 +592,16 @@ const HIDE = new Set(['first_romaji', 'last_romaji', 'prefecture', 'city', 'addr
   'ben_first_romaji', 'ben_last_romaji', 'birth_country', 'nationality', 'ben_birth_country', 'ben_nationality',
   'id_country', 'ben_id_country', 'phone_cc', 'income_currency', 'fund_currency', 'tax_country']);
 const MANUAL_GROUPS = [
+  { title: 'お名前のふりがな', note: '音声だと漢字に変換されてしまうので、ひらがなで入力してください。', keys: ['name_kana'] },
   { title: '数字・連絡先', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number'] },
   { title: '選択肢をタップ', note: '当てはまるものを選んでください。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type'] },
-  { title: '日付を確認して入力', note: '書類を見ながら確認してください。分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
+  { title: '日付を確認して入力', note: '分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
 ];
 // 受取人は手入力の欄、ご契約内容は担当者が先に入れるので、どちらも音声では聞かない
 const BEN_KEYS = SECTIONS.find(s => s.id === 'beneficiary').fields.map(f => f.k);
 const CONTRACT_KEYS = ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name', 'staff_name'];
 // 最初から値が入っているが、確認してもらうために手入力の欄に出し続ける項目
-const ALWAYS_SHOW = new Set(['bank_open_date', 'fund_method']);
+const ALWAYS_SHOW = new Set(['bank_open_date', 'employment_start', 'fund_method']);
 // 勤務先の住所・ホームページは会社名から自動で調べるので、話す・手入力の対象にしない（確認画面で直せる）
 const MANUAL_KEYS = new Set(['email', 'phone_type', 'fund_annual', 'employer_address', 'employer_website', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
 const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
@@ -697,25 +698,29 @@ function renderStep() {
   } else if (step === 2) {
     const rest = remainingLines();
     setTimeout(maybeLookupEmployer, 400);
+    guessEmploymentStart();
     const mode = loadProgress().inputMode || '';
     const modeSwitch = (to, text) => h('button', { class: 'btn ghost wide sm', type: 'button', onclick: () => setInputMode(to) }, text);
+    // 入力のしかたを選ぶまでは、下の手入力の欄は出さない
+    const choosing = rest.length && !mode;
     body = [h('p', { class: 'lead' }, mode === 'type' ? '⌨️ 残りの項目を入力します。' : mode ? '🎤 話しやすい項目は音声で入力します。' : '📝 残りの項目を入力します。'),
-      rest.length && !mode ? modeChooser()
+      choosing ? modeChooser()
       : mode === 'type' && (rest.length || (typeKeysMemo && typeKeysMemo.length))
         ? typeEntry(h('button', { class: 'btn outline wide', type: 'button', onclick: () => setInputMode('voice') }, icon('mic'), '話して入力に切り替える（おすすめ）'), modeSwitch('voice', '🎤 やっぱり話して入力する（おすすめ）'))
       : rest.length
         ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
             h('strong', {}, `あと${rest.length}項目`),
             h('ul', { class: 'mini' }, ...firstRound(rest).map(t => h('li', {}, t.replace(/（[^）]*）/g, '')))),
-            rest.length > firstRound(rest).length ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - firstRound(rest).length}項目（読み上げは2回で終わります）`) : null,
+            rest.length > firstRound(rest).length ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - firstRound(rest).length}項目`) : null,
             h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => openVoice(1) }, icon('mic'), '話して入力をはじめる'),
             modeSwitch('type', '⌨️ 声を出せない時は、文字で入力する')))
         : h('div', { class: 'done-note' }, mode === 'type' ? '✓ 上の項目は入力済みです' : '✓ 音声での入力は完了です！', h('span', { class: 'done-sub' }, 'お手数ですが、残りの項目は下の欄に手入力でお願いします。')),
-      emailEntry(),
-      phoneEntry(),
-      ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
-      beneficiaryEntry(),
-      h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')];
+      ...(choosing ? [] : [
+        emailEntry(),
+        mode === 'voice' && data.phone_area && data.phone_local && mobileOk() ? null : phoneEntry(),
+        ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
+        beneficiaryEntry(),
+        h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')])];
   } else if (step === 3) {
     body = [h('p', { class: 'lead' }, '👀 違うところだけ「直す」で修正してください。'),
       h('p', { class: 'note' }, '🔢 特に電話番号・郵便番号・支店番号などの数字は、1文字ずつ確認してください（「⚠️ 間違いがないか確認」の印が付いています）。'),
@@ -816,7 +821,7 @@ function beneficiaryEntry() {
     h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), '受取人（受益者）'),
     h('p', { class: 'muted small', style: 'margin:0' }, '万一の時にお金を受け取る人です。受取人の免許証を撮影すると、名前や生年月日が自動で入ります。'),
     toggle,
-    ...(none ? [h('p', { class: 'done-note', style: 'margin:0' }, '受取人は指定しません。あとで指定したくなったら、上のボタンをもう一度タップしてください。')] : [
+    ...(none ? [h('p', { class: 'done-note', style: 'margin:0' }, '受取人は指定しません。受取人は、ご契約後にあとから設定することもできます。')] : [
       h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力'),
       sameSurnameBtn(),
       ...fields.map(f => { const el = renderField(f); paint(f.k); return el; })])));
@@ -828,7 +833,7 @@ function modeChooser() {
   return h('section', { class: 'sec mode-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', { class: 'mode-q' }, '入力のしかたを選んでください'),
     h('button', { class: 'mode-opt rec', type: 'button', onclick: () => setInputMode('voice') },
-      h('span', { class: 'mode-badge' }, 'おすすめ'), h('span', { class: 'mode-title' }, '🎤 話して入力'), h('span', { class: 'mode-desc' }, '見本を読み上げるだけ。2回で終わるので早いです')),
+      h('span', { class: 'mode-badge' }, 'おすすめ'), h('span', { class: 'mode-title' }, '🎤 話して入力'), h('span', { class: 'mode-desc' }, '見本を読み上げるだけ。1回で終わるので早いです')),
     h('button', { class: 'mode-opt', type: 'button', onclick: () => setInputMode('type') },
       h('span', { class: 'mode-title' }, '⌨️ 文字で入力'), h('span', { class: 'mode-desc' }, '電車の中など、声を出せない時に')),
     h('p', { class: 'muted small', style: 'margin:0' }, 'あとから切り替えることもできます。')));
@@ -893,7 +898,8 @@ function confirmCard(sec) {
       if (YEN.has(f.k) && v) { const m = manText(v); v = yenText(v) + '円' + (m ? '（' + m.replace(/^＝ /, '') + '）' : ''); }
       const num = NUM_CHECK.has(f.k), ai = aiKeys.has(f.k) || (f.k === 'phone_area' && aiKeys.has('phone_local'));
       const bad = fieldError(f.k) || (f.k === 'postal_code' ? zipWarning() : '') || (f.k === 'phone_area' && !mobileOk() ? '携帯番号は090・080・070から始まる11桁です' : '');
-      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null)); }),
+      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null,
+        f.k === 'employer_address' ? h('small', { class: 'muted', style: 'display:block;font-size:.8rem;font-weight:400;letter-spacing:0' }, 'お申込みには本社の住所が必要です。支店や営業所の住所なら「直す」で本社の住所に変えてください。') : null)); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
     sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
     sec.id === 'payment' ? cardEntry() : null,
@@ -934,8 +940,10 @@ function renderField(f) {
     userEditAt[f.k] = Date.now();
     data[f.k] = YEN.has(f.k) ? zen2han(input.value).replace(/[,，円\s]/g, '') : input.value; dirty.add(f.k); aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); updateCounts(); scheduleSave();
   });
-  if (f.k === 'ben_name_kana') input.addEventListener('change', fillBenRomaji);
+  if (f.k === 'ben_name_kana') input.addEventListener('change', () => fillRomaji('ben_'));
+  if (f.k === 'name_kana') input.addEventListener('change', () => fillRomaji(''));
   if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
+  if (f.k === 'birth_date') input.addEventListener('change', guessEmploymentStart);
   if (YEN.has(f.k)) {
     const man = h('small', { class: 'man' });
     const showMan = () => { man.textContent = manText(data[f.k]); };
@@ -985,14 +993,28 @@ function kanaToRoma(text) {
   }
   return out.replace(/OU|OO/g, 'O').replace(/UU/g, 'U');
 }
-function fillBenRomaji() {
-  const parts = String(data.ben_name_kana || '').trim().split(/[\s　]+/);
+// ふりがなからローマ字を作る（p は '' ＝ご本人、'ben_' ＝受取人）
+function fillRomaji(p) {
+  if (!p && docsOf(data).passport) return; // パスポートを撮影済みなら、パスポートの表記を優先する
+  const parts = String(data[p + 'name_kana'] || '').trim().split(/[\s　]+/);
   if (parts.length !== 2) return;
   const [last, first] = parts.map(kanaToRoma);
   if (!last || !first) return;
-  if (!String(data.ben_last_romaji || '').trim() || aiKeys.has('ben_last_romaji')) setField('ben_last_romaji', last, true, true);
-  if (!String(data.ben_first_romaji || '').trim() || aiKeys.has('ben_first_romaji')) setField('ben_first_romaji', first, true, true);
+  if (!String(data[p + 'last_romaji'] || '').trim() || aiKeys.has(p + 'last_romaji')) setField(p + 'last_romaji', last, true, true);
+  if (!String(data[p + 'first_romaji'] || '').trim() || aiKeys.has(p + 'first_romaji')) setField(p + 'first_romaji', first, true, true);
   scheduleSave();
+}
+// 今の勤務先で働き始めた日：空なら、生年月日から大学を卒業した年の4月1日を推測で入れる
+// （4月2日〜12月生まれは生まれた年＋23年、1月1日〜4月1日生まれ＝早生まれは＋22年）
+function guessEmploymentStart() {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data.birth_date || '');
+  if (!m) return;
+  const cur = String(data.employment_start || '').trim();
+  if (cur && !guessKeys.has('employment_start')) return;
+  const md = +m[2] * 100 + +m[3];
+  const v = (+m[1] + (md >= 402 ? 23 : 22)) + '-04-01';
+  if (v > new Date().toISOString().slice(0, 10) || v === cur) return;
+  setField('employment_start', v, true, true); scheduleSave();
 }
 function paint(k) {
   const r = inputs[k]; if (!r) return;
@@ -1095,6 +1117,7 @@ function applyAI(res, preset = {}, opts = {}) {
     setField(k, v, true, guess.has(k)); n++; first = first || k;
   }
   if ('fund_amount' in vals) syncFundAnnual();
+  if ('birth_date' in vals) guessEmploymentStart();
   updateCounts(); scheduleSave(300);
   if (!n) { toast(opts.emptyMsg || '読み取れる項目がありませんでした。明るい場所でもう一度お試しください。', 5000); refreshStep(); return; }
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
@@ -1651,7 +1674,6 @@ const PHOTO_CHECK = { k: 'photo_problem', label: '写真の問題点', hint: '�
 /* ---------- 読み上げ見本（まだ空いている項目だけ表示） ---------- */
 const SCRIPT = [
   { keys: ['name_ja'], text: 'お名前は「漢字のフルネーム」です。' },
-  { keys: ['name_kana'], text: '名前のふりがなは「やまだ はなこ」です。' },
   { keys: ['birth_date'], text: '生年月日は「〇年〇月〇日」です。' },
   { keys: ['gender'], text: '性別は「男性・女性」です。' },
   { keys: ['id_number'], text: '本人確認書類の番号は「〇〇」です。（書類を撮影した場合は不要）' },
@@ -1697,8 +1719,8 @@ function docSummary(values) {
 const voiceSkipped = new Set();
 let voiceChunkNow = [];
 const remainingLines = () => scriptLines(voiceValues(), VOICE_AVAIL).filter(t => !voiceSkipped.has(t));
-// 読み上げは2回で終わり：1回目は半分、2回目は残り全部
-const VOICE_ROUNDS = 2;
+// 読み上げは1回で全部（2回以上に分ける時はここを増やす）
+const VOICE_ROUNDS = 1;
 // 1回目に読む数：半分。ただし銀行まわり（銀行名・支店・支店番号・口座番号・口座を作った時期）は分けずに2回目へまとめる
 const BANK_LINES = new Set(SCRIPT.filter(x => x.keys.some(k => /^bank_|^account_number$/.test(k))).map(x => x.text));
 function chunkSize(n, all = []) {
@@ -1719,7 +1741,8 @@ function scriptBox(values, available, step = 1) {
   const box = h('div', { class: 'script' });
   if (!lines.length) { box.append(h('p', { class: 'small', style: 'margin:0' }, '入力が必要な項目は、すべて埋まっています。')); return box; }
   const names = docSummary(values);
-  box.append(h('div', { class: 'script-head' }, h('strong', {}, `読み上げ見本（${Math.min(step, VOICE_ROUNDS)}回目／全${VOICE_ROUNDS}回：${lines.length}項目）`), h('span', { class: 'muted small' }, step >= VOICE_ROUNDS || lines.length === all.length ? '「」の中を自分の内容に変えて、上から順に読むだけでOK。これで読み上げは最後です' : '「」の中を自分の内容に変えて、上から順に読むだけでOK。終わったら残りの項目が出ます（あと1回）'),
+  box.append(h('div', { class: 'script-head' }, h('strong', {}, VOICE_ROUNDS > 1 ? `読み上げ見本（${Math.min(step, VOICE_ROUNDS)}回目／全${VOICE_ROUNDS}回：${lines.length}項目）` : `読み上げ見本（${lines.length}項目）`), h('span', { class: 'muted small' }, VOICE_ROUNDS === 1 ? '「」の中を自分の内容に変えて、上から順に読むだけでOK。'
+      : step >= VOICE_ROUNDS || lines.length === all.length ? '「」の中を自分の内容に変えて、上から順に読むだけでOK。これで読み上げは最後です' : '「」の中を自分の内容に変えて、上から順に読むだけでOK。終わったら残りの項目が出ます（あと1回）'),
     h('span', { class: 'small' }, names.length
       ? '撮影済みの書類（' + names.join('・') + '）から入力できた項目は省いています。'
       : '先に本人確認書類を撮影すると、読む項目が少なくなります。')));
