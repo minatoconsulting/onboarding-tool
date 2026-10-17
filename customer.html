@@ -686,7 +686,7 @@ function renderStep() {
         h('span', { class: 'num' }, later ? '!' : (i + 1 < step ? '✓' : String(i + 1))), h('span', { class: 'ptxt' }, later ? 'あとで撮影' : t)));
   }));
   inputs = {};
-  let body = [], nextLabel = '次へ', canNext = true, nextFn = () => go(step + 1), hint = null;
+  let body = [], nextLabel = '次へ', canNext = true, nextFn = () => go(step + 1), hint = null, showNext = true;
   if (step === 1) {
     const st = docStatus(data);
     docsPanelEl = renderDocsPanel();
@@ -709,6 +709,8 @@ function renderStep() {
     const modeSwitch = (to, text) => h('button', { class: 'btn ghost wide sm', type: 'button', onclick: () => setInputMode(to) }, text);
     // 入力のしかたを選ぶまでは、下の手入力の欄は出さない
     const choosing = rest.length && !mode;
+    // 入力のしかたを選ぶまでは「次へ」を出さない（選ばずに次へ進んでしまわないように）
+    if (choosing) showNext = false;
     body = [h('p', { class: 'lead' }, mode === 'type' ? '⌨️ 残りの項目を入力します。' : mode ? '🎤 話しやすい項目は音声で入力します。' : '📝 残りの項目を入力します。'),
       choosing ? modeChooser()
       : mode === 'type' && (rest.length || (typeKeysMemo && typeKeysMemo.length))
@@ -784,7 +786,7 @@ function renderStep() {
   const backBtn = step > 1 ? h('button', { class: 'btn wide', type: 'button', onclick: () => backToChooser ? setInputMode('') : go(step - 1) }, '戻る') : h('span');
   const nextBtn = h('button', { class: 'btn primary wide', type: 'button', disabled: !canNext }, nextLabel);
   nextBtn.addEventListener('click', nextFn);
-  navEl.replaceChildren(h('div', { class: 'nav-wrap' }, hint ? h('p', { class: 'nav-hint' }, hint) : null, h('div', { class: 'dock-in nav-in' }, backBtn, nextBtn)));
+  navEl.replaceChildren(h('div', { class: 'nav-wrap' }, hint ? h('p', { class: 'nav-hint' }, hint) : null, h('div', { class: 'dock-in nav-in' }, backBtn, showNext ? nextBtn : h('span'))));
 }
 function emailEntry() {
   const input = h('input', { id: 'customer-email', type: 'email', inputmode: 'email', autocomplete: 'email', autocapitalize: 'off', spellcheck: 'false', placeholder: '例：hanako@example.com' });
