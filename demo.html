@@ -322,7 +322,7 @@ a.btn{text-decoration:none}
 </head>
 <body>
 <div class="demo-banner" role="note">
-  <p><strong>🧪 体験版</strong> お客様が実際に入力する流れを体験できます。入力した内容はどこにも送信されません。写真・音声は見本のデータで自動入力されます。</p>
+  <p><strong>🧪 体験版</strong> お客様と同じ流れで入力できます。写真や音声は本番と同じように読み取りますが、内容は保存・送信されません。</p>
   <button type="button" class="demo-reset" onclick="demoReset()">最初からやり直す</button>
 </div>
 <div id="app"></div>
@@ -336,64 +336,28 @@ a.btn{text-decoration:none}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .demo-banner,:root:not([data-theme="light"]) .demo-note{background:#382D10;color:#F2D58A;border-color:#D9AE3E}:root:not([data-theme="light"]) .demo-reset{background:#172128;color:#F2D58A;border-color:#D9AE3E}}
 </style>
 <script>
-/* 体験版：データベース・AI・スプレッドシートの代わり（端末の外には何も送らない） */
-const DEMO = {
-  // 担当者が先に入れておく「ご契約内容」
-  preset: { product_type: 'EVO', contract_years: '15年', monthly_usd: '200', fund_choice: 'BTC50％ GOLD50％', introducer_name: '紹介 一郎' },
-  person: {
-    name_ja: '見本 花子', first_romaji: 'HANAKO', last_romaji: 'MIHON', gender: '女性', birth_date: '1985-06-15',
-    address_ja: '愛知県名古屋市中区栄3丁目2-1 サンプルマンション1302', address_kana: 'アイチケン ナゴヤシ ナカク サカエ 3-2-1 サンプルマンション 1302',
-    prefecture: 'Aichi', city: 'Nagoya-shi Naka-ku', addr1: '3-2-1-1302 Sakae', addr2: 'Sample Mansion',
-  },
-  license: { id_number: '123456789012', id_issue_date: '2023-06-20', id_expiry: '2028-07-15' },
-  passport: { first_romaji: 'HANAKO', last_romaji: 'MIHON', gender: '女性', birth_date: '1985-06-15', nationality: '日本', id_number: 'TK1234567', id_country: '日本', id_issue_date: '2022-04-01', id_expiry: '2032-04-01' },
-  ben: { ben_name_ja: '見本 太郎', ben_first_romaji: 'TARO', ben_last_romaji: 'MIHON', ben_birth_date: '1983-02-10', ben_id_number: '987654321098', ben_id_issue_date: '2022-03-01', ben_id_expiry: '2027-03-10' },
-  voice: {
-    phone_area: '90', phone_local: '12345678',
-    employer_type: '会社員', employer_name: 'サンプル商事株式会社', industry: '小売・サービス', position: '一般社員', job_detail: '店舗での販売・接客',
-    income_amount: '4500000', pep: 'いいえ', us_status: '米国市民・米国居住者ではない',
-    bank_name: '三菱UFJ銀行', bank_branch: '名古屋営業部', bank_branch_no: '150', bank_open_date: '2010-04-01', account_number: '1234567',
-    card_company: '楽天カード', fund_method: '給与', fund_amount: '50000', savings_amount: '3000000', purpose: '老後資金、資産形成',
-  },
-  company: { employer_address: '〒460-0008 愛知県名古屋市中区栄1-1-1（見本）', employer_website: 'https://example.com', industry: '小売・サービス' },
-  transcript: '携帯番号は090-1234-5678です。勤務先はサンプル商事株式会社で、業種は小売・サービス、役職は一般社員です。仕事の内容は店舗での販売・接客です。年収は450万円です。政治家や官公庁の幹部などとの関係はありません。アメリカの国籍やグリーンカードは持っていません。メインで使っている銀行は三菱UFJ銀行の名古屋営業部です。支店番号は150です。口座番号は1234567です。その口座を作ったのは2010年4月ごろです。カード会社は楽天カードです。積立に使えるお金は給与から月5万円くらいあります。貯金は300万円くらいあります。投資の目的は老後資金と資産形成です。',
-};
-const demoWait = ms => new Promise(r => setTimeout(r, ms));
-// 頼まれた項目のうち、見本にあるものだけを返す（onlyEmpty: すでに入っている項目は返さない）
-function demoPick(src, fields, onlyEmpty) {
-  const want = new Set((fields || []).map(f => f.k)), values = {};
-  for (const [k, v] of Object.entries(src)) {
-    if (!want.has(k)) continue;
-    if (onlyEmpty && String((typeof data !== 'undefined' && data[k]) ?? '').trim()) continue;
-    values[k] = v;
-  }
-  return { values };
-}
+/* 体験版：読み取り（写真・音声・勤務先検索）は本番と同じAIを使う。
+   保存・スプレッドシート送信はしない（データベースにも、写真の置き場にも残らない）。
+   読み取りは体験版専用の窓口 onboarding-demo を使う（保存・送信の機能がない窓口） */
+const DEMO_FUNCTION = 'onboarding-demo';
+const DEMO_AI_MODES = new Set(['transcribe', 'card', 'mynumber', 'image', 'voice', 'company']);
+// 担当者が先に入れておく「ご契約内容」（本番でも、お客様が開く前に担当者が入れている）
+const DEMO_PRESET = { product_type: 'EVO', contract_years: '15年', monthly_usd: '200' };
 async function demoAI(body) {
-  switch (body.mode) {
-    case 'image': {
-      await demoWait(1800);
-      const label = String(body.docLabel || '');
-      if (/受益者/.test(label)) return demoPick(DEMO.ben, body.fields);
-      if (/裏面/.test(label)) return { values: {} };  // 住所変更の記載なし
-      if (/パスポート/.test(label)) return demoPick(DEMO.passport, body.fields);
-      return demoPick({ ...DEMO.person, ...DEMO.license }, body.fields);
-    }
-    case 'store': await demoWait(300); return { ok: true };
-    case 'mynumber': await demoWait(800); return { number: '123456789018', check: true };
-    case 'card': await demoWait(1500); return { card: { number: '4242 4242 4242 4242', expiry: '12/30', check: true }, values: { card_kind: 'クレジット', card_brand: 'VISA' } };
-    case 'company': await demoWait(2000); return demoPick(DEMO.company, body.fields, true);
-    case 'transcribe': await demoWait(1200); return { text: DEMO.transcript };
-    case 'voice': await demoWait(1500); return demoPick({ ...DEMO.person, ...DEMO.voice }, body.fields, true);
-    case 'sheet': await demoWait(1000); return { ok: true };
-    default: return { ok: true };
-  }
+  if (!DEMO_AI_MODES.has(body.mode)) return { ok: true };  // 写真の保存・スプレッドシート送信は、したことにするだけ
+  const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/' + DEMO_FUNCTION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + CONFIG.SUPABASE_ANON_KEY },
+    body: JSON.stringify(body),
+  });
+  let j = null; try { j = await res.json(); } catch {}
+  if (!res.ok) { const e = new Error((j && j.error) || '接続エラー（' + res.status + '）'); e.context = { json: async () => j }; throw e; }
+  return j;
 }
 const DEMO_SB = {
   async rpc(name, args) {
-    await demoWait(150);
     if (name === 'onboarding_invite_status') return { data: 'ok', error: null };
-    if (name === 'onboarding_invite_get') return { data: { ...DEMO.preset }, error: null };
+    if (name === 'onboarding_invite_get') return { data: { ...DEMO_PRESET }, error: null };
     if (name === 'onboarding_invite_save') {
       // 送信が終わったら、次に開いた時は最初からになるようにする
       if (args && args.p_final) demoClear();
@@ -417,8 +381,8 @@ function demoReset() {
 <script>
 /* お客様用の入力画面（ログインなし・リンク専用） */
 const CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: 'https://axaxqgvvezvhffopggba.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YXhxZ3Z2ZXp2aGZmb3BnZ2JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1Nzc5MTgsImV4cCI6MjEwMDE1MzkxOH0.l4HVsYvcFV-WyD86hjrfSS7Pgc9qCqgUlMaZWZD9vCg',
   FUNCTION_NAME: 'onboarding-extract',
   // サポート料（9,800円）の Stripe 支払いリンク。Stripeの管理画面で作った https://buy.stripe.com/... を貼る（空ならボタンを出さない）
   STRIPE_PAYMENT_LINK: 'demo',
@@ -1981,49 +1945,6 @@ payBlock = function (again = false, no = '') {
 lineBlock = function (no = '') {
   return demoBlock(no + '公式LINEに登録してください', '手続きの進み具合や今後のご連絡は、公式LINEでお知らせします。',
     'btn wide line-btn', 'LINEで友だち追加する', '体験版のため、LINEには移動しません。本番ではここで公式LINEの友だち追加が開きます。');
-};
-
-/* ---------- 体験版：書類を持っていなくても「見本の写真」で試せる ---------- */
-function demoSampleFile() {
-  return new Promise(resolve => {
-    const c = document.createElement('canvas'); c.width = 640; c.height = 400;
-    const g = c.getContext('2d');
-    g.fillStyle = '#F3F6F7'; g.fillRect(0, 0, 640, 400);
-    g.fillStyle = '#2E7D6B'; g.fillRect(0, 0, 640, 60);
-    g.fillStyle = '#16222B'; g.font = 'bold 36px sans-serif'; g.fillText('見本（体験版）', 40, 220);
-    c.toBlob(b => resolve(new File([b], 'sample.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.8);
-  });
-}
-async function demoUseSample() {
-  const file = await demoSampleFile();
-  try {
-    const dt = new DataTransfer(); dt.items.add(file);
-    fileInput.files = dt.files;
-    fileInput.dispatchEvent(new Event('change'));
-    return;
-  } catch {}
-  // DataTransfer が使えない古い端末向け
-  const slot = fileInput.dataset.slot, doc = fileInput.dataset.doc;
-  fileInput.dataset.slot = '';
-  if (slot) await handleDocFile(slot, file);
-  else if (doc === 'credit_card') await scanCard(file);
-  else toast('この端末では見本の写真を使えません。「写真を撮影する」で何か撮ってみてください。', 6000);
-}
-openPhotoPicker = function () {
-  const pick = camera => {
-    back.remove();
-    if (camera) fileInput.setAttribute('capture', 'environment'); else fileInput.removeAttribute('capture');
-    fileInput.click();
-  };
-  const mobile = matchMedia('(pointer: coarse)').matches;
-  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet photo-pick', role: 'dialog', 'aria-modal': 'true', 'aria-label': '写真の選び方' },
-    h('p', { class: 'demo-note' }, '🧪 体験版：どの写真を使っても、見本の内容が自動で入ります。写真はどこにも送信されません。'),
-    h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => { back.remove(); demoUseSample(); } }, '🧪 見本の写真で試す'),
-    mobile ? h('button', { class: 'btn outline wide', type: 'button', onclick: () => pick(true) }, '📷 写真を撮影する') : null,
-    h('button', { class: 'btn outline wide', type: 'button', onclick: () => pick(false) }, mobile ? '🖼 保存済みの写真から選ぶ' : '🖼 パソコンの写真から選ぶ'),
-    h('button', { class: 'btn ghost wide', type: 'button', onclick: () => back.remove() }, 'やめる')));
-  back.addEventListener('click', e => { if (e.target === back) back.remove(); });
-  document.body.append(back);
 };
 
 boot();
