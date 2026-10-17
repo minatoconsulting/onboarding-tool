@@ -117,7 +117,7 @@ a.btn.ghost{color:var(--muted)}
 .busy-card{background:var(--surface);padding:20px 24px;border-radius:14px;display:flex;align-items:center;gap:12px;font-weight:700}
 .spinner{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--seal);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));z-index:70;width:max-content;max-width:min(92vw,560px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));z-index:70;pointer-events:none;width:max-content;max-width:min(92vw,560px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 .danger-zone{margin-top:28px;display:grid}
 @media (prefers-reduced-motion:reduce){.mic[aria-pressed="true"]::after,.spinner{animation:none}.chev{transition:none}}
 
@@ -306,6 +306,8 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .btn.line-btn{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
 .bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;width:calc(100% - 32px);max-width:560px;padding:8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700;line-height:1.45;pointer-events:none}
 .man{display:block;margin-top:4px;font-weight:700;color:var(--seal)}
+/* 下から出るメニュー（写真を撮る等）が開いている間は、読み取り中の表示を画面の上に出す（メニューのボタンと重ならないように） */
+body:has(.backdrop) .bg-pill{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}
 .bg-pill small{display:block;font-size:.76rem;font-weight:500;color:var(--muted)}
 .bg-pill .spinner{flex:none;width:18px;height:18px}
 .btn svg{width:20px;height:20px;flex:none}
@@ -534,10 +536,19 @@ function toast(msg, ms = 3500) {
   const t = h('div', { class: 'toast', role: 'status' }, msg); document.body.append(t); placeToast(); setTimeout(() => t.remove(), ms);
 }
 // 「〇〇を読み取り中…」の表示が出ている間は、黒いお知らせをその上に出す（重ならないように）
+// 下から出るメニューが開いている間は、お知らせを画面の上に出す（メニューのボタンと重ならないように）
 function placeToast() {
   const t = document.querySelector('.toast'); if (!t) return;
-  t.style.bottom = bgPill ? (window.innerHeight - bgPill.getBoundingClientRect().top + 10) + 'px' : '';
+  if (document.querySelector('.backdrop')) {
+    t.style.bottom = 'auto';
+    t.style.top = bgPill ? (bgPill.getBoundingClientRect().bottom + 10) + 'px' : 'calc(10px + env(safe-area-inset-top,0px))';
+  } else {
+    t.style.top = '';
+    t.style.bottom = bgPill ? (window.innerHeight - bgPill.getBoundingClientRect().top + 10) + 'px' : '';
+  }
 }
+// メニューが開いた・閉じた時も、出ているお知らせの位置を合わせ直す
+new MutationObserver(() => { try { placeToast(); } catch {} }).observe(document.body, { childList: true });
 function busy(msg) {
   const b = h('div', { class: 'busy', role: 'alert' }, h('div', { class: 'busy-card' }, h('span', { class: 'spinner' }), msg));
   document.body.append(b); return () => b.remove();
