@@ -373,6 +373,8 @@ function demoClear() {
     try { Object.keys(s).filter(k => k.startsWith('onboarding-')).forEach(k => s.removeItem(k)); } catch {}
   }
 }
+// 体験版は、開くたびに最初（書類を撮る画面の前）から始める（前回の続きから再開すると、途中の画面から始まって分かりづらいため）
+demoClear();
 function demoReset() {
   if (!confirm('入力した内容を消して、最初からやり直しますか？')) return;
   demoClear(); location.reload();
