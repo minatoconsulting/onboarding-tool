@@ -1,0 +1,1875 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F6457">
+<meta name="robots" content="noindex">
+<title>お申込み情報のご入力</title>
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="お申込み">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --paper:#F3F6F7;--surface:#FFFFFF;--ink:#16222B;--muted:#5B6A75;--line:#D3DCE2;
+  --seal:#1F6457;--seal-ink:#FFFFFF;--seal-soft:#E2EFEB;
+  --ai:#FFF3CC;--ai-line:#C9961A;--ai-ink:#6B4E00;
+  --danger:#AE3A2A;--dock-h:84px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0F161B;--surface:#172128;--ink:#E5EDF1;--muted:#97A7B2;--line:#2A3943;
+  --seal:#4E9F8D;--seal-ink:#06110E;--seal-soft:#1B2F2A;
+  --ai:#382D10;--ai-line:#D9AE3E;--ai-ink:#F2D58A;--danger:#E07A69;
+}}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--paper);color:var(--ink);font-family:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:16px;line-height:1.65;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--seal);outline-offset:2px}
+[hidden]{display:none!important}
+
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--dock-h) + 48px + env(safe-area-inset-bottom,0px))}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--paper);background:color-mix(in srgb,var(--paper) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.tb-title{flex:1;min-width:0;margin:0;font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save{font-size:.76rem;color:var(--muted);white-space:nowrap;background:none;border:0;padding:4px;cursor:default}
+.save.bad{color:var(--danger);cursor:pointer;text-decoration:underline}
+.status-sel{font-size:.85rem;min-height:36px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:500;cursor:pointer}
+.btn.primary{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
+.btn.outline{border-color:var(--seal);color:var(--seal);background:transparent}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.danger{border-color:var(--danger);color:var(--danger);background:transparent}
+.btn.sm{min-height:36px;padding:0 10px;font-size:.88rem}
+.btn.wide{width:100%}
+a.btn{text-decoration:none;color:inherit}
+a.btn.outline{color:var(--seal)}
+a.btn.ghost{color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+.icon-btn{flex:none;width:40px;height:40px;border:0;background:transparent;border-radius:8px;display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:22px;height:22px}
+
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 14px;overflow:hidden}
+.sec-head{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:0;background:transparent;text-align:left;cursor:pointer}
+.num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:.85rem;font-weight:700;border:1.5px solid var(--line);color:var(--muted)}
+.sec.done .num{background:var(--seal);border-color:var(--seal);color:var(--seal-ink)}
+.sec-title{flex:1;font-weight:700}
+.count{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.chev{flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px;transition:transform .2s}
+.sec-head[aria-expanded="false"] .chev{transform:rotate(-45deg);margin-bottom:0}
+.sec-body{padding:2px 16px 18px;display:grid;gap:14px}
+.note{margin:0;padding:10px 12px;border-radius:8px;background:var(--seal-soft);font-size:.86rem}
+
+.field{display:grid;gap:4px}
+.field-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px}
+.field label{font-size:.88rem;font-weight:500}
+.field input,.field select,.field textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
+.field textarea{resize:vertical;min-height:84px}
+.hint{color:var(--muted);font-size:.78rem}
+.field.ai input,.field.ai select,.field.ai textarea{background:var(--ai);border-color:var(--ai-line)}
+.ok-btn{display:none;border:1px solid var(--ai-line);background:var(--ai);color:var(--ai-ink);font-size:.74rem;font-weight:700;border-radius:999px;padding:2px 10px;cursor:pointer;white-space:nowrap}
+.field.ai .ok-btn{display:inline-block}
+
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.dock-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.dock-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:62px;border-radius:12px;border:1px solid var(--line);background:var(--paper);font-size:.78rem;font-weight:500;line-height:1.3;cursor:pointer;text-align:center}
+.dock-btn svg{width:24px;height:24px}
+.dock-btn.primary{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700;font-size:.88rem}
+
+.list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.row{width:100%;display:grid;grid-template-columns:1fr auto;grid-template-areas:"name chip" "date chip";gap:0 10px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;cursor:pointer}
+.row-name{grid-area:name;font-weight:700}
+.row-date{grid-area:date;font-size:.78rem;color:var(--muted)}
+.chip{grid-area:chip;font-size:.76rem;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;color:var(--muted)}
+.chip.s-b{border-color:var(--ai-line);color:var(--ai-ink);background:var(--ai)}
+.chip.s-c{border-color:var(--seal);color:var(--seal-ink);background:var(--seal)}
+.search{width:100%;min-height:46px;margin-top:12px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+.pad{padding:12px 4px}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.err{color:var(--danger);margin:0}
+
+.login,.setup{max-width:420px;margin:0 auto;padding:calc(56px + env(safe-area-inset-top,0px)) 20px 40px;display:grid;gap:14px}
+.login h1,.setup h1{margin:0;font-size:1.6rem;letter-spacing:.02em}
+.login p,.setup p{margin:0}
+.lbl{display:grid;gap:4px;font-size:.88rem;font-weight:500}
+.lbl input{min-height:48px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+
+.backdrop{position:fixed;inset:0;z-index:50;background:rgba(8,16,20,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:720px;background:var(--surface);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:12px;max-height:92vh;overflow:auto}
+.sheet-top{display:flex;align-items:center;justify-content:space-between}
+.sheet h2{margin:0;font-size:1.1rem}
+.mic{justify-self:center;width:96px;height:96px;border-radius:50%;border:0;background:var(--seal);color:var(--seal-ink);display:grid;place-items:center;cursor:pointer;position:relative}
+.mic svg{width:40px;height:40px}
+.mic:disabled{opacity:.4;cursor:default}
+.mic[aria-pressed="true"]{background:var(--danger)}
+.mic[aria-pressed="true"]::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px solid var(--danger);animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{from{transform:scale(.92);opacity:.7}to{transform:scale(1.18);opacity:0}}
+.mic-label{text-align:center;font-weight:700;margin:0}
+.transcript{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:16px;line-height:1.6;resize:vertical}
+
+.busy{position:fixed;inset:0;z-index:60;background:rgba(8,16,20,.5);display:grid;place-items:center}
+.busy-card{background:var(--surface);padding:20px 24px;border-radius:14px;display:flex;align-items:center;gap:12px;font-weight:700}
+.spinner{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--seal);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));z-index:70;width:max-content;max-width:min(92vw,560px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.danger-zone{margin-top:28px;display:grid}
+@media (prefers-reduced-motion:reduce){.mic[aria-pressed="true"]::after,.spinner{animation:none}.chev{transition:none}}
+
+.hero{max-width:560px;margin:0 auto;padding:calc(40px + env(safe-area-inset-top,0px)) 20px 40px;display:grid;gap:16px}
+.hero h1{margin:0;font-size:1.5rem;line-height:1.4}
+.hero p{margin:0}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.steps li{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.steps .num{margin-top:1px}
+.consent{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:.88rem}
+.consent ul{margin:6px 0 0;padding-left:1.2em;display:grid;gap:4px}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:500;cursor:pointer}
+.check input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--seal);flex:none}
+.submit-zone{margin-top:20px;display:grid;gap:8px}
+.center{text-align:center}
+.big-icon{font-size:2.6rem;line-height:1}
+
+.script{border:1px dashed var(--seal);background:var(--seal-soft);border-radius:12px;padding:12px 14px;max-height:38vh;overflow:auto}
+.script-wrap{position:relative}
+.script-wrap.has-more::after{content:"";position:absolute;left:1px;right:1px;bottom:1px;height:56px;border-radius:0 0 12px 12px;background:linear-gradient(to bottom,transparent,var(--seal-soft) 75%);pointer-events:none}
+.script-more{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:1;padding:6px 16px;border-radius:999px;border:0;background:var(--seal);color:var(--seal-ink);font:inherit;font-size:.86rem;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,.18);cursor:pointer;white-space:nowrap}
+.script-head{display:grid;gap:2px;margin-bottom:6px}
+.script ol{margin:0;padding-left:1.4em;display:grid;gap:6px;font-size:.95rem;line-height:1.6}
+.script mark{background:var(--ai);color:var(--ai-ink);border-radius:4px;padding:0 2px}
+
+.doc-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hp-box{margin:14px 0;padding:14px;border-radius:12px;border:2px solid var(--seal);background:var(--seal-soft)}
+.hp-box.unset{border-color:var(--ai-line);background:var(--ai)}
+.hp-box.flash{animation:hpflash .9s 2}
+@keyframes hpflash{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--ai-line) 45%,transparent)}}
+.hp-q{margin:0;font-size:1.12rem;font-weight:800}
+.hp-sub{margin:2px 0 10px;font-size:.84rem;color:var(--muted)}
+.hp-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hp-opt{min-height:52px;border-radius:10px;border:2px solid var(--line);background:var(--surface);font-size:1.05rem;font-weight:700;cursor:pointer}
+.hp-opt.on{border-color:var(--seal);background:var(--seal);color:var(--seal-ink)}
+.doc-badge{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--ai-line);background:var(--ai);color:var(--ai-ink);white-space:nowrap}
+.doc-badge.ok{border-color:var(--seal);background:var(--seal);color:var(--seal-ink)}
+.shot-tips{display:flex;gap:14px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--paper);border:1px solid var(--line)}
+.shot-tips ul{margin:0;padding-left:1.1em;font-size:.84rem;display:grid;gap:2px}
+.frame{position:relative;width:84px;height:58px;flex:none}
+.frame .card{position:absolute;inset:9px;border-radius:5px;background:var(--seal-soft);border:1.5px solid var(--seal)}
+.frame .c{position:absolute;width:15px;height:15px;border:0 solid var(--danger)}
+.frame .tl{top:0;left:0;border-top-width:3px;border-left-width:3px}
+.frame .tr{top:0;right:0;border-top-width:3px;border-right-width:3px}
+.frame .bl{bottom:0;left:0;border-bottom-width:3px;border-left-width:3px}
+.frame .br{bottom:0;right:0;border-bottom-width:3px;border-right-width:3px}
+.doc-group{border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.doc-group.card-need{border:2px solid #A8564B;background:#F7E9E6}
+.doc-group.card-need .doc-title{color:#7E3328}
+.doc-group.card-need .doc-row{border-top-color:#E3C3BD}
+.doc-group.card-need .btn.outline{border-color:#A8564B;background:#A8564B;color:#fff}
+.zip-fix{display:flex;margin-top:6px}
+#cf-payment.card-need-box,.sec.secret.card-need-box{border:2px solid #A8564B;background:#F7E9E6}
+#cf-payment.card-need-box .card-entry,.sec.secret.card-need-box .card-entry{background:transparent}
+.card-need-box .card-scan{border-color:#A8564B;background:#A8564B;color:#fff}
+.card-need-note{margin:0;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #D9A79F;color:#8E3F35;font-weight:700;font-size:.88rem}
+.card-entry:not(.card-need-box) .card-need-note{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #cf-payment.card-need-box,:root:not([data-theme="light"]) .sec.secret.card-need-box{background:#33201D;border-color:#C27368}:root:not([data-theme="light"]) .card-need-note{background:#172128;color:#F0B8AE}}
+.card-need-msg{color:#8E3F35;font-weight:800}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .doc-group.card-need{background:#33201D;border-color:#C27368}:root:not([data-theme="light"]) .doc-group.card-need .doc-title{color:#F0B8AE}}
+.doc-group.done{border-color:var(--seal)}
+.doc-name{display:flex;justify-content:space-between;align-items:center;font-weight:700;padding:2px 0 4px}
+.doc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.doc-label{display:grid;gap:0}
+.doc-row.retake{margin:0 -8px;padding:8px;border-radius:10px;background:#FDECEA;border-top-color:transparent}
+.retake-msg{color:var(--danger);font-weight:700}
+.retake-banner{display:block;width:100%;margin:10px 0 0;padding:10px 12px;border-radius:10px;border:1.5px solid var(--danger);background:#FDECEA;color:#8A2A1D;font:inherit;font-size:.9rem;text-align:left;cursor:pointer}
+.retake-target{display:flex;align-items:center;gap:12px;margin:4px 0 10px;padding:12px;border-radius:12px;border:2px solid var(--danger);background:var(--surface)}
+.retake-target strong{display:block;font-size:1.15rem}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .doc-row.retake,:root:not([data-theme="light"]) .retake-banner{background:#3A1E1A;color:#F2B8AE}}
+.doc-actions{display:flex;gap:6px;flex:none}
+.doc-ok{color:var(--seal);font-weight:700;font-size:.8rem}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.chip-btn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 12px;font-size:.84rem;cursor:pointer;min-height:34px}
+.chip-btn:active{background:var(--seal-soft);border-color:var(--seal)}
+.chip-btn.on{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
+.warn{margin:0;padding:10px 12px;border-radius:8px;background:#FDECEA;color:#8A2A1D;border:1px solid #F2B8AE;font-size:.88rem;display:grid;gap:4px}
+.warn p{margin:0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn{background:#3A1E1A;color:#F2B8AE;border-color:#6B3328}}
+
+.progress{list-style:none;margin:0;padding:10px 12px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:720px;margin-inline:auto}
+.progress li{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;color:var(--muted);text-align:center}
+.pstep{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-height:44px;padding:2px 0;border:0;border-radius:8px;background:transparent;font:inherit;color:inherit;cursor:pointer}
+.pstep:active{background:var(--seal-soft)}
+.progress li .num{width:26px;height:26px;font-size:.8rem}
+.progress li.now{color:var(--ink);font-weight:700}
+.progress li.now .num{border-color:var(--seal);color:var(--seal);border-width:2px}
+.progress li.done .num{background:var(--seal);border-color:var(--seal);color:var(--seal-ink)}
+.lead{margin:4px 0 14px;font-size:.98rem}
+.wiz{padding-bottom:calc(var(--dock-h) + 70px + env(safe-area-inset-bottom,0px))}
+.nav-wrap{max-width:720px;margin:0 auto;display:grid;gap:6px}
+.nav-in{grid-template-columns:1fr 1.6fr}
+.nav-hint{margin:0;text-align:center;font-size:.8rem;color:var(--muted)}
+.mini{margin:8px 0;padding-left:1.2em;display:grid;gap:4px;font-size:.9rem}
+.tall{min-height:58px;font-size:1.02rem}
+.done-note{margin:0 0 12px;padding:14px;border-radius:12px;background:var(--seal-soft);font-weight:700;color:var(--seal)}
+.done-sub{display:block;margin-top:4px;color:var(--ink);font-size:.95rem}
+.cf-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cf-row{display:grid;grid-template-columns:minmax(110px,40%) 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:.92rem}
+.cf-row.ai .cf-val{background:var(--ai);border-radius:4px;padding:0 4px}
+.cf-label{color:var(--muted)}
+.cf-val{word-break:break-all}
+.cf-val.empty,.cf-row.num-check .cf-val.empty{justify-self:start;align-self:start;width:fit-content;height:fit-content;color:#fff;background:var(--danger);font-weight:800;font-size:.86rem;letter-spacing:0;padding:1px 10px;border-radius:999px}
+.cf.editing{border-color:var(--seal)}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.sum-block{padding-bottom:10px;border-bottom:1px solid var(--line)}
+.sum-block .sum-row{border-bottom:0}
+.sum-link{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit;min-height:44px}
+.jump-group{margin-top:8px}
+.jump-sec{display:block;font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:4px}
+.jump-list{display:flex;flex-wrap:wrap;gap:6px}
+.jump-chip{min-height:36px;padding:4px 12px;border-radius:999px;border:1.5px solid var(--danger);background:transparent;color:var(--danger);font-size:.85rem;font-weight:700;cursor:pointer}
+.doc-group.flash,.field.flash,.cf.flash{animation:hpflash .9s 2;border-radius:10px}
+html.big .wrap,html.big .progress,html.big .nav-wrap{zoom:1.15}
+
+.doc-name{gap:10px;justify-content:flex-start}
+.doc-title{flex:1}
+.doc-ill{width:54px;height:38px;flex:none;display:inline-flex}
+.doc-ill svg,.tip-ill svg,.need-ill svg,.hero-ill svg,.flow-ill svg{width:100%;height:100%}
+.tips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;background:var(--paper);font-size:.78rem;font-weight:700;text-align:center}
+.tip-ill{width:34px;height:34px;display:inline-flex}
+
+/* ---------- お客様画面：あたたかい見た目 ---------- */
+:root{--paper:#FBF6EE;--seal:#2E7D6B;--seal-soft:#E3F1EB;--accent:#F2C14E;--accent-soft:#FDF0D0;--coral:#E07A5F;--round:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Noto Sans JP",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#14191C;--seal-soft:#1D302A;--accent-soft:#3A3116}}
+body{background:var(--paper)}
+h1,h2,strong,.btn,.sec-title,.doc-title,.tb-title,.ptxt,.tip,.need-name,.flow-label{font-family:var(--round)}
+.sec{border-radius:20px;border-color:transparent;box-shadow:0 2px 14px rgba(46,125,107,.08)}
+.btn{border-radius:14px}
+.btn.primary{box-shadow:0 6px 16px rgba(46,125,107,.25)}
+.topbar{border-bottom:0}
+.welcome{gap:18px;padding-top:calc(24px + env(safe-area-inset-top,0px))}
+.hero-ill{width:min(260px,70vw);aspect-ratio:1.3;margin:0 auto;display:block}
+.welcome h1{text-align:center;font-size:1.55rem;line-height:1.35;font-weight:800}
+.welcome .sub{text-align:center;margin:-8px 0 0;color:var(--muted)}
+.need{background:var(--surface);border-radius:22px;padding:16px;box-shadow:0 2px 14px rgba(46,125,107,.08);display:grid;gap:12px}
+.need-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.need-head h2{margin:0;font-size:1.05rem}
+.badge2{background:var(--coral);color:#fff;font-family:var(--round);font-weight:800;border-radius:999px;padding:4px 12px;font-size:.9rem;white-space:nowrap}
+.need-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.need-card{position:relative;background:var(--paper);border-radius:16px;padding:10px 8px 12px;display:grid;justify-items:center;gap:4px}
+.need-ill{width:100%;max-width:120px;aspect-ratio:120/84;display:block}
+.need-name{font-weight:700;font-size:.92rem}
+.need-tag{position:absolute;top:6px;right:6px;background:var(--accent);color:#3A2A00;font-family:var(--round);font-weight:800;font-size:.68rem;border-radius:999px;padding:2px 8px}
+.need-note{margin:0;font-size:.84rem;color:var(--muted);text-align:center}
+.for-name{margin:0;display:inline-block;justify-self:center;background:var(--seal-soft);color:var(--seal);font-weight:800;border-radius:999px;padding:6px 16px;font-size:.92rem}
+.need-more{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.need-more li{display:grid;gap:2px;background:var(--paper);border-radius:14px;padding:10px 12px;font-size:.84rem;color:var(--muted)}
+.need-more strong{color:var(--ink, inherit);font-size:.92rem}
+.cf-row.num-check .cf-val{font-size:1.12rem;font-weight:800;letter-spacing:.06em}
+.num-badge{display:block;width:fit-content;margin-top:3px;font-size:.72rem;font-weight:700;color:#6B4E00;background:#FFF3CC;border:1px solid #E8C860;border-radius:6px;padding:1px 7px;white-space:nowrap}
+.check-note{margin:8px 0 0;padding:10px 12px;border-radius:8px;background:#FFF3CC;border:1px solid #E8C860;color:#5A4200;font-size:.88rem;font-weight:700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .num-badge,:root:not([data-theme="light"]) .check-note{background:#382D10;color:#F2D58A;border-color:#8A6D1E}}
+.flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:4px}
+.flow li{display:grid;justify-items:center;gap:4px}
+.flow-ill{width:52px;height:52px;border-radius:50%;background:var(--surface);display:grid;place-items:center;box-shadow:0 2px 10px rgba(46,125,107,.1);padding:10px}
+.flow-label{font-weight:700;font-size:.85rem}
+.flow .arrow{color:var(--muted);font-size:1.1rem}
+details.consent{background:var(--surface);border-radius:16px;padding:12px 14px;font-size:.84rem}
+details.consent summary{cursor:pointer;font-weight:700;font-family:var(--round)}
+details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
+.done-ill{width:150px;height:150px;margin:0 auto;display:block}
+
+.progress li.later{color:var(--coral);font-weight:700}
+.progress li.later .num{border-color:var(--coral);color:var(--coral);border-width:2px}
+.sec.secret{border:1px dashed var(--ai-line)}
+.card-entry{display:grid;gap:12px}
+.voice-foot{margin:0;font-size:.72rem;line-height:1.55;color:var(--muted)}
+.photo-pick{display:grid;gap:10px}
+.field.bad input{border-color:var(--danger)}
+.field-err:empty{display:none}
+.mode-box{border:2px solid var(--seal)}
+.mode-q{display:block;font-size:1.08rem;margin-bottom:10px}
+.mode-opt{position:relative;display:grid;gap:2px;width:100%;margin:0 0 10px;padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);text-align:left;font:inherit;color:inherit;cursor:pointer}
+.mode-opt.rec{border-color:var(--seal);background:var(--seal-soft)}
+.mode-title{font-size:1.08rem;font-weight:800}
+.mode-desc{font-size:.85rem;color:var(--muted)}
+.mode-badge{position:absolute;top:-10px;right:12px;font-size:.74rem;font-weight:800;color:var(--seal-ink);background:var(--seal);border-radius:999px;padding:2px 10px}
+.type-sec{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line);font-weight:800;color:var(--seal)}
+.sec.manual-box{border:2px solid var(--seal);box-shadow:0 0 0 4px var(--seal-soft)}
+.manual-tag{display:inline-block;font-size:.72rem;font-weight:800;color:var(--seal-ink);background:var(--seal);border-radius:999px;padding:2px 10px;margin-right:6px;vertical-align:middle}
+.btn.toggle[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
+.sheet p[role=status]:empty{display:none}
+.btn.line-btn{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
+.bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;width:calc(100% - 32px);max-width:560px;padding:8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700;line-height:1.45;pointer-events:none}
+.man{display:block;margin-top:4px;font-weight:700;color:var(--seal)}
+.bg-pill small{display:block;font-size:.76rem;font-weight:500;color:var(--muted)}
+.bg-pill .spinner{flex:none;width:18px;height:18px}
+.btn svg{width:20px;height:20px;flex:none}
+a.btn{text-decoration:none}
+
+.kbd-guide{display:grid;gap:8px;padding:12px 14px;border-radius:12px;background:var(--seal-soft)}
+.kbd-guide strong{font-size:1rem}
+.kbd-steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.kbd-steps li{display:flex;align-items:center;gap:10px;font-size:.92rem}
+.kbd-steps .num{width:24px;height:24px;font-size:.78rem;background:var(--surface)}
+.kbd-mic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:var(--surface);border:1px solid var(--line);vertical-align:middle}
+.kbd-mic svg{width:16px;height:16px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input type="file" id="file-input" accept="image/*" hidden>
+<script>
+/* お客様用の入力画面（ログインなし・リンク専用） */
+const CONFIG = {
+  SUPABASE_URL: 'https://axaxqgvvezvhffopggba.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YXhxZ3Z2ZXp2aGZmb3BnZ2JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1Nzc5MTgsImV4cCI6MjEwMDE1MzkxOH0.l4HVsYvcFV-WyD86hjrfSS7Pgc9qCqgUlMaZWZD9vCg',
+  FUNCTION_NAME: 'onboarding-extract',
+  // サポート料（9,800円）の Stripe 支払いリンク。Stripeの管理画面で作った https://buy.stripe.com/... を貼る（空ならボタンを出さない）
+  STRIPE_PAYMENT_LINK: 'https://buy.stripe.com/6oUdR9gqI65t1oLb7t7EQ00',
+  // 送信が終わった後に案内する公式LINE（友だち追加のリンク）
+  LINE_URL: 'https://line.me/R/ti/p/@092ulblk',
+};
+
+const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
+const ID_TYPES = ['運転免許証', 'パスポート', 'マイナンバーカード'];
+const SECTIONS = [
+  { id: 'me', title: 'お名前・生年月日', fields: [
+    F('name_ja', '氏名（漢字）', { hint: '例：山田 花子' }),
+    F('name_kana', 'ふりがな', { hint: '例：やまだ はなこ（姓と名の間にスペース）' }),
+    F('first_romaji', '名（ローマ字）', { hint: '例：HANAKO（ふりがながあれば、そこからヘボン式で作る）' }),
+    F('last_romaji', '姓（ローマ字）', { hint: '例：YAMADA（ふりがながあれば、そこからヘボン式で作る）' }),
+    F('gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
+    F('birth_date', '生年月日', { type: 'date' }),
+    F('birth_country', '生まれた国', { def: '日本' }),
+    F('nationality', '国籍', { def: '日本' }),
+    F('pep', '政府や政治に関わる重要な役職の経験', { type: 'select', opts: ['いいえ', 'はい'], def: 'いいえ', hint: 'ご本人やご家族が、政治家・官僚の幹部・国営企業の役員などの経験がある場合は「はい」' }),
+  ]},
+  { id: 'idcard', title: '本人確認書類', fields: [
+    F('id_type', '書類の種類', { type: 'select', opts: ID_TYPES, def: '運転免許証' }),
+    F('id_number', '書類の番号', { hint: '運転免許証の12桁の番号' }),
+    F('id_country', '発行した国', { def: '日本' }),
+    F('id_issue_date', '交付日', { type: 'date' }),
+    F('id_expiry', '有効期限', { type: 'date' }),
+  ]},
+  { id: 'contact', title: 'ご連絡先', fields: [
+    F('email', 'メールアドレス', { type: 'email' }),
+    F('phone_type', '電話の種類', { type: 'select', opts: ['携帯', '自宅', '勤務先'], def: '携帯' }),
+    F('phone_cc', '国番号', { def: '+81' }),
+    F('phone_area', '電話番号（最初の部分）', { type: 'tel', hint: '先頭の0は除きます（090 → 90）' }),
+    F('phone_local', '電話番号（残り）', { type: 'tel', hint: '例：12345678' }),
+  ]},
+  { id: 'address', title: 'ご住所', fields: [
+    F('address_ja', 'ご住所（日本語）'),
+    F('address_kana', '住所（カタカナ）', { hint: '例：アイチケン ナゴヤシ ナカク サカエ 1-2-3' }),
+    F('postal_code', '郵便番号', { type: 'tel', hint: '7桁の数字' }),
+    F('prefecture', '都道府県（ローマ字）', { hint: '例：Aichi' }),
+    F('city', '市区町村（ローマ字）', { hint: '例：Nagoya-shi Naka-ku' }),
+    F('addr1', '町名・番地（ローマ字）', { hint: '例：3-2-1302 Sakae' }),
+    F('addr2', '建物名（ローマ字）'),
+    F('addr_country', '国', { def: '日本' }),
+  ]},
+  { id: 'work', title: 'お仕事・収入', fields: [
+    F('employer_type', '働き方', { chips: ['会社員', '自営業', '会社役員', '公務員', '専業主婦・主夫', 'パート・アルバイト', '年金生活'] }),
+    F('employer_name', '勤務先の名前'),
+    F('employer_address', '勤務先の住所（本社の住所）', { hint: 'お申込みには本社の住所が必要です。働いている場所が支店や営業所でも、本社の住所を入れてください（郵便番号＋住所）' }),
+    F('employer_website', '勤務先のホームページ', { hint: 'なければ「なし」' }),
+    F('industry', '業種', { hint: '例：医療機関、不動産', chips: ['医療・福祉', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '金融・保険', '公務'] }),
+    F('position', '役職', { chips: ['一般社員', '管理職', '役員', '代表者'] }),
+    F('job_detail', 'お仕事の内容', { type: 'textarea', hint: '例：中央病院の看護師' }),
+    F('employment_start', '今の勤務先で働き始めた日', { type: 'date' }),
+    F('income_currency', '年収の通貨', { def: 'JPY' }),
+    F('income_amount', '年収（円）', { type: 'number', hint: '例：450万円なら 4,500,000' }),
+  ]},
+  { id: 'beneficiary', title: '受取人（受益者）', capture: 'ben_license', fields: [
+    F('ben_name_ja', '氏名（漢字）'),
+    F('ben_name_kana', 'ふりがな', { hint: '例：やまだ たろう（姓と名の間にスペース）' }),
+    F('ben_first_romaji', '名（ローマ字）', { hint: 'ふりがなからヘボン式で作る' }),
+    F('ben_last_romaji', '姓（ローマ字）', { hint: 'ふりがなからヘボン式で作る' }),
+    F('ben_gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
+    F('ben_birth_date', '生年月日', { type: 'date' }),
+    F('ben_birth_country', '生まれた国', { def: '日本' }),
+    F('ben_nationality', '国籍', { def: '日本' }),
+    F('ben_id_type', '本人確認書類の種類', { type: 'select', opts: ID_TYPES, def: '運転免許証' }),
+    F('ben_id_number', '書類の番号'),
+    F('ben_id_country', '発行した国', { def: '日本' }),
+    F('ben_id_issue_date', '交付日', { type: 'date' }),
+    F('ben_id_expiry', '有効期限', { type: 'date' }),
+    F('ben_relation', 'あなたとの関係', { hint: '例：配偶者、子', chips: ['配偶者', '子', '親', '兄弟姉妹'] }),
+    F('ben_percent', '受け取る割合（%）', { type: 'number', def: '100' }),
+  ]},
+  { id: 'tax', title: '税金について', fields: [
+    F('us_status', 'アメリカとの関係', { type: 'select', opts: ['米国市民・米国居住者ではない', '米国市民・米国居住者である', '米国生まれだが市民権を放棄した'], def: '米国市民・米国居住者ではない', hint: 'アメリカ国籍やグリーンカードがなければ「ではない」' }),
+    F('tax_country', '税金を納めている国', { def: '日本' }),
+  ]},
+  { id: 'contract', title: 'ご契約内容（担当者と決めた内容）', fields: [
+    F('product_type', '契約商品', { type: 'select', opts: ['S&P', 'EVO', 'FIP', 'PLS'] }),
+    F('contract_years', '契約年数', { type: 'number', chips: ['25年', '20年', '15年', '10年'], hint: '数字＋年（例：15年）' }),
+    F('monthly_usd', '月々の金額（米ドル）', { type: 'number', hint: '数字のみ。例：月200ドル → 200' }),
+    F('fund_choice', 'ファンド選択', { hint: '担当者と決めたもの', chips: ['BTC100％', 'BTC75％ ETH25％', 'BTC50％ GOLD50％', '分散ファンド'] }),
+    F('introducer_name', '紹介者（漢字フルネーム）'),
+  ]},
+  { id: 'payment', title: 'お支払いに使うカード', fields: [
+    F('card_kind', '使用カード', { type: 'select', opts: ['クレジット', 'デビット'] }),
+    F('card_brand', 'カード種類', { type: 'select', opts: ['VISA', 'MASTER', 'JCB', 'AMEX', 'DINERS'] }),
+    F('card_company', 'カード会社', { hint: '例：楽天カード、イオンカード、三井住友カード、JCBカード など' }),
+  ]},
+  { id: 'funds', title: '資金について', fields: [
+    F('bank_name', 'メインで使っている銀行', { hint: '例：三菱UFJ銀行' }),
+    F('bank_branch', '支店名'),
+    F('bank_branch_no', '支店番号', { type: 'tel', hint: '3桁の番号' }),
+    F('bank_open_date', '入力した銀行口座を作った日（だいたいでOK）', { type: 'date', def: (new Date().getFullYear() - 5) + '-04-01', hint: '例：2015年4月1日。はっきり分からなければ、だいたいの年の4月1日でOK' }),
+    F('fund_method', '積立のお金は、どこから払いますか？', { def: '給与', hint: '毎月の積立に使うお金の元（もと）を選んでください。例：お給料から払う → 給与、貯金から払う → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
+    F('fund_currency', '通貨', { def: 'JPY' }),
+    F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50,000' }),
+    F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600,000）' }),
+    F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1,000,000' }),
+    F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
+  ]},
+];
+const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
+FIELD_MAP.has_passport = F('has_passport', 'パスポートはお持ちですか？（あれば必ず撮影）', { type: 'select', opts: ['はい', 'いいえ'] });
+const ALL_KEYS = Object.keys(FIELD_MAP);
+const DOCS = {
+  license: { label: '運転免許証（申込者）', set: { id_type: '運転免許証' },
+    keys: ['name_ja','first_romaji','last_romaji','birth_date','id_number','id_issue_date','id_expiry','address_ja','address_kana','postal_code','prefecture','city','addr1','addr2'] },
+  mynumber: { label: 'マイナンバーカードの表面（申込者）', set: {},
+    keys: ['name_ja','first_romaji','last_romaji','gender','birth_date','address_ja','address_kana','postal_code','prefecture','city','addr1','addr2'] },
+  ben_license: { label: '運転免許証（受益者）', set: { ben_id_type: '運転免許証' },
+    keys: ['ben_name_ja','ben_first_romaji','ben_last_romaji','ben_birth_date','ben_id_number','ben_id_issue_date','ben_id_expiry'] },
+};
+
+const app = document.getElementById('app');
+const fileInput = document.getElementById('file-input');
+const TOKEN = (new URLSearchParams(location.search).get('t') || '').slice(0, 100);
+const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'onboarding-guest' },
+});
+let data = {}, aiKeys = new Set(), guessKeys = new Set(), dirty = new Set();
+let inputs = {}, counters = [], saveEl = null, saveTimer = null, savePromise = null, voiceDraft = '';
+let rec = null, recording = false, voiceStream = null;
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) { if (c == null || c === false) continue; el.append(c instanceof Node ? c : document.createTextNode(String(c))); }
+  return el;
+}
+const ICONS = {
+  card: '<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="11" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.8 16c.5-1.5 1.5-2.2 2.7-2.2s2.2.7 2.7 2.2M13.5 10h5M13.5 13.5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  card2: '<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 9.5h7M6 12.5h5M6 15.5h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="15" y="9" width="3.5" height="4.5" rx=".8" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+};
+function icon(name) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.innerHTML = ICONS[name]; return s;
+}
+function toast(msg, ms = 3500) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = h('div', { class: 'toast', role: 'status' }, msg); document.body.append(t); placeToast(); setTimeout(() => t.remove(), ms);
+}
+// 「〇〇を読み取り中…」の表示が出ている間は、黒いお知らせをその上に出す（重ならないように）
+function placeToast() {
+  const t = document.querySelector('.toast'); if (!t) return;
+  t.style.bottom = bgPill ? (window.innerHeight - bgPill.getBoundingClientRect().top + 10) + 'px' : '';
+}
+function busy(msg) {
+  const b = h('div', { class: 'busy', role: 'alert' }, h('div', { class: 'busy-card' }, h('span', { class: 'spinner' }), msg));
+  document.body.append(b); return () => b.remove();
+}
+
+const HERO_ILL = '<svg viewBox="0 0 260 200" aria-hidden="true"><ellipse cx="130" cy="182" rx="96" ry="10" fill="#000" opacity=".06"/><circle cx="210" cy="40" r="22" fill="#F2C14E" opacity=".35"/><circle cx="40" cy="70" r="14" fill="#E07A5F" opacity=".25"/><rect x="88" y="18" width="84" height="158" rx="18" fill="#2E7D6B"/><rect x="95" y="30" width="70" height="132" rx="10" fill="#FFFFFF"/><rect x="104" y="44" width="52" height="34" rx="6" fill="#E3F1EB" stroke="#2E7D6B" stroke-width="2"/><circle cx="117" cy="58" r="5" fill="#9CC5B9"/><rect x="126" y="54" width="24" height="4" rx="2" fill="#2E7D6B"/><rect x="126" y="62" width="18" height="3" rx="1.5" fill="#BFD6CF"/><rect x="104" y="88" width="52" height="6" rx="3" fill="#F3EEE4"/><rect x="104" y="100" width="40" height="6" rx="3" fill="#F3EEE4"/><rect x="104" y="112" width="46" height="6" rx="3" fill="#F3EEE4"/><rect x="108" y="134" width="44" height="16" rx="8" fill="#2E7D6B"/><path d="M184 92c0-14 11-24 26-24s26 10 26 24-11 24-26 24c-4 0-8-1-11-2l-11 6 3-10c-4-5-7-11-7-18z" fill="#F2C14E"/><rect x="204" y="80" width="12" height="20" rx="6" fill="#3A2A00"/><path d="M198 94a12 12 0 0024 0" fill="none" stroke="#3A2A00" stroke-width="3" stroke-linecap="round"/><path d="M44 120l24-8 6 18-24 8z" fill="#7A2E3A"/><circle cx="58" cy="122" r="3" fill="#E9C46A"/><path d="M30 150h36v26H30z" fill="#FFFFFF" stroke="#CFC6B6" stroke-width="2"/><rect x="36" y="156" width="20" height="3" rx="1.5" fill="#8C7B64"/><rect x="36" y="163" width="24" height="2.5" rx="1.25" fill="#D9D0C1"/></svg>';
+const DONE_ILL = '<svg viewBox="0 0 150 150" aria-hidden="true"><circle cx="75" cy="75" r="52" fill="#E3F1EB"/><circle cx="75" cy="75" r="38" fill="#2E7D6B"/><path d="M57 76l12 12 24-26" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><g fill="#F2C14E"><circle cx="22" cy="40" r="5"/><circle cx="128" cy="34" r="4"/><circle cx="132" cy="108" r="5"/></g><g fill="#E07A5F"><rect x="30" y="104" width="8" height="8" rx="2" transform="rotate(20 34 108)"/><rect x="112" y="16" width="7" height="7" rx="2" transform="rotate(-15 115 19)"/></g></svg>';
+const FLOW_ILL = {
+  shot: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="9" width="24" height="17" rx="4" fill="#2E7D6B"/><path d="M11 9l2-4h6l2 4" fill="#2E7D6B"/><circle cx="16" cy="17.5" r="5.5" fill="#fff"/><circle cx="16" cy="17.5" r="3" fill="#F2C14E"/></svg>',
+  talk: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="12" y="4" width="8" height="15" rx="4" fill="#2E7D6B"/><path d="M8 15a8 8 0 0016 0M16 23v5" fill="none" stroke="#2E7D6B" stroke-width="2.6" stroke-linecap="round"/></svg>',
+  send: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="#2E7D6B"/><path d="M10 16.5l4 4 8-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+/* ---------- 起動 ---------- */
+// 開き直した時に、ブラウザが前回のスクロール位置へ戻さないようにする
+try { history.scrollRestoration = 'manual'; } catch {}
+async function boot() {
+  if (!TOKEN) return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
+  const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
+  if (error) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。');
+  if (st === 'used') return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true, nextSteps(true));
+  if (st === 'expired') return viewMessage('リンクの期限が切れています', 'お手数ですが、担当者に新しいリンクをご依頼ください。');
+  if (st !== 'ok') return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
+  const { data: saved } = await sb.rpc('onboarding_invite_get', { p_token: TOKEN });
+  data = {};
+  for (const f of Object.values(FIELD_MAP)) if (f.def) data[f.k] = f.def;
+  Object.assign(data, saved || {});
+  const prog = loadProgress();
+  if (prog.agreed) { viewForm(prog.step || 1); toast('前回の続きから再開しました。入力した内容は保存されています。', 4500); }
+  else viewWelcome();
+}
+function viewMessage(title, body, ok = false, extra = null) {
+  app.replaceChildren(h('main', { class: 'hero center' },
+    ok ? ill(DONE_ILL, 'done-ill') : h('div', { class: 'big-icon', 'aria-hidden': 'true' }, '!'), h('h1', {}, title), h('p', { class: 'muted' }, body), extra));
+}
+// サポート料の支払い（Stripeの画面を開く。カード番号はStripeが受け取り、このツールには来ない）
+function lineBlock() {
+  if (!CONFIG.LINE_URL) return null;
+  return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, '① 公式LINEに登録してください'),
+    h('p', { class: 'small muted', style: 'margin:0' }, '手続きの進み具合や今後のご連絡は、公式LINEでお知らせします。'),
+    h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener' }, 'LINEで友だち追加する')));
+}
+function nextSteps(again = false) {
+  return h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, lineBlock(), payBlock(again));
+}
+function payBlock(again = false) {
+  if (!CONFIG.STRIPE_PAYMENT_LINK) return null;
+  let href;
+  try {
+    const url = new URL(CONFIG.STRIPE_PAYMENT_LINK);
+    const email = String((data && data.email) || '').trim();
+    if (email) url.searchParams.set('prefilled_email', email);
+    href = url.toString();
+  } catch { return null; }
+  return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, (CONFIG.LINE_URL ? '② ' : '') + 'サポート料 9,800円のお支払い'),
+    h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
+    h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
+}
+function viewWelcome() {
+  const agree = h('input', { type: 'checkbox', id: 'agree' });
+  const start = h('button', { class: 'btn primary wide tall', type: 'button', disabled: true }, 'はじめる');
+  agree.addEventListener('change', () => { start.disabled = !agree.checked; });
+  start.addEventListener('click', () => { saveProgress({ agreed: true }); viewForm(1); });
+  const card = (doc, tag) => h('div', { class: 'need-card' }, tag ? h('span', { class: 'need-tag' }, tag) : null, ill(DOC_ILL[doc], 'need-ill'), h('span', { class: 'need-name' }, DOC_TYPES[doc]));
+  app.replaceChildren(h('main', { class: 'hero welcome' },
+    ill(HERO_ILL, 'hero-ill'),
+    data.invite_for ? h('p', { class: 'for-name' }, String(data.invite_for).trim() + ' 様用のお申込みページです') : null,
+    h('h1', {}, 'お申込みは', h('br'), 'スマホでかんたん'),
+    h('p', { class: 'sub' }, '書類を撮影し、残りを音声と手入力で進めます。所要時間は入力内容によって変わります。'),
+    h('section', { class: 'need' },
+      h('div', { class: 'need-head' }, h('h2', {}, 'ご用意いただくもの'), h('span', { class: 'badge2' }, 'このうち2つ')),
+      h('div', { class: 'need-grid' }, card('passport', 'あれば必ず'), card('license'), card('mynumber'), card('juminhyo')),
+      h('p', { class: 'need-note' }, '免許証・マイナンバーカードは表と裏を撮ります'),
+      h('ul', { class: 'need-more' },
+        h('li', {}, h('strong', {}, '💳 お支払いに使うクレジットカード'), h('span', {}, 'デビットカードでも可能です。番号の面を撮影します')),
+        h('li', {}, h('strong', {}, '👤 受取人（受益者）の情報'), h('span', {}, '氏名・ふりがな・生年月日・続柄。受取人の免許証があれば撮影で入ります。決まっていなければ、あとで入力もできます')))),
+    h('ol', { class: 'flow', 'aria-label': '流れ' },
+      h('li', {}, ill(FLOW_ILL.shot, 'flow-ill'), h('span', { class: 'flow-label' }, '撮る')),
+      h('li', { class: 'arrow', 'aria-hidden': 'true' }, '›'),
+      h('li', {}, ill(FLOW_ILL.talk, 'flow-ill'), h('span', { class: 'flow-label' }, '話す')),
+      h('li', { class: 'arrow', 'aria-hidden': 'true' }, '›'),
+      h('li', {}, ill(FLOW_ILL.send, 'flow-ill'), h('span', { class: 'flow-label' }, '送る'))),
+    h('details', { class: 'consent' },
+      h('summary', {}, '個人情報の取り扱い（タップで表示）'),
+      h('ul', {},
+        h('li', {}, 'お申込み手続き（Investors Trust）のために、担当者が利用します。'),
+        h('li', {}, '書類の写真は担当者だけが見られる場所に保存し、手続き後に削除します。'),
+        h('li', {}, '書類と話した内容の整理にはAnthropic社のClaude、録音の文字起こしにはOpenAIの音声認識を使います。'),
+        h('li', {}, 'カード番号・マイナンバーは音声で話さないでください（口座番号は話してOK）。カードは撮影して読み取れます（写真は保存しません）。番号はツールに保存せず、送信の時にスプレッドシートへ直接送ります。'),
+        h('li', {}, 'サポート料のお支払いは、Stripe社の決済画面で行います。'),
+        h('li', {}, 'このリンクはあなた専用です。'))),
+    h('label', { class: 'check', for: 'agree' }, agree, '個人情報の取り扱いに同意します'),
+    start));
+}
+
+/* ---------- 途中保存（この端末で、どこまで進んだかを覚える） ---------- */
+const LS_KEY = 'onboarding-progress-' + TOKEN.slice(0, 16);
+function loadProgress() { try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; } }
+function saveProgress(p) { try { localStorage.setItem(LS_KEY, JSON.stringify({ ...loadProgress(), ...p })); } catch {} }
+
+/* ---------- 入力画面（4ステップ） ---------- */
+// お客様には見せない項目（ローマ字・決まった値は自動で入る）
+const HIDE = new Set(['first_romaji', 'last_romaji', 'prefecture', 'city', 'addr1', 'addr2', 'addr_country',
+  'ben_first_romaji', 'ben_last_romaji', 'birth_country', 'nationality', 'ben_birth_country', 'ben_nationality',
+  'id_country', 'ben_id_country', 'phone_cc', 'income_currency', 'fund_currency', 'tax_country']);
+const MANUAL_GROUPS = [
+  { title: 'お名前のふりがな', note: '音声だと漢字に変換されてしまうので、ひらがなで入力してください。', keys: ['name_kana'] },
+  { title: '数字・連絡先', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number'] },
+  { title: '選択肢をタップ', note: '当てはまるものを選んでください。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'id_type'] },
+  { title: '日付を確認して入力', note: '分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
+];
+// 受取人は手入力の欄、ご契約内容は担当者が先に入れるので、どちらも音声では聞かない
+const BEN_KEYS = SECTIONS.find(s => s.id === 'beneficiary').fields.map(f => f.k);
+const CONTRACT_KEYS = ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name', 'staff_name'];
+// 最初から値が入っているが、確認してもらうために手入力の欄に出し続ける項目
+const ALWAYS_SHOW = new Set(['bank_open_date', 'employment_start', 'fund_method']);
+// 勤務先の住所・ホームページは会社名から自動で調べるので、話す・手入力の対象にしない（確認画面で直せる）
+const MANUAL_KEYS = new Set(['email', 'phone_type', 'fund_annual', 'employer_address', 'employer_website', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
+const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
+const visibleFields = sec => sec.fields.filter(f => !HIDE.has(f.k));
+const STEPS = ['書類を撮る', '話して入力', '確認', '送信'];
+let step = 1, editing = null, mainEl = null, navEl = null, progEl = null;
+window.onDocsChanged = () => refreshStep();
+function viewForm(startStep = 1) {
+  inputs = {}; counters = []; step = Math.max(1, Math.min(4, Number(startStep) || 1)); editing = null;
+  saveEl = h('button', { class: 'save', type: 'button', role: 'status' }, '');
+  saveEl.addEventListener('click', () => { if (dirty.size) save(); });
+  const big = h('button', { class: 'btn ghost sm', type: 'button', 'aria-pressed': 'false' }, '文字を大きく');
+  big.addEventListener('click', () => {
+    const on = document.documentElement.classList.toggle('big');
+    big.setAttribute('aria-pressed', String(on)); big.textContent = on ? '文字をもとに戻す' : '文字を大きく';
+  });
+  progEl = h('ol', { class: 'progress', 'aria-label': '進み具合' });
+  mainEl = h('main', { class: 'wrap wiz' });
+  navEl = h('nav', { class: 'dock', 'aria-label': '進む・戻る' });
+  app.replaceChildren(h('header', { class: 'topbar' }, h('h1', { class: 'tb-title' }, 'お申込み情報のご入力'), saveEl, big), progEl, mainEl, navEl);
+  renderStep();
+  // 最初の画面で下までスクロールしていても、入力画面は一番上から見せる
+  window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0));
+}
+// 送信前の画面から、未入力・黄色の項目へ移動する（未入力は、その項目の入力欄を開く）
+function jumpToField(k, edit) {
+  const sec = SECTIONS.find(s => visibleFields(s).some(f => f.k === k));
+  go(3);
+  if (sec && edit) { editing = sec.id; renderStep(); }
+  setTimeout(() => {
+    const target = edit && inputs[k] ? inputs[k].wrap : sec && document.getElementById('cf-' + sec.id);
+    if (!target) return;
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
+  }, 60);
+}
+// 「話して入力」の画面を離れる時（次へ・戻る・上の番号のどれでも）、メールと携帯番号の形をチェックする
+function step2InputsOk() {
+  if (step !== 2) return true;
+  const email = document.getElementById('customer-email');
+  if (email && email.value && !email.checkValidity()) { toast('メールアドレスの形式を確認してください。'); email.scrollIntoView({ block: 'center' }); email.focus(); return false; }
+  const phone = document.getElementById('customer-phone');
+  if (phone && phone.value && !phone.checkValidity()) { toast('携帯番号は090・080・070から始まる11桁で入力してください。'); phone.scrollIntoView({ block: 'center' }); phone.focus(); return false; }
+  return true;
+}
+const MOBILE_RE = /^0[789]0\d{8}$/;
+function mobileOk(d = data) {
+  if (d.phone_type !== '携帯' || (!d.phone_area && !d.phone_local)) return true;
+  return MOBILE_RE.test('0' + String(d.phone_area || '').replace(/^0/, '') + String(d.phone_local || ''));
+}
+function go(n) { if (n !== step && !step2InputsOk()) return; if (saveTimer) save(); step = Math.max(1, Math.min(4, n)); editing = null; saveProgress({ step }); renderStep(); window.scrollTo(0, 0); }
+// 入力中の欄があれば、画面の描き直しは入力が終わるまで待つ（裏で読み取りが終わった時に、打っている途中の欄が消えないように）
+const typingIn = () => { const a = document.activeElement; return !!(a && mainEl && mainEl.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
+let refreshWaiting = false;
+function refreshStep() {
+  if (!mainEl || !mainEl.isConnected || editing) return;
+  if (typingIn()) {
+    if (!refreshWaiting) {
+      refreshWaiting = true;
+      const later = () => setTimeout(() => { if (typingIn()) return; mainEl.removeEventListener('focusout', later); refreshWaiting = false; refreshStep(); }, 0);
+      mainEl.addEventListener('focusout', later);
+    }
+    return;
+  }
+  const y = window.scrollY; renderStep(); window.scrollTo(0, y);
+}
+function renderStep() {
+  saveProgress({ step });
+  if (step >= 2) watchZip();
+  const docsOk = docStatus(data).ok;
+  progEl.replaceChildren(...STEPS.map((t, i) => {
+    const later = i === 0 && step > 1 && !docsOk;
+    const cls = i + 1 === step ? 'now' : later ? 'later' : (i + 1 < step ? 'done' : '');
+    return h('li', { class: cls, 'aria-current': i + 1 === step ? 'step' : null },
+      h('button', { class: 'pstep', type: 'button', 'aria-label': `${i + 1}. ${t}へ移動`, onclick: () => { if (i + 1 !== step || editing) go(i + 1); } },
+        h('span', { class: 'num' }, later ? '!' : (i + 1 < step ? '✓' : String(i + 1))), h('span', { class: 'ptxt' }, later ? 'あとで撮影' : t)));
+  }));
+  inputs = {};
+  let body = [], nextLabel = '次へ', canNext = true, nextFn = () => go(step + 1), hint = null;
+  if (step === 1) {
+    const st = docStatus(data);
+    docsPanelEl = renderDocsPanel();
+    body = [h('p', { class: 'lead' }, '📷 書類2つと、お支払いに使うクレジットカードを撮りましょう。名前や住所、カード番号が自動で入ります。'), docsPanelEl];
+    if (!st.ok && st.done.length >= 2 && !data.has_passport) {
+      nextFn = () => {
+        toast('パスポートをお持ちか「はい」「いいえ」を選んでください。');
+        const box = document.getElementById('hp-box');
+        if (box) { box.scrollIntoView({ block: 'center', behavior: 'smooth' }); box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash'); }
+      };
+    } else if (!st.ok) {
+      nextLabel = 'あとで撮影する';
+      body.push(h('p', { class: 'muted small center' }, '手元に書類がなければ、先にほかの項目を入力できます。入力した内容は保存され、送信前に撮影すればOKです。'));
+    }
+  } else if (step === 2) {
+    const rest = remainingLines();
+    setTimeout(maybeLookupEmployer, 400);
+    guessEmploymentStart();
+    const mode = loadProgress().inputMode || '';
+    const modeSwitch = (to, text) => h('button', { class: 'btn ghost wide sm', type: 'button', onclick: () => setInputMode(to) }, text);
+    // 入力のしかたを選ぶまでは、下の手入力の欄は出さない
+    const choosing = rest.length && !mode;
+    body = [h('p', { class: 'lead' }, mode === 'type' ? '⌨️ 残りの項目を入力します。' : mode ? '🎤 話しやすい項目は音声で入力します。' : '📝 残りの項目を入力します。'),
+      choosing ? modeChooser()
+      : mode === 'type' && (rest.length || (typeKeysMemo && typeKeysMemo.length))
+        ? typeEntry(h('button', { class: 'btn outline wide', type: 'button', onclick: () => setInputMode('voice') }, icon('mic'), '話して入力に切り替える（おすすめ）'), modeSwitch('voice', '🎤 やっぱり話して入力する（おすすめ）'))
+      : rest.length
+        ? h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+            h('strong', {}, `あと${rest.length}項目`),
+            h('ul', { class: 'mini' }, ...firstRound(rest).map(t => h('li', {}, t.replace(/（[^）]*）/g, '')))),
+            rest.length > firstRound(rest).length ? h('p', { class: 'muted small', style: 'margin:0' }, `…ほか${rest.length - firstRound(rest).length}項目`) : null,
+            h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => openVoice(1) }, icon('mic'), '話して入力をはじめる'),
+            modeSwitch('type', '⌨️ 声を出せない時は、文字で入力する')))
+        : h('div', { class: 'done-note' }, mode === 'type' ? '✓ 上の項目は入力済みです' : '✓ 音声での入力は完了です！', h('span', { class: 'done-sub' }, 'お手数ですが、残りの項目は下の欄に手入力でお願いします。')),
+      ...(choosing ? [] : [
+        emailEntry(),
+        mode === 'voice' && data.phone_area && data.phone_local && mobileOk() ? null : phoneEntry(),
+        ...MANUAL_GROUPS.map(manualEntry).filter(Boolean),
+        beneficiaryEntry(),
+        h('p', { class: 'muted small' }, 'わからない項目は、次の画面で直せます。')])];
+  } else if (step === 3) {
+    body = [h('p', { class: 'lead' }, '👀 違うところだけ「直す」で修正してください。'),
+      h('p', { class: 'note' }, '🔢 特に電話番号・郵便番号・支店番号などの数字は、1文字ずつ確認してください（「⚠️ 間違いがないか確認」の印が付いています）。'),
+      expiryWarn(), ...SECTIONS.map(confirmCard)];
+    setTimeout(maybeLookupEmployer, 400);
+    if (editing) {
+      const id = editing;
+      nextLabel = '直し終わった（確認を続ける）';
+      nextFn = () => {
+        const sec = SECTIONS.find(s => s.id === id);
+        if (sec) visibleFields(sec).forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); });
+        editing = null; renderStep();
+        const el = document.getElementById('cf-' + id); if (el) el.scrollIntoView({ block: 'start' });
+      };
+    }
+  } else {
+    const vis = SECTIONS.flatMap(visibleFields);
+    const isEmpty = f => f.k && !String(data[f.k] ?? '').trim() && !(f.k === 'phone_local' && !String(data.phone_area ?? '').trim());
+    const emptyGroups = SECTIONS.filter(sec => !(sec.id === 'beneficiary' && data.ben_none === 'はい'))
+      .map(sec => ({ sec, list: visibleFields(sec).filter(isEmpty) })).filter(g => g.list.length);
+    const emptyList = emptyGroups.flatMap(g => g.list);
+    const empty = vis.filter(f => !String(data[f.k] ?? '').trim()).length;
+    const aiList = vis.filter(f => aiKeys.has(f.k));
+    const unchecked = [...aiKeys].filter(k => !HIDE.has(k)).length;
+    const st = docStatus(data);
+    const agree = h('input', { type: 'checkbox', id: 'agree2' });
+    body = [h('p', { class: 'lead' }, '✨ あと少しです！送信して完了です。'),
+      h('section', { class: 'sec' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+        h('div', { class: 'sum-row' }, h('span', {}, '本人確認書類'), h('strong', { class: st.ok ? 'doc-ok' : 'err' }, st.ok ? '✓ そろっています' : '不足しています')),
+        emptyList.length
+          ? h('div', { class: 'sum-block' },
+              h('button', { class: 'sum-row sum-link', type: 'button', onclick: () => jumpToField(emptyList[0].k, true) }, h('span', {}, '未入力の項目'), h('strong', { class: 'err' }, `${emptyList.length}か所 ›`)),
+              h('p', { class: 'muted small', style: 'margin:6px 0 4px' }, 'タップすると、その項目の入力画面に移ります'),
+              ...emptyGroups.map(g => h('div', { class: 'jump-group' }, h('span', { class: 'jump-sec' }, g.sec.title),
+                h('div', { class: 'jump-list' }, ...g.list.map(f => h('button', { class: 'jump-chip', type: 'button', onclick: () => jumpToField(f.k, true) }, f.k === 'phone_area' ? '電話番号' : f.label))))))
+          : h('div', { class: 'sum-row' }, h('span', {}, '未入力の項目'), h('strong', { class: 'doc-ok' }, '✓ ありません')),
+        aiList.length
+          ? h('div', { class: 'sum-block' },
+              h('button', { class: 'sum-row sum-link', type: 'button', onclick: () => jumpToField(aiList[0].k, false) }, h('span', {}, '自動で入力した項目（黄色の欄）'), h('strong', {}, `${unchecked}か所 ›`)),
+              h('p', { class: 'muted small', style: 'margin:6px 0 0' }, '書類の写真や音声から自動で入れた項目です。読み間違いがあるかもしれないので、念のため見直してください（このままでも送信できます）。'))
+          : null,
+        expiryWarn(),
+        !st.ok ? h('div', { class: 'warn' }, h('p', {}, !data.has_passport ? 'パスポートをお持ちか選択してください。' : st.needPassport ? 'パスポートの撮影がまだです。' : '本人確認書類の撮影がまだです（2つ必要）。'), h('p', { class: 'small' }, '入力内容は保存されています。書類が用意できたら、このリンクを開いて撮影すると送信できます。'),
+          h('button', { class: 'btn outline sm', type: 'button', onclick: () => go(1) }, '書類を撮影する')) : null,
+        empty || unchecked ? h('p', { class: 'muted small', style: 'margin:0' }, '空欄があっても送信できます。担当者が確認します。') : null,
+        h('label', { class: 'check', for: 'agree2' }, agree, '内容に間違いがないことを確認しました')))];
+    body.splice(1, 0, secretCard('🔒 カード番号・マイナンバー'));
+    nextLabel = '送信する'; nextFn = submit; canNext = false;
+    agree.addEventListener('change', () => { nextBtn.disabled = !agree.checked || !st.ok; });
+  }
+  mainEl.replaceChildren(...body.filter(Boolean));
+  paintCardNeed();
+  // 「話して入力」「文字で入力」を選んだ後に戻るを押したら、まず入力のしかたを選ぶ画面へ戻す
+  const backToChooser = step === 2 && !!loadProgress().inputMode && remainingLines().length > 0;
+  const backBtn = step > 1 ? h('button', { class: 'btn wide', type: 'button', onclick: () => backToChooser ? setInputMode('') : go(step - 1) }, '戻る') : h('span');
+  const nextBtn = h('button', { class: 'btn primary wide', type: 'button', disabled: !canNext }, nextLabel);
+  nextBtn.addEventListener('click', nextFn);
+  navEl.replaceChildren(h('div', { class: 'nav-wrap' }, hint ? h('p', { class: 'nav-hint' }, hint) : null, h('div', { class: 'dock-in nav-in' }, backBtn, nextBtn)));
+}
+function emailEntry() {
+  const input = h('input', { id: 'customer-email', type: 'email', inputmode: 'email', autocomplete: 'email', autocapitalize: 'off', spellcheck: 'false', placeholder: '例：hanako@example.com' });
+  input.value = data.email || '';
+  input.addEventListener('input', () => {
+    data.email = input.value.trim(); dirty.add('email'); scheduleSave();
+  });
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), 'メールアドレス'),
+    h('div', { class: 'field' }, h('label', { for: 'customer-email' }, 'メールアドレス'), input)));
+}
+function phoneEntry() {
+  const typeField = renderField(FIELD_MAP.phone_type);
+  inputs.phone_type.input.addEventListener('change', refreshStep);
+  const body = [h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), '電話番号'), typeField];
+  if (data.phone_type === '携帯') {
+    const input = h('input', { id: 'customer-phone', type: 'tel', inputmode: 'numeric', autocomplete: 'tel', pattern: '0[789]0[0-9]{8}', placeholder: '09012345678' });
+    if (data.phone_area && data.phone_local) input.value = '0' + String(data.phone_area).replace(/^0/, '') + data.phone_local;
+    input.addEventListener('input', () => {
+      const digits = input.value.replace(/\D/g, ''); input.value = digits;
+      if (!digits || input.checkValidity()) {
+        data.phone_area = digits ? digits.slice(1, 3) : '';
+        data.phone_local = digits ? digits.slice(3) : '';
+        dirty.add('phone_area'); dirty.add('phone_local'); scheduleSave();
+      }
+    });
+    body.push(h('div', { class: 'field' }, h('label', { for: 'customer-phone' }, '携帯番号（11桁）'), input));
+  } else {
+    body.push(renderField(FIELD_MAP.phone_area), renderField(FIELD_MAP.phone_local));
+  }
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' }, ...body));
+}
+function beneficiaryEntry() {
+  const fields = visibleFields(SECTIONS.find(s => s.id === 'beneficiary'));
+  const none = data.ben_none === 'はい';
+  const toggle = h('button', { class: 'btn outline wide toggle', type: 'button', 'aria-pressed': String(none), onclick: () => {
+    data.ben_none = none ? '' : 'はい'; dirty.add('ben_none'); scheduleSave(); refreshStep();
+  } }, none ? '✓ 受取人を指定しない（タップで取り消し）' : '受取人を指定しない');
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), '受取人（受益者）'),
+    h('p', { class: 'muted small', style: 'margin:0' }, '万一の時にお金を受け取る人です。受取人の免許証を撮影すると、名前や生年月日が自動で入ります。'),
+    toggle,
+    ...(none ? [h('p', { class: 'done-note', style: 'margin:0' }, '受取人は指定しません。受取人は、ご契約後にあとから設定することもできます。')] : [
+      h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力'),
+      sameSurnameBtn(),
+      ...fields.map(f => { const el = renderField(f); paint(f.k); return el; })])));
+}
+/* ---------- 入力のしかた：話して入力（おすすめ）か、文字で入力（電車の中など）か ---------- */
+let typeKeysMemo = null;
+function setInputMode(mode) { saveProgress({ inputMode: mode }); typeKeysMemo = null; renderStep(); window.scrollTo(0, 0); }
+function modeChooser() {
+  return h('section', { class: 'sec mode-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', { class: 'mode-q' }, '入力のしかたを選んでください'),
+    h('button', { class: 'mode-opt rec', type: 'button', onclick: () => setInputMode('voice') },
+      h('span', { class: 'mode-badge' }, 'おすすめ'), h('span', { class: 'mode-title' }, '🎤 話して入力'), h('span', { class: 'mode-desc' }, '見本を読み上げるだけ。1回で終わるので早いです')),
+    h('button', { class: 'mode-opt', type: 'button', onclick: () => setInputMode('type') },
+      h('span', { class: 'mode-title' }, '⌨️ 文字で入力'), h('span', { class: 'mode-desc' }, '電車の中など、声を出せない時に')),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'あとから切り替えることもできます。')));
+}
+// 文字で入力：音声で聞く予定だった項目を、入力欄としてまとめて出す（選んだ時点で空いていた項目）
+function typeEntry(topSwitch, switchBtn) {
+  if (!typeKeysMemo) {
+    const avail = new Set(VOICE_KEYS);
+    typeKeysMemo = SECTIONS.flatMap(visibleFields).map(f => f.k)
+      .filter(k => avail.has(k) && !['phone_area', 'phone_local'].includes(k) && !String(data[k] ?? '').trim());
+  }
+  const groups = SECTIONS.map(sec => ({ sec, fs: visibleFields(sec).filter(f => typeKeysMemo.includes(f.k)) })).filter(g => g.fs.length);
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '文字で入力'), '残りの項目'),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'わからない項目は空欄のままで進めます。'),
+    topSwitch,
+    ...groups.flatMap(g => {
+      const lastBank = [...g.fs].reverse().find(f => /^bank_/.test(f.k));
+      return [h('p', { class: 'type-sec' }, g.sec.title), ...g.fs.flatMap(f => f === lastBank ? [renderField(f), accountEntry()] : [renderField(f)])];
+    }),
+    switchBtn));
+}
+function manualEntry(group) {
+  const hasBeneficiary = !!String(data.ben_name_ja || '').trim() || !!docsOf(data).ben_license;
+  const fields = group.keys.filter(k => FIELD_MAP[k] && (ALWAYS_SHOW.has(k) || !String(data[k] ?? '').trim()) && (hasBeneficiary || !k.startsWith('ben_')));
+  if (!fields.length) return null;
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, h('span', { class: 'manual-tag' }, '手入力'), group.title), h('p', { class: 'muted small', style: 'margin:0' }, group.note),
+    ...fields.map(k => renderField(FIELD_MAP[k]))));
+}
+// 確認画面で「間違いがないか確認」の印を付ける項目
+const NUM_CHECK = new Set(['phone_area', 'postal_code', 'id_number', 'bank_branch_no', 'ben_id_number']);
+function phoneText() {
+  const a = String(data.phone_area || '').replace(/^0/, ''), l = String(data.phone_local || '');
+  if (!a && !l) return '';
+  return '0' + a + '-' + (l.length === 8 ? l.slice(0, 4) + '-' + l.slice(4) : l);
+}
+function confirmCard(sec) {
+  const vis = visibleFields(sec), isEdit = editing === sec.id;
+  const hasAI = vis.some(f => aiKeys.has(f.k));
+  const rerender = () => { const y = window.scrollY; renderStep(); window.scrollTo(0, y); };
+  const head = h('div', { class: 'cf-head' }, h('strong', {}, sec.title),
+    h('div', { class: 'doc-actions' },
+      !isEdit && hasAI ? h('button', { class: 'btn ghost sm', type: 'button', title: '黄色の項目を見て、合っていれば押してください', onclick: () => { vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); }); rerender(); } }, '黄色は合っている') : null,
+      h('button', { class: 'btn sm ' + (isEdit ? 'primary' : 'outline'), type: 'button', onclick: () => {
+        if (isEdit) vis.forEach(f => { aiKeys.delete(f.k); guessKeys.delete(f.k); });
+        editing = isEdit ? null : sec.id; rerender();
+      } }, isEdit ? '完了' : '直す')));
+  if (isEdit) {
+    const body = h('div', { class: 'sec-body' });
+    if (sec.id === 'beneficiary') { body.append(sameSurnameBtn()); body.append(h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力')); }
+    vis.forEach(f => { body.append(renderField(f)); paint(f.k); });
+    if (sec.id === 'payment') body.append(cardEntry());
+    if (sec.id === 'funds') body.append(accountEntry());
+    return h('section', { class: 'sec cf editing', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px;padding-bottom:6px' }, head), body);
+  }
+  return h('section', { class: 'sec cf', id: 'cf-' + sec.id }, h('div', { class: 'sec-body', style: 'padding-top:14px' }, head,
+    ...(sec.id === 'beneficiary' && data.ben_none === 'はい' ? [h('div', { class: 'cf-row' }, h('span', { class: 'cf-label' }, '受取人'), h('span', { class: 'cf-val' }, '指定しない'))] : vis).filter(f => !f.k || f.k !== 'phone_local').map(f => {
+      if (!f.k) return f;
+      let v = String(data[f.k] ?? '').trim(), label = f.label;
+      if (f.k === 'phone_area') { label = '電話番号'; v = phoneText(); }
+      if (YEN.has(f.k) && v) { const m = manText(v); v = yenText(v) + '円' + (m ? '（' + m.replace(/^＝ /, '') + '）' : ''); }
+      const num = NUM_CHECK.has(f.k), ai = aiKeys.has(f.k) || (f.k === 'phone_area' && aiKeys.has('phone_local'));
+      const bad = fieldError(f.k) || (f.k === 'postal_code' ? zipWarning() : '') || (f.k === 'phone_area' && !mobileOk() ? '携帯番号は090・080・070から始まる11桁です' : '');
+      return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null,
+        f.k === 'employer_address' ? h('small', { class: 'muted', style: 'display:block;font-size:.8rem;font-weight:400;letter-spacing:0' }, 'お申込みには本社の住所が必要です。支店や営業所の住所なら「直す」で本社の住所に変えてください。') : null)); }),
+    vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
+    sec.id === 'contract' ? h('p', { class: 'muted small', style: 'margin:0' }, '担当者が入力した内容です。金額や商品が変わった場合は「直す」で変更できます。') : null,
+    sec.id === 'payment' ? cardEntry() : null,
+    sec.id === 'funds' ? accountEntry() : null));
+}
+function renderSection(sec, idx) {
+  const count = h('span', { class: 'count' });
+  const body = h('div', { class: 'sec-body' });
+  const head = h('button', { class: 'sec-head', type: 'button', 'aria-expanded': 'true' },
+    h('span', { class: 'num' }, String(idx + 1)), h('span', { class: 'sec-title' }, sec.title), count, h('span', { class: 'chev', 'aria-hidden': 'true' }));
+  head.addEventListener('click', () => { const open = head.getAttribute('aria-expanded') === 'true'; head.setAttribute('aria-expanded', String(!open)); body.hidden = open; });
+  if (sec.capture) body.append(h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage(sec.capture) }, icon('card'), '受取人の免許証を撮影して入力'));
+  for (const f of sec.fields) body.append(renderField(f));
+  const el = h('section', { class: 'sec' }, head, body);
+  counters.push({ sec, el, count });
+  return el;
+}
+function renderField(f) {
+  const id = 'f-' + f.k;
+  let input;
+  if (f.type === 'select') input = h('select', { id }, h('option', { value: '' }, '選択してください'), ...f.opts.map(o => h('option', { value: o }, o)));
+  else if (f.type === 'textarea') input = h('textarea', { id, rows: '3' });
+  else input = h('input', { id, type: f.type === 'number' ? 'text' : f.type, inputmode: f.type === 'number' ? 'decimal' : (f.type === 'tel' ? 'numeric' : null), autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+  input.value = YEN.has(f.k) ? yenText(data[f.k]) : (data[f.k] ?? '');
+  // multi の項目は、タップするたびに追加・解除（例：老後資金、資産形成）
+  const chipList = () => String(input.value).split(/[、,，]\s*/).map(x => x.trim()).filter(Boolean);
+  const chips = f.chips ? h('div', { class: 'chips' }, ...f.chips.map(c => h('button', { class: 'chip-btn', type: 'button', onclick: () => {
+    if (f.multi) { const list = chipList(), i = list.indexOf(c); i >= 0 ? list.splice(i, 1) : list.push(c); input.value = list.join('、'); }
+    else input.value = c;
+    input.dispatchEvent(new Event(f.type === 'select' ? 'change' : 'input'));
+  } }, c))) : null;
+  const paintChips = () => { if (!chips || !f.multi) return; const list = chipList(); chips.querySelectorAll('.chip-btn').forEach(b => { const on = list.includes(b.textContent); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); };
+  input.addEventListener('input', paintChips); paintChips();
+  const ok = h('button', { class: 'ok-btn', type: 'button' }, '合っている');
+  ok.addEventListener('click', () => { aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); });
+  const wrap = h('div', { class: 'field' }, h('div', { class: 'field-top' }, h('label', { for: id }, f.label), ok), input, chips, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+  input.addEventListener(f.type === 'select' ? 'change' : 'input', () => {
+    userEditAt[f.k] = Date.now();
+    data[f.k] = YEN.has(f.k) ? zen2han(input.value).replace(/[,，円\s]/g, '') : input.value; dirty.add(f.k); aiKeys.delete(f.k); guessKeys.delete(f.k); paint(f.k); updateCounts(); scheduleSave();
+  });
+  if (f.k === 'ben_name_kana') input.addEventListener('change', () => fillRomaji('ben_'));
+  if (f.k === 'name_kana') input.addEventListener('change', () => fillRomaji(''));
+  if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
+  if (f.k === 'birth_date') input.addEventListener('change', guessEmploymentStart);
+  if (YEN.has(f.k)) {
+    const man = h('small', { class: 'man' });
+    const showMan = () => { man.textContent = manText(data[f.k]); };
+    input.addEventListener('input', showMan);
+    input.addEventListener('blur', () => { input.value = yenText(data[f.k]); });
+    wrap.insertBefore(man, input.nextSibling); showMan(); inputs[f.k + ':man'] = showMan;
+  }
+  if (f.k === 'postal_code') {
+    const zw = h('small', { class: 'err field-err zip-warn', role: 'alert' });
+    wrap.append(zw);
+    input.addEventListener('input', () => watchZip());
+  }
+  if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
+  if (VALIDATE[f.k]) {
+    const msg = h('small', { class: 'err field-err', role: 'alert' });
+    const check = () => { const e = fieldError(f.k, input.value); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
+    input.addEventListener('input', check); wrap.append(msg); check(); wrap.check = check;
+  }
+  if (f.k === 'product_type') input.addEventListener('change', paintYears);
+  if (f.k === 'contract_years') {
+    // 「12」と入れたら「12年」にそろえる
+    input.addEventListener('change', () => { const n = yearsNum(input.value); if (/^\d+$/.test(n) && input.value !== n + '年') { input.value = n + '年'; input.dispatchEvent(new Event('input')); } });
+    setTimeout(paintYears, 0);
+  }
+  inputs[f.k] = { input, wrap, ok };
+  return wrap;
+}
+// ふりがな → ヘボン式ローマ字（パスポートと同じく長音は付けない：おお・おう → O、うう → U）
+const KANA_ROMA = { あ:'A',い:'I',う:'U',え:'E',お:'O',か:'KA',き:'KI',く:'KU',け:'KE',こ:'KO',が:'GA',ぎ:'GI',ぐ:'GU',げ:'GE',ご:'GO',
+  さ:'SA',し:'SHI',す:'SU',せ:'SE',そ:'SO',ざ:'ZA',じ:'JI',ず:'ZU',ぜ:'ZE',ぞ:'ZO',た:'TA',ち:'CHI',つ:'TSU',て:'TE',と:'TO',だ:'DA',ぢ:'JI',づ:'ZU',で:'DE',ど:'DO',
+  な:'NA',に:'NI',ぬ:'NU',ね:'NE',の:'NO',は:'HA',ひ:'HI',ふ:'FU',へ:'HE',ほ:'HO',ば:'BA',び:'BI',ぶ:'BU',べ:'BE',ぼ:'BO',ぱ:'PA',ぴ:'PI',ぷ:'PU',ぺ:'PE',ぽ:'PO',
+  ま:'MA',み:'MI',む:'MU',め:'ME',も:'MO',や:'YA',ゆ:'YU',よ:'YO',ら:'RA',り:'RI',る:'RU',れ:'RE',ろ:'RO',わ:'WA',を:'O',ん:'N',ぁ:'A',ぃ:'I',ぅ:'U',ぇ:'E',ぉ:'O',ゔ:'BU' };
+function kanaToRoma(text) {
+  const k = [...String(text).replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))];
+  let out = '';
+  for (let i = 0; i < k.length; i++) {
+    const c = k[i], next = k[i + 1];
+    if (c === 'ー') continue;
+    if (c === 'っ') { const r = KANA_ROMA[next] || ''; out += r.startsWith('CH') ? 'T' : r.charAt(0); continue; }
+    let r = KANA_ROMA[c]; if (!r) return '';
+    if ('ゃゅょ'.includes(next || '_') && r.endsWith('I') && r.length > 1) {
+      const v = { ゃ: 'A', ゅ: 'U', ょ: 'O' }[next];
+      r = /(SH|CH|J)I$/.test(r) ? r.slice(0, -1) + v : r.slice(0, -1) + 'Y' + v; i++;
+    }
+    if (c === 'ん' && /^[BMP]/.test(KANA_ROMA[next] || '')) r = 'M';
+    out += r;
+  }
+  return out.replace(/OU|OO/g, 'O').replace(/UU/g, 'U');
+}
+// ふりがなからローマ字を作る（p は '' ＝ご本人、'ben_' ＝受取人）
+function fillRomaji(p) {
+  if (!p && docsOf(data).passport) return; // パスポートを撮影済みなら、パスポートの表記を優先する
+  const parts = String(data[p + 'name_kana'] || '').trim().split(/[\s　]+/);
+  if (parts.length !== 2) return;
+  const [last, first] = parts.map(kanaToRoma);
+  if (!last || !first) return;
+  if (!String(data[p + 'last_romaji'] || '').trim() || aiKeys.has(p + 'last_romaji')) setField(p + 'last_romaji', last, true, true);
+  if (!String(data[p + 'first_romaji'] || '').trim() || aiKeys.has(p + 'first_romaji')) setField(p + 'first_romaji', first, true, true);
+  scheduleSave();
+}
+// 今の勤務先で働き始めた日：空なら、生年月日から大学を卒業した年の4月1日を推測で入れる
+// （4月2日〜12月生まれは生まれた年＋23年、1月1日〜4月1日生まれ＝早生まれは＋22年）
+function guessEmploymentStart() {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data.birth_date || '');
+  if (!m) return;
+  const cur = String(data.employment_start || '').trim();
+  if (cur && !guessKeys.has('employment_start')) return;
+  const md = +m[2] * 100 + +m[3];
+  const v = (+m[1] + (md >= 402 ? 23 : 22)) + '-04-01';
+  if (v > new Date().toISOString().slice(0, 10) || v === cur) return;
+  setField('employment_start', v, true, true); scheduleSave();
+}
+function paint(k) {
+  const r = inputs[k]; if (!r) return;
+  r.wrap.classList.toggle('ai', aiKeys.has(k));
+  r.ok.textContent = guessKeys.has(k) ? '推測です・合っている' : '合っている';
+}
+function setField(k, v, ai = false, guess = false) {
+  data[k] = v; dirty.add(k);
+  if (inputs[k]) inputs[k].input.value = YEN.has(k) ? yenText(v) : v;
+  if (inputs[k + ':man']) inputs[k + ':man']();
+  if (k === 'postal_code' || k === 'address_ja') watchZip();
+  if (ai) { aiKeys.add(k); guess ? guessKeys.add(k) : guessKeys.delete(k); }
+  paint(k);
+}
+function updateCounts() {
+  for (const c of counters) {
+    const total = c.sec.fields.length, filled = c.sec.fields.filter(f => String(data[f.k] ?? '').trim()).length;
+    c.count.textContent = `${filled}/${total}`; c.el.classList.toggle('done', filled === total);
+  }
+}
+
+/* ---------- 保存 ---------- */
+function scheduleSave(delay = 1500) { saveEl.textContent = '保存待ち'; saveEl.classList.remove('bad'); clearTimeout(saveTimer); saveTimer = setTimeout(save, delay); }
+async function save(final = false) {
+  clearTimeout(saveTimer); saveTimer = null;
+  if (savePromise) { try { await savePromise; } catch {} }
+  const keys = final ? ALL_KEYS : [...dirty];
+  const patch = {}; for (const k of keys) patch[k] = String(data[k] ?? '').trim();
+  dirty = new Set();
+  if (!final && !keys.length) { saveEl.textContent = '保存済み'; return true; }
+  saveEl.textContent = '保存中…';
+  const pending = sb.rpc('onboarding_invite_save', { p_token: TOKEN, p_data: patch, p_final: final });
+  savePromise = pending;
+  let res, error;
+  try { ({ data: res, error } = await pending); }
+  catch (e) { error = e; }
+  if (savePromise === pending) savePromise = null;
+  if (error || res !== 'ok') {
+    keys.forEach(k => dirty.add(k));
+    saveEl.textContent = '保存できませんでした（押して再試行）';
+    saveEl.classList.add('bad');
+    if (res === 'closed') toast('リンクの期限が切れたか、送信済みです。担当者にご連絡ください。', 6000);
+    return false;
+  }
+  saveEl.textContent = '保存済み'; saveEl.classList.remove('bad'); return true;
+}
+window.addEventListener('pagehide', () => { if (saveTimer) save(); });
+
+async function submit() {
+  const bad = invalidKeys();
+  if (bad.length) { toast('⚠ ' + fieldError(bad[0]) + '。確認画面で直してください。', 6000); go(3); return; }
+  if (bgTasks.size) { toast('写真の読み取り中です。終わるまで少しお待ちください。'); return; }
+  const ds = docStatus(data);
+  if (!ds.ok) { alert(!data.has_passport ? 'パスポートをお持ちか選択してください。' : ds.needPassport ? 'パスポートをお持ちの場合は、パスポートの写真が必要です。' : '本人確認書類を2点撮影してください（運転免許証・マイナンバーカードは表と裏の両方）。'); go(1); return; }
+  if (!mobileOk()) { toast('携帯番号の形式を確認してください（090・080・070から始まる11桁）。', 6000); go(2); setTimeout(() => { const p = document.getElementById('customer-phone'); if (p) { p.scrollIntoView({ block: 'center' }); p.focus(); } }, 60); return; }
+  if (data.email) { const email = document.createElement('input'); email.type = 'email'; email.value = data.email; if (!email.checkValidity()) { toast('メールアドレスの形式を確認してください。'); go(2); return; } }
+  if (accountError() && !confirm(`口座番号が7桁ではありません（いま${accountDigits().length}桁）。\nこのまま送信しますか？\n\n「キャンセル」を押すと、口座番号の欄に戻ります。`)) {
+    editing = 'funds'; step = 3; renderStep();
+    setTimeout(() => { const el = document.querySelector('[data-secret="account_number"]'); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 60);
+    return;
+  }
+  const done = busy('送信中…');
+  // ① 最新の内容を保存 → ② スプレッドシートへ送信 → ③ 送信完了にする
+  ALL_KEYS.forEach(k => dirty.add(k));
+  if (!await save(false)) { done(); toast('入力内容を保存できませんでした。通信状態を確認して、もう一度送信してください。', 6000); return; }
+  let sheetRes = null;
+  try { sheetRes = await callAI({ mode: 'sheet', secret: { ...secretVals } }); } catch (e) { sheetRes = { ok: false, error: e.message }; }
+  if (!sheetRes || !sheetRes.ok) {
+    done(); toast('スプレッドシートへ送信できませんでした：' + ((sheetRes && sheetRes.error) || '接続エラー'), 6000); return;
+  }
+  const ok = await save(true);
+  done();
+  if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
+  stopVoice();
+  forgetSecrets();
+  viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, nextSteps());
+}
+
+/* ---------- AI ---------- */
+function fieldSpec(keys) { return keys.map(k => FIELD_MAP[k]).filter(Boolean).map(f => ({ k: f.k, label: f.label, opts: f.opts, hint: f.hint })); }
+async function callAI(body) {
+  const { data: res, error } = await sb.functions.invoke(CONFIG.FUNCTION_NAME, { body, headers: { 'x-invite-token': TOKEN } });
+  if (error) { let m = error.message; try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch {} throw new Error(m); }
+  if (res && res.error) throw new Error(res.error);
+  return res;
+}
+function applyAI(res, preset = {}, opts = {}) {
+  const vals = (res && res.values) || {}, guess = new Set((res && res.uncertain) || []);
+  let n = 0, first = null;
+  for (const [k, v] of Object.entries(preset)) setField(k, v);
+  for (const [k, raw] of Object.entries(vals)) {
+    const f = FIELD_MAP[k]; if (!f || raw == null) continue;
+    if (opts.since && (userEditAt[k] || 0) > opts.since) continue;
+    let v = String(raw).trim(); if (!v) continue;
+    if (f.type === 'select' && !f.opts.includes(v)) continue;
+    if (f.type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) continue;
+    if (f.type === 'number') v = v.replace(/[,，円\s]/g, '');
+    if (k === 'contract_years' && /^\d+$/.test(yearsNum(v))) v = yearsNum(v) + '年';
+    if (k === 'postal_code') { v = zen2han(v).replace(/\D/g, ''); if (v.length !== 7) continue; v = v.slice(0, 3) + '-' + v.slice(3); }
+    setField(k, v, true, guess.has(k)); n++; first = first || k;
+  }
+  if ('fund_amount' in vals) syncFundAnnual();
+  if ('birth_date' in vals) guessEmploymentStart();
+  updateCounts(); scheduleSave(300);
+  if (!n) { toast(opts.emptyMsg || '読み取れる項目がありませんでした。明るい場所でもう一度お試しください。', 5000); refreshStep(); return; }
+  toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
+  warnExpiryToast();
+  refreshStep();
+  const r = opts.since || opts.noScroll ? null : inputs[first]; if (r) r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+function pickImage(doc) { fileInput.dataset.slot = ''; fileInput.dataset.doc = doc; fileInput.value = ''; openPhotoPicker(); }
+fileInput.addEventListener('change', async () => {
+  const f0 = fileInput.files && fileInput.files[0];
+  if (fileInput.dataset.slot) { const slot = fileInput.dataset.slot; fileInput.dataset.slot = ''; fileInput.value = ''; if (f0) await handleDocFile(slot, f0); return; }
+  if (fileInput.dataset.doc === 'credit_card') { fileInput.value = ''; if (f0) await scanCard(f0); return; }
+  const file = f0, doc = DOCS[fileInput.dataset.doc];
+  if (!file || !doc) return;
+  const done = bgStart('写真を読み取り中'), since = Date.now();
+  try {
+    const image = await toJpegBase64(file);
+    const res = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: doc.label, fields: fieldSpec(doc.keys) });
+    done(); applyAI(res, doc.set, { since });
+  } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
+  finally { fileInput.value = ''; }
+});
+function loadImage(file) {
+  return new Promise((res, rej) => { const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); }; img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('画像を開けませんでした')); }; img.src = url; });
+}
+async function toJpegBase64(file, max = 1600) {
+  const img = await loadImage(file);
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+}
+
+
+const STAFF = false;
+const D = () => data;
+function markDirty(k) { dirty.add(k); scheduleSave(); }
+
+
+/* ---------- イラスト（書類） ---------- */
+const DOC_ILL = {
+  passport: '<svg viewBox="0 0 120 84" aria-hidden="true"><rect x="34" y="6" width="52" height="72" rx="6" fill="#7A2E3A"/><rect x="34" y="6" width="8" height="72" rx="3" fill="#5E2230"/><circle cx="64" cy="34" r="12" fill="none" stroke="#E9C46A" stroke-width="2.5"/><circle cx="64" cy="34" r="5" fill="#E9C46A"/><rect x="50" y="56" width="28" height="4" rx="2" fill="#E9C46A"/><rect x="54" y="64" width="20" height="3" rx="1.5" fill="#E9C46A" opacity=".7"/></svg>',
+  license: '<svg viewBox="0 0 120 84" aria-hidden="true"><rect x="10" y="14" width="100" height="62" rx="8" fill="#FFFFFF" stroke="#BFD6CF" stroke-width="2"/><rect x="10" y="14" width="100" height="12" rx="6" fill="#7FB8A8"/><rect x="10" y="62" width="100" height="6" fill="#E9C46A"/><rect x="20" y="32" width="24" height="26" rx="3" fill="#D7E9E3"/><circle cx="32" cy="41" r="5" fill="#9CC5B9"/><path d="M24 55c2-6 5-8 8-8s6 2 8 8" fill="#9CC5B9"/><rect x="52" y="34" width="46" height="5" rx="2.5" fill="#2E7D6B"/><rect x="52" y="44" width="36" height="4" rx="2" fill="#BFD6CF"/><rect x="52" y="52" width="40" height="4" rx="2" fill="#BFD6CF"/></svg>',
+  mynumber: '<svg viewBox="0 0 120 84" aria-hidden="true"><rect x="10" y="14" width="100" height="62" rx="8" fill="#FFFFFF" stroke="#E7C9D0" stroke-width="2"/><path d="M10 22a8 8 0 018-8h84a8 8 0 018 8v6H10z" fill="#F4B6C2"/><rect x="76" y="34" width="24" height="28" rx="3" fill="#FBE3E8"/><circle cx="88" cy="44" r="5" fill="#E89AAB"/><path d="M80 59c2-6 5-8 8-8s6 2 8 8" fill="#E89AAB"/><rect x="20" y="36" width="46" height="5" rx="2.5" fill="#B24C66"/><rect x="20" y="46" width="38" height="4" rx="2" fill="#EBC7CF"/><rect x="20" y="54" width="42" height="4" rx="2" fill="#EBC7CF"/></svg>',
+  juminhyo: '<svg viewBox="0 0 120 84" aria-hidden="true"><path d="M36 6h38l14 14v58H36z" fill="#FFFFFF" stroke="#CFC6B6" stroke-width="2"/><path d="M74 6v14h14" fill="#F3EEE4" stroke="#CFC6B6" stroke-width="2"/><rect x="44" y="26" width="34" height="4" rx="2" fill="#8C7B64"/><rect x="44" y="36" width="36" height="3" rx="1.5" fill="#D9D0C1"/><rect x="44" y="43" width="30" height="3" rx="1.5" fill="#D9D0C1"/><rect x="44" y="50" width="34" height="3" rx="1.5" fill="#D9D0C1"/><circle cx="74" cy="66" r="7" fill="none" stroke="#D9534F" stroke-width="2.5"/></svg>',
+};
+const TIP_ILL = {
+  corners: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="15" width="24" height="18" rx="3" fill="#D7E9E3" stroke="#2E7D6B" stroke-width="2"/><path d="M5 13V5h8M35 5h8v8M5 35v8h8M43 35v8h-8" fill="none" stroke="#E07A5F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  light: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="#F2C14E"/><g stroke="#F2C14E" stroke-width="3" stroke-linecap="round"><path d="M24 5v6M24 37v6M5 24h6M37 24h6M10.5 10.5l4 4M33.5 33.5l4 4M10.5 37.5l4-4M33.5 14.5l4-4"/></g></svg>',
+  focus: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#2E7D6B" stroke-width="3"/><circle cx="24" cy="24" r="4" fill="#2E7D6B"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6" stroke="#2E7D6B" stroke-width="3" stroke-linecap="round"/></svg>',
+};
+function ill(svg, cls) { const s = h('span', { class: cls || 'ill' }); s.innerHTML = svg; return s; }  // 固定のイラストだけなので安全
+
+/* ---------- 本人確認書類（2点・パスポート優先） ---------- */
+const DOC_TYPES = { passport: 'パスポート', license: '運転免許証', mynumber: 'マイナンバーカード', juminhyo: '住民票' };
+const DOC_SLOTS = [
+  { slot: 'passport', doc: 'passport', label: '顔写真のページ', ai: 'passport' },
+  { slot: 'license_front', doc: 'license', label: '表', ai: 'license' },
+  { slot: 'license_back', doc: 'license', label: '裏', ai: 'license_back' },
+  { slot: 'mynumber_front', doc: 'mynumber', label: '表', ai: 'mynumber' },
+  { slot: 'mynumber_back', doc: 'mynumber', label: '裏', ai: null, secret: 'mynumber', note: '個人番号を自動で読み取ります（番号はツールに保存しません）' },
+  { slot: 'juminhyo', doc: 'juminhyo', label: '全体', ai: 'juminhyo', note: 'マイナンバーの記載がないもの' },
+];
+DOCS.passport = { label: 'パスポートの顔写真ページ（申込者）', set: { id_type: 'パスポート' },
+  keys: ['first_romaji', 'last_romaji', 'gender', 'birth_date', 'nationality', 'id_number', 'id_country', 'id_issue_date', 'id_expiry'] };
+DOCS.license_back = { label: '運転免許証の裏面（申込者・住所変更などの記載欄）', set: {},
+  keys: ['address_ja', 'address_kana', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
+DOCS.juminhyo = { label: '住民票（申込者）', set: {},
+  keys: ['name_ja', 'birth_date', 'gender', 'address_ja', 'address_kana', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
+
+const docsOf = d => (d && d._docs) || {};
+const docDone = (d, doc) => DOC_SLOTS.filter(x => x.doc === doc).every(x => docsOf(d)[x.slot]);
+function docStatus(d) {
+  const done = Object.keys(DOC_TYPES).filter(k => docDone(d, k));
+  const needPassport = d.has_passport === 'はい' && !done.includes('passport');
+  return { done, needPassport, ok: !!d.has_passport && done.length >= 2 && !needPassport };
+}
+// パスポートがある時は、身分証明書とローマ字の名前はパスポートを優先（他の書類で上書きしない）
+function docPlan(docKey, d) {
+  const cfg = DOCS[docKey];
+  let keys = cfg.keys.filter(k => k !== 'postal_code'), set = { ...cfg.set };
+  const passportFirst = !!docsOf(d).passport || d.id_type === 'パスポート';
+  if (docKey !== 'passport' && docKey !== 'ben_license' && passportFirst) {
+    keys = keys.filter(k => !/^id_/.test(k) && k !== 'first_romaji' && k !== 'last_romaji');
+    set = {};
+  }
+  return { label: cfg.label, keys, set };
+}
+function captureDoc(slot) { fileInput.dataset.slot = slot; fileInput.dataset.doc = ''; fileInput.value = ''; openPhotoPicker(); }
+/* ---------- 写真の選び方：スマホでは「写真を撮影」を一番上に ---------- */
+// ※スマホが出す選択メニュー（写真ライブラリ・Googleドライブ・ファイル）の並びはOSが決めるので、
+//   ツール側で「撮影」と「保存済みから選ぶ」の2つに分けて、撮影を先に出す
+function openPhotoPicker() {
+  if (!matchMedia('(pointer: coarse)').matches) { fileInput.removeAttribute('capture'); fileInput.click(); return; }
+  const pick = camera => {
+    back.remove();
+    if (camera) fileInput.setAttribute('capture', 'environment'); else fileInput.removeAttribute('capture');
+    fileInput.click();
+  };
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet photo-pick', role: 'dialog', 'aria-modal': 'true', 'aria-label': '写真の選び方' },
+    h('button', { class: 'btn primary wide tall', type: 'button', onclick: () => pick(true) }, '📷 写真を撮影する'),
+    h('button', { class: 'btn outline wide', type: 'button', onclick: () => pick(false) }, '🖼 保存済みの写真から選ぶ'),
+    h('p', { class: 'muted small', style: 'margin:0;text-align:center' }, 'フォトライブラリー・Googleドライブ・ファイルは「保存済みの写真から選ぶ」から選べます'),
+    h('button', { class: 'btn ghost wide', type: 'button', onclick: () => back.remove() }, 'やめる')));
+  back.addEventListener('click', e => { if (e.target === back) back.remove(); });
+  document.body.append(back);
+}
+
+async function handleDocFile(slot, file) {
+  const s = DOC_SLOTS.find(x => x.slot === slot); if (!s) return;
+  const endBg = bgStart(DOC_TYPES[s.doc] + (s.doc === 'passport' || s.doc === 'juminhyo' ? '' : '（' + s.label + '）') + 'を' + (s.ai || s.secret ? '読み取り中' : '保存中'));
+  const since = Date.now(); pendingSlots.add(slot); refreshDocs();
+  const done = () => { endBg(); pendingSlots.delete(slot); refreshDocs(); };
+  try {
+    const image = await toJpegBase64(file, 2000);
+    let plan = null, read = null, readError = false;
+    if (s.ai) {
+      plan = docPlan(s.ai, D());
+      try {
+        read = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: [...fieldSpec(plan.keys), PHOTO_CHECK] });
+      } catch { readError = true; }
+      const problem = read && read.values && read.values.photo_problem;
+      if (problem) { retakeNeed[slot] = problem; done(); retakeSheet(slot, problem); return; }
+    }
+    const storeBody = { mode: 'store', slot, image };
+    if (STAFF) storeBody.customer_id = state.id;
+    await callAI(storeBody);
+    let secretMsg = '';
+    if (s.secret === 'mynumber') {
+      try {
+        const r = await callAI({ mode: 'mynumber', image, mediaType: 'image/jpeg' });
+        if (r && r.number) {
+          secretVals.mynumber = r.number; syncSecret('mynumber');
+          secretMsg = r.check === false ? '⚠ 個人番号が正しくない可能性があります。送信前の画面でカードと見比べてください。' : '個人番号を読み取りました ✓ 送信前の画面で確認してください。';
+        } else secretMsg = r && r.reason === 'refused'
+          ? '写真は保存しました。個人番号はAIが読み取りを行えなかったので、送信前の画面で手で入力してください。'
+          : '写真は保存しました。個人番号が読み取れませんでした。明るい場所でマイナンバーカードの「裏」を撮り直すか、送信前の画面で手で入力してください。';
+      } catch { secretMsg = '写真は保存しました。個人番号は読み取れなかったので、送信前の画面で入力してください。'; }
+    }
+    delete retakeNeed[slot];
+    done();
+    const d = D(); d._docs = { ...docsOf(d), [slot]: new Date().toISOString() };
+    refreshDocs();
+    if (read) {
+      applyAI(read, plan.set, { since, emptyMsg: slot === 'license_back'
+        ? '裏面を保存しました ✓（住所変更の記載はありませんでした）'
+        : '写真を保存しました ✓（自動で入る項目はありませんでした）' });
+    }
+    else if (readError) toast('写真は保存しました。文字の読み取りはできなかったので、手で入力してください。', 5000);
+    else toast(secretMsg || '写真を保存しました。', secretMsg ? 6000 : 3500);
+  } catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
+}
+let docsPanelEl = null;
+function refreshDocs() { if (docsPanelEl && docsPanelEl.isConnected) { const n = renderDocsPanel(); docsPanelEl.replaceWith(n); docsPanelEl = n; } if (window.onDocsChanged) window.onDocsChanged(); }
+// お支払いに使うカード（書類と一緒に撮る。写真は保存しない）
+function cardDocGroup() {
+  const got = !!secretVals.card_number;
+  return h('div', { class: 'doc-group' + (got ? ' done' : ' card-need') },
+    h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'お支払いに使うクレジットカード'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
+    h('div', { class: 'doc-row' },
+      h('div', { class: 'doc-label' }, h('span', {}, '番号が書いてある面'), h('small', { class: cardPending ? 'muted' : got ? 'doc-ok' : 'card-need-msg' }, cardPending ? '読み取り中…' : got ? '読み取り済み' : '⚠ まだ撮影していません'),
+        h('small', { class: 'hint' }, 'デビットカードでも可能です。写真は保存しません。番号は送信の時にスプレッドシートへ直接送ります')),
+      h('div', { class: 'doc-actions' },
+        h('button', { class: 'btn sm ' + (got ? 'ghost' : 'outline'), type: 'button', disabled: cardPending, onclick: () => pickImage('credit_card') }, cardPending ? '読み取り中' : got ? '撮り直す' : '撮影する'))));
+}
+// パスポートの質問に答えたら、次に撮る書類まで画面を動かす（はい→パスポート、いいえ→運転免許証）
+function jumpToDoc(doc) {
+  setTimeout(() => {
+    const g = document.getElementById('grp-' + doc); if (!g) return;
+    const top = g.getBoundingClientRect().top + window.scrollY - 70;
+    window.scrollTo({ top, behavior: 'smooth' });
+    g.classList.remove('flash'); void g.offsetWidth; g.classList.add('flash');
+  }, 80);
+}
+function renderDocsPanel() {
+  const d = D(), st = docStatus(d);
+  const left = Math.max(0, 2 - st.done.length);
+  const badge = st.ok ? h('span', { class: 'doc-badge ok' }, '2点そろいました')
+    : h('span', { class: 'doc-badge' }, !d.has_passport && !left ? 'パスポートの確認が必要' : st.needPassport && !left ? 'パスポートが必要です' : `あと${left || 1}点`);
+  const hp = FIELD_MAP.has_passport;
+  const hpBox = h('div', { class: 'hp-box' + (d.has_passport ? '' : ' unset'), id: 'hp-box', role: 'radiogroup', 'aria-labelledby': 'hp-q' },
+    h('p', { class: 'hp-q', id: 'hp-q' }, '🛂 パスポートはお持ちですか？'),
+    h('p', { class: 'hp-sub' }, 'お持ちの場合は、必ずパスポートも撮影してください'),
+    h('div', { class: 'hp-opts' }, ...hp.opts.map(o => h('button', { class: 'hp-opt' + (d.has_passport === o ? ' on' : ''), type: 'button', role: 'radio', 'aria-checked': String(d.has_passport === o),
+      onclick: () => { d.has_passport = o; markDirty('has_passport'); refreshDocs(); jumpToDoc(o === 'はい' ? 'passport' : 'license'); } }, o))));
+  const groups = Object.keys(DOC_TYPES).map(doc => {
+    const isDone = docDone(d, doc);
+    return h('div', { class: 'doc-group' + (isDone ? ' done' : ''), id: 'grp-' + doc },
+      h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null),
+      ...DOC_SLOTS.filter(x => x.doc === doc).map(x => {
+        const has = !!docsOf(d)[x.slot], pend = pendingSlots.has(x.slot), redo = !pend && retakeNeed[x.slot];
+        return h('div', { class: 'doc-row' + (redo ? ' retake' : ''), id: 'slot-' + x.slot },
+          h('div', { class: 'doc-label' }, h('span', {}, x.label),
+            redo ? h('small', { class: 'retake-msg' }, '⚠ この写真を撮り直してください（' + redo + '）')
+              : h('small', { class: pend ? 'muted' : has ? 'doc-ok' : 'muted' }, pend ? '読み取り中…' : has ? '撮影済み' : 'まだです'),
+            x.note ? h('small', { class: 'hint' }, x.note) : null),
+          h('div', { class: 'doc-actions' },
+            STAFF && has ? h('button', { class: 'btn ghost sm', type: 'button', onclick: () => viewDoc(x.slot) }, '見る') : null,
+            h('button', { class: 'btn sm ' + (redo ? 'primary' : has ? 'ghost' : 'outline'), type: 'button', disabled: pend, onclick: () => captureDoc(x.slot) }, pend ? '読み取り中' : redo || has ? '撮り直す' : '撮影する')));
+      }));
+  });
+  const el = h('section', { class: 'sec docs', id: 'docs-panel' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('div', { class: 'doc-top' }, h('strong', {}, '書類を2つ撮影'), badge),
+    ...DOC_SLOTS.filter(x => retakeNeed[x.slot] && !pendingSlots.has(x.slot)).map(x => h('button', { class: 'retake-banner', type: 'button', onclick: () => { const r = document.getElementById('slot-' + x.slot); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' }); } },
+      '⚠ 撮り直しが必要です：', h('strong', {}, slotName(x)), ' ›')),
+    hpBox,
+    h('div', { class: 'tips' },
+      h('div', { class: 'tip' }, ill(TIP_ILL.corners, 'tip-ill'), h('span', {}, '四隅を入れる')),
+      h('div', { class: 'tip' }, ill(TIP_ILL.light, 'tip-ill'), h('span', {}, '明るい場所で')),
+      h('div', { class: 'tip' }, ill(TIP_ILL.focus, 'tip-ill'), h('span', {}, 'ピントを合わせる'))),
+    ...groups,
+    cardDocGroup(),
+    STAFF && Object.keys(docsOf(d)).length ? h('button', { class: 'btn danger sm', type: 'button', onclick: purgeDocs }, '書類の写真をすべて削除（ITA提出後に）') : null));
+  return el;
+}
+async function viewDoc(slot) {
+  const { data: res, error } = await sb.storage.from('onboarding-docs').createSignedUrl(`${state.id}/${slot}.jpg`, 300);
+  if (error || !res) { toast('写真を開けませんでした：' + (error ? error.message : '')); return; }
+  window.open(res.signedUrl, '_blank', 'noopener');
+}
+async function purgeDocs() {
+  if (!confirm('このお客様の書類の写真をすべて削除します。元に戻せません。よろしいですか？')) return;
+  const done = busy('削除中…');
+  try { await callAI({ mode: 'purge', customer_id: state.id }); done(); state.data._docs = {}; refreshDocs(); toast('削除しました'); }
+  catch (e) { done(); toast('削除できませんでした：' + e.message); }
+}
+
+
+
+/* ---------- 番号（ツールには保存しない：送信時にスプレッドシートへ直接） ---------- */
+const SECRET_FIELDS = [
+  { k: 'mynumber', label: 'マイナンバー（12桁）', type: 'tel' },
+  { k: 'card_number', label: 'カード番号', type: 'tel' },
+  { k: 'card_expiry', label: 'カード有効期限（月/年）', hint: '例：08/29' },
+  { k: 'account_number', label: '口座番号', type: 'tel' },
+];
+const secretVals = {};
+// お客様の画面では、番号をこのタブの中だけに一時保存（再読み込みしても消えない。タブを閉じると消える。データベースには入らない）
+const SECRET_KEY = !STAFF && typeof TOKEN === 'string' ? 'onboarding-secret-' + TOKEN.slice(0, 16) : null;
+if (SECRET_KEY) { try { Object.assign(secretVals, JSON.parse(sessionStorage.getItem(SECRET_KEY) || '{}')); } catch {} }
+function keepSecrets() { if (SECRET_KEY) { try { sessionStorage.setItem(SECRET_KEY, JSON.stringify(secretVals)); } catch {} } }
+function forgetSecrets() { if (SECRET_KEY) { try { sessionStorage.removeItem(SECRET_KEY); } catch {} } }
+let secretSeq = 0;
+function secretCard(title) {
+  return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, title),
+    h('p', { class: 'small muted', style: 'margin:0' }, 'ここに入れた番号はツールには保存されず、送信の時にスプレッドシートへ直接送られます。画面を閉じると消えるので、送信の直前に入力してください。'),
+    ...SECRET_FIELDS.filter(f => f.k !== 'account_number').map(secretInput)));
+}
+// 口座番号は銀行の情報と一緒に（ツールには保存しない）
+function accountEntry() {
+  const f = SECRET_FIELDS.find(x => x.k === 'account_number');
+  return secretInput({ ...f, label: '口座番号（7桁）', badge: true, check: accountError, hint: 'ツールには保存せず、送信の時にスプレッドシートへ直接送ります。「話して入力」で読み上げても入ります' });
+}
+// 同じ番号の欄が画面に2つある時も、片方に入れたらもう片方にも入るようにする
+function secretInput(f) {
+  const id = 's-' + f.k + '-' + (++secretSeq);
+  const inp = h('input', { id, type: 'text', inputmode: f.type === 'tel' ? 'numeric' : null, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'data-secret': f.k });
+  inp.value = secretVals[f.k] || '';
+  inp.addEventListener('input', () => { secretVals[f.k] = inp.value; syncSecret(f.k, inp); });
+  const wrap = h('div', { class: 'field' }, h('label', { for: id }, f.label, f.badge ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), inp, f.hint ? h('small', { class: 'hint' }, f.hint) : null);
+  if (f.check) {
+    const msg = h('small', { class: 'err field-err', role: 'alert', 'data-secret-err': f.k });
+    wrap.append(msg);
+    const paintErr = () => { const e = f.check(secretVals[f.k]); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
+    inp.addEventListener('input', paintErr); paintErr();
+  }
+  return wrap;
+}
+const accountDigits = () => zen2han(secretVals.account_number).replace(/\D/g, '');
+function accountError(v = secretVals.account_number) {
+  const n = zen2han(v).replace(/\D/g, '').length;
+  return n && n !== 7 ? `口座番号は7桁です（いま${n}桁）。通帳やキャッシュカードで確認してください` : '';
+}
+function syncSecret(k, except) {
+  keepSecrets();
+  if (k === 'card_number') paintCardNeed();
+  document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
+}
+
+/* ---------- 契約年数：EVOは25・20・15・10年から選ぶ。S&Pは5〜20年（1年刻み）、FIP・PLSは手入力 ---------- */
+const YEARS_HINT = { 'S&P': '5〜20年の間で、1年刻みで入力できます（例：12）', EVO: '下の25年・20年・15年・10年から選んでください', FIP: '年数を数字で入力してください（例：10）', PLS: '年数を数字で入力してください（例：10）' };
+const yearsNum = v => String(v ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[年\s]/g, '');
+function yearsError(v) {
+  const s = yearsNum(v);
+  if (!/^\d+$/.test(s)) return '年数は数字で入力してください（例：15）';
+  const n = +s, p = D().product_type;
+  if (p === 'S&P' && (n < 5 || n > 20)) return 'S&Pは5〜20年の間で選べます';
+  if (p === 'EVO' && ![10, 15, 20, 25].includes(n)) return 'EVOは25年・20年・15年・10年のどれかです';
+  if (n < 1 || n > 50) return '年数を確認してください';
+  return '';
+}
+function paintYears() {
+  const r = inputs.contract_years; if (!r) return;
+  const p = D().product_type, chips = r.wrap.querySelector('.chips'), hint = r.wrap.querySelector('.hint');
+  if (chips) chips.style.display = p === 'EVO' ? '' : 'none';
+  if (hint) hint.textContent = YEARS_HINT[p] || '先に契約商品を選んでください';
+  if (r.wrap.check) r.wrap.check();
+}
+
+/* ---------- 入力チェック（決まった形でないとエラーを出す） ---------- */
+const VALIDATE = {
+  contract_years: yearsError,
+  bank_branch_no: v => /^\d{3}$/.test(v) ? '' : '支店番号は3桁の数字です（例：123）',
+  postal_code: v => /^\d{3}-?\d{4}$/.test(zen2han(v).trim()) ? '' : '郵便番号は7桁の数字です（例：460-0008）',
+};
+const zen2han = s => String(s ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[－ー‐―]/g, '-');
+
+/* ---------- 金額の表示（4000000 → 4,000,000／400万円） ---------- */
+const YEN = new Set(['income_amount', 'fund_amount', 'fund_annual', 'savings_amount']);
+const yenText = v => { const s = zen2han(v).replace(/[,，円\s]/g, ''); return /^\d+$/.test(s) ? Number(s).toLocaleString('ja-JP') : String(v ?? ''); };
+function manText(v) {
+  const n = Number(zen2han(v).replace(/[,，円\s]/g, ''));
+  if (!n) return '';
+  const oku = Math.floor(n / 1e8), man = Math.floor(n % 1e8 / 1e4), rest = n % 1e4;
+  return '＝ ' + (oku ? oku + '億' : '') + (man ? man.toLocaleString('ja-JP') + '万' : '') + (rest ? rest.toLocaleString('ja-JP') : '') + '円';
+}
+
+/* ---------- 郵便番号：日本郵便の郵便番号データ（zip/都道府県コード.json）で、住所から引く ---------- */
+// AIの推測は使わない。書類から住所が入ったら、ここで郵便番号を自動で入れる
+const PREFS = ['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県',
+  '新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県',
+  '鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
+const zipFiles = {};
+const loadPref = code => zipFiles[code] || (zipFiles[code] = fetch('zip/' + code + '.json').then(r => r.ok ? r.json() : null).catch(() => null)
+  .then(j => { if (!j) delete zipFiles[code]; return j; }));
+const normA = s => zen2han(s).replace(/[\s　]/g, '').replace(/[ヶヵケ]/g, 'ケ').replace(/[のノ之]/g, 'ノ');
+const KNUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+const kanjiNum = s => { let n = 0, cur = 0; for (const c of s) { if (c === '十') { n += (cur || 1) * 10; cur = 0; } else cur = KNUM[c] || 0; } return n + cur; };
+// 「1~19丁目」「20丁目」「1,2丁目」「100~200番地」などの補足に、番地・丁目の数字が入るか
+function noteHas(note, n) {
+  let found = false, any = false;
+  for (const m of note.matchAll(/(\d+)(?:~(\d+))?(?=[^\d~]|$)/g)) { any = true; const lo = +m[1], hi = m[2] ? +m[2] : lo; if (n >= lo && n <= hi) found = true; }
+  return { any, found };
+}
+async function zipFromAddress(addr) {
+  let a = normA(addr);
+  const pi = PREFS.findIndex(p => a.startsWith(p));
+  if (pi < 0) return null;
+  a = a.slice(PREFS[pi].length);
+  const d = await loadPref(String(pi + 1).padStart(2, '0'));
+  if (!d) return null;
+  let city = null, clen = 0;
+  for (const c of Object.keys(d)) for (const v of [normA(c), normA(c).replace(/^.+?郡/, '')]) if (v && a.startsWith(v) && v.length > clen) { city = c; clen = v.length; }
+  if (!city) return null;
+  const hadOaza = /^大字/.test(a.slice(clen));
+  let rest = a.slice(clen).replace(/^大字|^字/, '');
+  const rows = d[city];
+  let tlen = 0;
+  for (const r of rows) { const t = normA(r[0]); if (t && rest.startsWith(t) && t.length > tlen) tlen = t.length; }
+  // 京都の「〇〇通〇〇上ル〇〇町」のように、町名の前に通り名がある住所は、途中に出てくる町名で探す
+  if (!tlen) {
+    let at = -1;
+    for (const r of rows) { const t = normA(r[0]); const i = t.length >= 2 ? rest.indexOf(t) : -1; if (i >= 0 && t.length > tlen) { tlen = t.length; at = i; } }
+    if (at > 0) rest = rest.slice(at);
+  }
+  let cands = tlen ? rows.filter(r => normA(r[0]).length === tlen && rest.startsWith(normA(r[0]))) : rows.filter(r => !r[0]);
+  if (cands.some(r => r[2] === '大字')) { const f = cands.filter(r => (r[2] === '大字') === hadOaza); if (f.length) cands = f; }
+  if (!cands.length) cands = rows.filter(r => !r[0]);
+  if (new Set(cands.map(r => r[1])).size > 1) {
+    const after = rest.slice(tlen);
+    const m = after.match(/^(\d+)/) || after.match(/^([一二三四五六七八九十]+)丁目/);
+    const n = m ? (/\d/.test(m[1]) ? +m[1] : kanjiNum(m[1])) : null;
+    if (n != null) {
+      const hit = cands.filter(r => r[2] && !/除く/.test(r[2]) && noteHas(r[2], n).found);
+      const general = cands.filter(r => !r[2] || /除く/.test(r[2]) || !noteHas(r[2], n).any);
+      cands = hit.length ? hit : general.length ? general : cands;
+    }
+  }
+  const zips = [...new Set(cands.map(r => r[1]))];
+  return { zips, place: PREFS[pi] + city + (tlen ? cands[0][0] : '') };
+}
+const fmtZip = z => z.slice(0, 3) + '-' + z.slice(3);
+const zipDigits = (d = D()) => zen2han(d.postal_code).replace(/\D/g, '');
+let zipTimer = null, zipResult = null, zipAddrSeen = null;
+function watchZip() {
+  clearTimeout(zipTimer);
+  zipTimer = setTimeout(async () => {
+    const addr = String(D().address_ja || '').trim();
+    const changed = addr !== zipAddrSeen;
+    if (changed) { zipAddrSeen = addr; zipResult = addr ? await zipFromAddress(addr) : null; }
+    // 住所が変わった時：郵便番号が空か、AIが入れた番号なら、住所から引いた番号に入れ替える
+    if (changed && zipResult && zipResult.zips.length === 1) {
+      const z = zipResult.zips[0];
+      if (zipDigits() !== z && (!zipDigits() || aiKeys.has('postal_code'))) { setField('postal_code', fmtZip(z), true, false); scheduleSave(); if (step === 3) refreshStep(); }
+    }
+    paintZip();
+  }, 300);
+}
+function zipWarning(d = D()) {
+  if (!zipResult || !zipResult.zips.length || String(d.address_ja || '').trim() !== zipAddrSeen) return '';
+  const code = zipDigits(d);
+  if (code.length !== 7 || zipResult.zips.includes(code)) return '';
+  return `ご住所（${zipResult.place}）の郵便番号は「${zipResult.zips.slice(0, 4).map(fmtZip).join('」「')}」${zipResult.zips.length > 1 ? 'のどれか' : ''}です。お手元の郵便物などで確認してください`;
+}
+function paintZip() {
+  const r = inputs.postal_code;
+  if (r) {
+    const el = r.wrap.querySelector('.zip-warn'); const w = fieldError('postal_code') ? '' : zipWarning();
+    if (el) {
+      el.replaceChildren(w ? '⚠ ' + w : '');
+      if (w && zipResult.zips.length === 1) el.append(h('button', { class: 'btn outline sm zip-fix', type: 'button', onclick: () => { setField('postal_code', fmtZip(zipResult.zips[0])); markDirty('postal_code'); } }, fmtZip(zipResult.zips[0]) + ' にする'));
+    }
+    if (w) r.wrap.classList.add('bad');
+  }
+  const now = zipWarning();
+  if (now !== lastZipWarn) { lastZipWarn = now; if (step === 3) refreshStep(); }
+}
+let lastZipWarn = '';
+const fieldError = (k, v = D()[k]) => { const s = String(v ?? '').trim(); return s && VALIDATE[k] ? VALIDATE[k](s) : ''; };
+const invalidKeys = () => Object.keys(VALIDATE).filter(k => fieldError(k));
+
+/* ---------- 口座番号は音声でもOK（ツールには保存せず、送信の時にスプレッドシートへ直接） ---------- */
+const ACCOUNT_SPEC = { k: 'account_number', label: '口座番号（普通預金の7桁の数字）' };
+const VOICE_AVAIL = [...VOICE_KEYS, 'account_number'];
+const voiceValues = () => ({ ...D(), account_number: secretVals.account_number || '' });
+// 音声の結果から口座番号だけ取り出して、番号の欄（保存しない）へ
+function takeAccountFromVoice(res) {
+  const vals = (res && res.values) || {};
+  const n = String(vals.account_number || '').replace(/\D/g, '');
+  delete vals.account_number;
+  if (!n) return false;
+  secretVals.account_number = n; syncSecret('account_number');
+  return true;
+}
+// 積立に使えるお金：月の金額から年間を自動で出す
+function syncFundAnnual() {
+  const m = Number(String(D().fund_amount || '').replace(/[^\d.]/g, ''));
+  const v = m > 0 ? String(Math.round(m * 12)) : '';
+  if (String(D().fund_annual || '') !== v) setField('fund_annual', v);
+}
+
+/* ---------- 裏で読み取り（読み取り中も、ほかの項目を入力できる） ---------- */
+const bgTasks = new Set();
+const pendingSlots = new Set();
+// 撮り直しが必要な写真（どの書類の、どの面か）
+const retakeNeed = {};
+const slotName = s => DOC_TYPES[s.doc] + (s.doc === 'passport' ? '（顔写真のページ）' : s.doc === 'juminhyo' ? '' : 'の「' + s.label + '」');
+let cardPending = false, bgPill = null;
+const userEditAt = {};  // 手で直した時刻（読み取り中に手で入れた値は、あとから上書きしない）
+function bgStart(msg) {
+  const t = { msg }; bgTasks.add(t); paintBg();
+  return () => { bgTasks.delete(t); paintBg(); };
+}
+function paintBg() {
+  if (!bgTasks.size) { if (bgPill) { bgPill.remove(); bgPill = null; placeToast(); } return; }
+  if (!bgPill) { bgPill = h('div', { class: 'bg-pill', role: 'status' }); document.body.append(bgPill); }
+  bgPill.replaceChildren(h('span', { class: 'spinner' }), h('span', {}, [...bgTasks].map(t => t.msg).join('・') + '…', h('small', {}, 'このまま他の項目を入力・操作できます')));
+  placeToast();
+}
+
+/* ---------- カード：写真から読み取り（写真も番号もツールには保存しない） ---------- */
+function cardScanBtn() {
+  return h('button', { class: 'btn outline wide card-scan', type: 'button', onclick: () => pickImage('credit_card') }, icon('card2'), 'カードを撮影して自動入力');
+}
+// カード番号が空の間は、カードの欄全体を赤くする
+function paintCardNeed() {
+  const need = !String(secretVals.card_number || '').trim();
+  document.querySelectorAll('#cf-payment, .card-entry').forEach(el => el.classList.toggle('card-need-box', need));
+  document.querySelectorAll('[data-card-need]').forEach(el => { el.hidden = !need; });
+}
+function cardEntry(title) {
+  return h('div', { class: 'card-entry' },
+    title ? h('strong', {}, title) : null,
+    h('p', { class: 'card-need-note', 'data-card-need': '' }, '⚠ カード番号がまだ入っていません。カードを撮影するか、下の欄に入力してください。'),
+    cardScanBtn(),
+    h('p', { class: 'small muted', style: 'margin:0' }, '写真は保存しません。カード番号と有効期限はツールに保存されず、送信の時にスプレッドシートへ直接送られます。'),
+    ...SECRET_FIELDS.filter(f => f.k.startsWith('card_')).map(secretInput));
+}
+async function scanCard(file) {
+  const endBg = bgStart('カードを読み取り中'), since = Date.now();
+  cardPending = true; refreshDocs();
+  const done = () => { endBg(); cardPending = false; refreshDocs(); };
+  try {
+    const image = await toJpegBase64(file);
+    const res = await callAI({ mode: 'card', image, mediaType: 'image/jpeg' });
+    done();
+    const c = (res && res.card) || {};
+    if (c.number) secretVals.card_number = c.number;
+    if (c.expiry) secretVals.card_expiry = c.expiry;
+    if (res && res.values && Object.keys(res.values).length) applyAI(res, {}, { since });
+    syncSecret('card_number'); syncSecret('card_expiry');
+    toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所でお支払い用のカード（番号が書いてある面）を撮り直すか、手で入力してください。'
+      : c.check === false ? '⚠ カード番号が正しくない可能性があります。カードと見比べて直してください。'
+      : !c.expiry ? 'カード番号を入れました。有効期限は手で入力してください。'
+      : 'カード番号と有効期限を入れました。カードと見比べて確認してください。', 6000);
+  } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
+}
+
+/* ---------- 勤務先：会社名から本社の住所・ホームページをネットで調べる ---------- */
+let employerLooked = '';
+async function lookupEmployer(auto = false) {
+  const name = String(D().employer_name || '').trim();
+  if (!name) { if (!auto) toast('先に勤務先の名前を入れてください。'); return; }
+  employerLooked = name;
+  const done = bgStart('勤務先を調べています（30秒ほど）'), since = Date.now();
+  try {
+    const res = await callAI({ mode: 'company', name, area: String(D().address_ja || '').slice(0, 12), fields: fieldSpec(['employer_address', 'employer_website', 'industry']) });
+    done();
+    applyAI(res, {}, { since, emptyMsg: '勤務先の情報が見つかりませんでした。正式な会社名で試すか、手で入力してください。' });
+  } catch (e) { done(); toast('調べられませんでした：' + e.message, 6000); }
+}
+// 名前があって住所もホームページも空なら、自動で1回だけ調べる
+function maybeLookupEmployer() {
+  const d = D(), name = String(d.employer_name || '').trim();
+  if (name && name !== employerLooked && !String(d.employer_address || '').trim() && !String(d.employer_website || '').trim()) lookupEmployer(true);
+}
+function employerLookupBtn() {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => lookupEmployer() }, '🔍 会社名から本社の住所・ホームページを調べる');
+}
+
+/* ---------- 便利機能：有効期限チェック・名字コピー・写真の撮り直し ---------- */
+const todayStr = () => new Date().toISOString().slice(0, 10);
+function expiredList(d) {
+  const out = [];
+  if (d.id_expiry && d.id_expiry < todayStr()) out.push(`申込者の本人確認書類の有効期限が切れています（${d.id_expiry}）`);
+  if (d.ben_id_expiry && d.ben_id_expiry < todayStr()) out.push(`受取人の本人確認書類の有効期限が切れています（${d.ben_id_expiry}）`);
+  return out;
+}
+function expiryWarn() {
+  const list = expiredList(D());
+  return list.length ? h('div', { class: 'warn' }, ...list.map(t => h('p', {}, '⚠ ' + t)), h('p', { class: 'small' }, '有効期限内の書類で撮り直してください。')) : null;
+}
+function warnExpiryToast() { const list = expiredList(D()); if (list.length) setTimeout(() => toast('⚠ ' + list[0], 6000), 4600); }
+function sameSurnameBtn() {
+  return h('button', { class: 'btn outline wide', type: 'button', onclick: () => {
+    const d = D();
+    const sur = String(d.name_ja || '').trim().split(/[\s\u3000]+/)[0];
+    if (!sur && !d.last_romaji) { toast('先に申込者のお名前を入れてください'); return; }
+    if (sur && !String(d.ben_name_ja || '').startsWith(sur)) setField('ben_name_ja', sur + ' ' + String(d.ben_name_ja || '').replace(/^\s+/, ''));
+    if (d.last_romaji) setField('ben_last_romaji', d.last_romaji);
+    if (d.nationality) setField('ben_nationality', d.nationality);
+    if (d.birth_country) setField('ben_birth_country', d.birth_country);
+    markDirty('ben_name_ja'); toast('名字・国籍を申込者と同じにしました');
+  } }, '👪 名字を申込者と同じにする');
+}
+function retakeSheet(slot, problem) {
+  const s = DOC_SLOTS.find(x => x.slot === slot);
+  const close = () => { back.remove(); setTimeout(() => { const r = document.getElementById('slot-' + slot); if (r) r.scrollIntoView({ block: 'center' }); }, 80); };
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '撮り直しのお願い' },
+    h('h2', {}, '撮り直しをお願いします'),
+    h('div', { class: 'retake-target' }, s ? ill(DOC_ILL[s.doc], 'doc-ill') : null,
+      h('div', {}, h('small', { class: 'muted' }, '撮り直す写真'), h('strong', {}, s ? slotName(s) : '書類'))),
+    h('p', { class: 'warn' }, '理由：' + problem),
+    h('p', { class: 'small muted' }, 'この写真は保存していません。四隅がすべて写るように、明るい場所で、反射しないように撮ってください。'),
+    h('button', { class: 'btn primary wide', type: 'button', onclick: () => { back.remove(); captureDoc(slot); } }, (s ? slotName(s) : '') + 'を撮り直す'),
+    h('button', { class: 'btn ghost wide', type: 'button', onclick: close }, 'あとで撮り直す')));
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+  document.body.append(back);
+}
+const PHOTO_CHECK = { k: 'photo_problem', label: '写真の問題点', hint: '四隅が切れている・ぼやけている・光の反射やかげで文字が読めない・指定と別の書類が写っている、などがあれば短い日本語で書く。問題がなければ出力しない' };
+
+/* ---------- 読み上げ見本（まだ空いている項目だけ表示） ---------- */
+const SCRIPT = [
+  { keys: ['name_ja'], text: 'お名前は「漢字のフルネーム」です。' },
+  { keys: ['birth_date'], text: '生年月日は「〇年〇月〇日」です。' },
+  { keys: ['gender'], text: '性別は「男性・女性」です。' },
+  { keys: ['id_number'], text: '本人確認書類の番号は「〇〇」です。（書類を撮影した場合は不要）' },
+  { keys: ['phone_area', 'phone_local'], text: '携帯番号は「〇〇〇-〇〇〇〇-〇〇〇〇」です。' },
+  { keys: ['address_ja', 'addr1', 'city', 'prefecture'], text: '住所は「都道府県から部屋番号まで」です。' },
+  { keys: ['postal_code'], text: '郵便番号は「〇〇〇-〇〇〇〇」です。' },
+  { keys: ['employer_type', 'employer_name'], text: '勤務先は「会社名」です。' },
+  { keys: ['industry', 'position'], text: '業種は「医療・不動産など」で、役職は「一般社員・管理職など」です。' },
+  { keys: ['job_detail'], text: '仕事の内容は「〇〇」です。' },
+  { keys: ['employer_address'], text: '勤務先の住所は「郵便番号と本社の住所」です。' },
+  { keys: ['employer_website'], text: '勤務先のホームページは「〇〇」です。（なければ「なし」）' },
+  { keys: ['income_amount'], text: '年収は「〇〇万円」です。' },
+  { keys: ['pep'], text: '政治家や官公庁の幹部などとの関係は「ありません」。' },
+  { keys: ['us_status'], text: 'アメリカの国籍やグリーンカードは「持っていません」。' },
+  { keys: ['ben_name_ja', 'ben_relation'], text: '受取人の名前は「漢字のフルネーム」です。' },
+  { keys: ['ben_name_kana'], text: '受取人のふりがなは「〇〇 〇〇」です。' },
+  { keys: ['ben_birth_date', 'ben_gender', 'ben_percent'], text: '受取人の生年月日は「〇年〇月〇日」、性別は「男性・女性」、受け取る割合は「100」パーセントです。' },
+  { keys: ['ben_id_number'], text: '受取人の運転免許証の番号は「12桁の番号」です。（受取人の免許証を撮影した場合は不要）' },
+  { keys: ['bank_name', 'bank_branch'], text: 'メインで使っている銀行は「〇〇銀行」の「〇〇支店」です。' },
+  { keys: ['bank_branch_no'], text: '支店番号は「3桁の番号」です。' },
+  { keys: ['account_number'], text: '口座番号は「7桁の番号」です。' },
+  { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
+  { keys: ['card_company'], text: 'カード会社は「楽天カード・イオンカード・三井住友カードなど」です。' },
+  { keys: ['fund_method', 'fund_amount'], text: '積立に使えるお金は「月〇万円くらい」あります。' },
+  { keys: ['savings_amount'], text: '貯金は「〇〇万円くらい」あります。' },
+  { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
+  { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P・EVO・FIP・PLS」を「〇年」、月「〇〇ドル」です。' },
+  { keys: ['fund_choice'], text: 'ファンドは「〇〇」です。' },
+  { keys: ['introducer_name'], text: '紹介者は「漢字のフルネーム」です。' },
+  { keys: ['staff_name'], text: '担当FPは「〇〇」です。' },
+];
+// 撮影した書類から読み取れる項目（＝話さなくてよい項目）
+function scriptLines(values, available) {
+  return SCRIPT.map(s => ({ ...s, need: s.keys.filter(k => available.includes(k)) }))
+    .filter(s => s.need.length && s.need.some(k => !String(values[k] ?? '').trim()))
+    .map(s => s.text);
+}
+function docSummary(values) {
+  const got = docsOf(values);
+  const names = Object.keys(DOC_TYPES).filter(doc => DOC_SLOTS.some(x => x.doc === doc && got[x.slot])).map(doc => DOC_TYPES[doc]);
+  return names;
+}
+const voiceSkipped = new Set();
+let voiceChunkNow = [];
+const remainingLines = () => scriptLines(voiceValues(), VOICE_AVAIL).filter(t => !voiceSkipped.has(t));
+// 読み上げは1回で全部（2回以上に分ける時はここを増やす）
+const VOICE_ROUNDS = 1;
+// 1回目に読む数：半分。ただし銀行まわり（銀行名・支店・支店番号・口座番号・口座を作った時期）は分けずに2回目へまとめる
+const BANK_LINES = new Set(SCRIPT.filter(x => x.keys.some(k => /^bank_|^account_number$/.test(k))).map(x => x.text));
+function chunkSize(n, all = []) {
+  let size = Math.max(1, Math.ceil(n / VOICE_ROUNDS));
+  const first = all.findIndex(t => BANK_LINES.has(t));
+  if (first >= 0 && first < size && all.slice(size).some(t => BANK_LINES.has(t))) {
+    const rest = all.filter(t => !BANK_LINES.has(t));
+    size = Math.max(1, Math.min(rest.length, size));
+    return { size, lines: rest.slice(0, size) };
+  }
+  return { size, lines: all.slice(0, size) };
+}
+const firstRound = all => chunkSize(all.length, all).lines;
+function scriptBox(values, available, step = 1) {
+  const all = scriptLines(values, available).filter(t => !voiceSkipped.has(t));
+  const lines = step >= VOICE_ROUNDS ? all : firstRound(all);
+  voiceChunkNow = lines;
+  const box = h('div', { class: 'script' });
+  if (!lines.length) { box.append(h('p', { class: 'small', style: 'margin:0' }, '入力が必要な項目は、すべて埋まっています。')); return box; }
+  const names = docSummary(values);
+  box.append(h('div', { class: 'script-head' }, h('strong', {}, VOICE_ROUNDS > 1 ? `読み上げ見本（${Math.min(step, VOICE_ROUNDS)}回目／全${VOICE_ROUNDS}回：${lines.length}項目）` : `読み上げ見本（${lines.length}項目）`), h('span', { class: 'muted small' }, VOICE_ROUNDS === 1 ? '「」の中を自分の内容に変えて、上から順に読むだけでOK。'
+      : step >= VOICE_ROUNDS || lines.length === all.length ? '「」の中を自分の内容に変えて、上から順に読むだけでOK。これで読み上げは最後です' : '「」の中を自分の内容に変えて、上から順に読むだけでOK。終わったら残りの項目が出ます（あと1回）'),
+    h('span', { class: 'small' }, names.length
+      ? '撮影済みの書類（' + names.join('・') + '）から入力できた項目は省いています。'
+      : '先に本人確認書類を撮影すると、読む項目が少なくなります。')));
+  const ol = h('ol', {});
+  for (const t of lines) {
+    const li = h('li', {});
+    t.split(/(「[^」]*」)/).forEach(part => li.append(/^「/.test(part) ? h('mark', {}, part) : part));
+    ol.append(li);
+  }
+  box.append(ol);
+  // 見本の枠の下に、まだ読む項目が隠れている時は「続きがあります」を出す（下までスクロールすると消える）
+  const more = h('button', { class: 'script-more', type: 'button', hidden: true, onclick: () => box.scrollBy({ top: box.clientHeight * 0.8, behavior: 'smooth' }) });
+  const paintMore = () => {
+    const bottom = box.getBoundingClientRect().bottom - 4;
+    const hidden = [...ol.children].filter(li => li.getBoundingClientRect().bottom > bottom).length;
+    more.hidden = !hidden;
+    more.textContent = `▼ 続きがあります（あと${hidden}項目）`;
+    wrap.classList.toggle('has-more', !!hidden);
+  };
+  box.addEventListener('scroll', paintMore, { passive: true });
+  const wrap = h('div', { class: 'script-wrap' }, box, more);
+  setTimeout(paintMore, 60); setTimeout(paintMore, 500);
+  if (window.ResizeObserver) new ResizeObserver(paintMore).observe(box);
+  return wrap;
+}
+
+/* ---------- 話して入力 ---------- */
+function voiceFinished() {
+  remainingLines().forEach(t => voiceSkipped.add(t));
+  refreshStep();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function stopVoice() {
+  recording = false;
+  if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop(); } catch {} rec = null; }
+  if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; }
+}
+function audioBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('録音データを読み込めませんでした'));
+    reader.readAsDataURL(blob);
+  });
+}
+function recordingFormat() {
+  if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== 'function') return '';
+  return ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
+function openVoice(step = 1) {
+  if (typeof step !== 'number') step = 1;
+  const format = recordingFormat();
+  const canRecord = !!format && !!navigator.mediaDevices?.getUserMedia;
+  const ta = h('textarea', { class: 'transcript', rows: '7', 'aria-label': '話した内容', placeholder: '例：勤務先は〇〇株式会社で事務をしていて、年収は450万円くらいです。メインで使っている銀行は〇〇銀行です。' });
+  ta.value = voiceDraft; ta.addEventListener('input', () => { voiceDraft = ta.value; });
+  const checkNote = h('p', { class: 'check-note', hidden: !voiceDraft.trim() }, '✏️ 文字になった内容をご確認ください。間違いがあれば、下の欄をタップして手入力で直してから、下のボタンを押してください。');
+  const label = h('p', { class: 'mic-label' }, canRecord ? '押して録音を始める' : '音声入力または手入力');
+  const status = h('p', { class: 'muted small', role: 'status' }, canRecord
+    ? ''
+    : 'この端末では録音できません。下の欄へ手入力するか、キーボードの音声入力をお使いください。');
+  const mic = h('button', { class: 'mic', type: 'button', 'aria-pressed': 'false', 'aria-label': '録音', hidden: !canRecord }, icon('mic'));
+  let canceled = false, recordTimer = null;
+  const release = () => { clearTimeout(recordTimer); if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; } };
+  mic.addEventListener('click', async () => {
+    if (recording) { recording = false; mic.disabled = true; status.textContent = '音声を文字にしています…'; rec.stop(); return; }
+    mic.disabled = true;
+    try {
+      voiceStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      if (canceled) { release(); return; }
+      const chunks = [];
+      rec = new MediaRecorder(voiceStream, { mimeType: format });
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      rec.onerror = () => { stopVoice(); mic.disabled = false; send.disabled = false; status.textContent = '録音できませんでした。もう一度お試しください。'; };
+      rec.onstop = async () => {
+        const blob = new Blob(chunks, { type: format });
+        rec = null; recording = false; release(); mic.setAttribute('aria-pressed', 'false'); label.textContent = 'もう一度録音する';
+        if (canceled) return;
+        if (!blob.size || blob.size > 4_000_000) { mic.disabled = false; send.disabled = false; status.textContent = '録音が短すぎるか長すぎます。短く区切って録り直してください。'; return; }
+        try {
+          const result = await callAI({ mode: 'transcribe', audio: await audioBase64(blob), mediaType: format });
+          if (canceled) return;
+          // 無音や雑音だけだと、文字起こしのヒント文「日本語の申込情報。…」が返ってくることがあるので取り除く
+          const heard = String(result.text || '').replace(/日本語の申込情報[^\n]*/g, '').trim();
+          if (!heard) { status.textContent = '声を認識できませんでした。もう一度録音してください。'; return; }
+          ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + heard;
+          voiceDraft = ta.value;
+          status.textContent = '';
+          checkNote.hidden = false;
+        } catch (e) { if (!canceled) status.textContent = '文字起こしに失敗しました：' + e.message; }
+        finally { mic.disabled = false; send.disabled = false; }
+      };
+      rec.start(); recording = true; mic.disabled = false; send.disabled = true; mic.setAttribute('aria-pressed', 'true'); label.textContent = '録音中…押して止める';
+      recordTimer = setTimeout(() => { if (recording) mic.click(); }, 120000);
+    } catch { release(); mic.disabled = false; status.textContent = 'マイクを使えません。ブラウザで許可するか、下の欄に手入力してください。'; }
+  });
+  const close = () => { canceled = true; stopVoice(); clearTimeout(recordTimer); back.remove(); };
+  const hasMore = () => step < VOICE_ROUNDS && remainingLines().length > voiceChunkNow.length;
+  const send = h('button', { class: 'btn primary wide', type: 'button' }, '自動で項目に入れる');
+  send.addEventListener('click', async () => {
+    stopVoice(); const t = ta.value.trim();
+    if (!t) { status.textContent = '話した内容がまだありません。'; return; }
+    close(); const done = busy('項目に入れています…');
+    try { const res = await callAI({ mode: 'voice', transcript: t, fields: [...fieldSpec(VOICE_KEYS), ACCOUNT_SPEC] }); done(); const gotAccount = takeAccountFromVoice(res); voiceDraft = ''; if (gotAccount && !Object.keys(res.values || {}).length) toast('口座番号を入れました。送信前の画面で確認してください。'); else applyAI(res, {}, { noScroll: true }); if (step < VOICE_ROUNDS && remainingLines().length) setTimeout(() => openVoice(step + 1), 700); else voiceFinished(); }
+    catch (e) { done(); toast('うまくいきませんでした：' + e.message, 6000); }
+  });
+  const skip = h('button', { class: 'btn outline wide', type: 'button' }, '⏭ この項目は飛ばす（わからない・当てはまらない）');
+  skip.addEventListener('click', () => {
+    voiceChunkNow.forEach(t => voiceSkipped.add(t));
+    close();
+    if (step < VOICE_ROUNDS && remainingLines().length) openVoice(step + 1); else voiceFinished();
+  });
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
+    h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
+    h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
+    scriptBox(voiceValues(), VOICE_AVAIL, step),
+    mic, label, status, checkNote, ta, send, skip,
+    h('p', { class: 'voice-foot' }, '録音は文字起こしのためOpenAIへ送ります（OpenAIのAPIでは、送った音声が学習などほかの目的に使われることはありません）。表示された文字を確認してから項目に入力します。', h('br'),
+      'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+  if (hasMore()) send.textContent = '入力して次の項目へ';
+  checkNote.textContent = `✏️ 文字になった内容をご確認ください。間違いがあれば、下の欄をタップして手入力で直してから、「${send.textContent}」を押してください。`;
+  if (voiceDraft.trim() && canRecord) label.textContent = 'もう一度録音する';
+  if (!voiceChunkNow.length) skip.hidden = true;
+  document.body.append(back);
+}
+
+boot();
+</script>
+</body>
+</html>
