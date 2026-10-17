@@ -382,7 +382,7 @@ const SECTIONS = [
     F('industry', '業種', { hint: '例：医療機関、不動産', chips: ['医療・福祉', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '金融・保険', '公務'] }),
     F('position', '役職', { chips: ['一般社員', '管理職', '役員', '代表者'] }),
     F('job_detail', 'お仕事の内容', { type: 'textarea', hint: '例：中央病院の看護師' }),
-    F('employment_start', '今の勤務先で働き始めた日', { type: 'date' }),
+    F('employment_start', '今の勤務先で働き始めた日（だいたいでOK）', { type: 'date' }),
     F('income_currency', '年収の通貨', { def: 'JPY' }),
     F('income_amount', '年収（円）', { type: 'number', hint: '例：450万円なら 4,500,000' }),
   ]},
@@ -520,17 +520,23 @@ function viewMessage(title, body, ok = false, extra = null) {
     ok ? ill(DONE_ILL, 'done-ill') : h('div', { class: 'big-icon', 'aria-hidden': 'true' }, '!'), h('h1', {}, title), h('p', { class: 'muted' }, body), extra));
 }
 // サポート料の支払い（Stripeの画面を開く。カード番号はStripeが受け取り、このツールには来ない）
-function lineBlock() {
+function lineBlock(no = '') {
   if (!CONFIG.LINE_URL) return null;
   return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('strong', {}, '① 公式LINEに登録してください'),
+    h('strong', {}, no + '公式LINEに登録してください'),
     h('p', { class: 'small muted', style: 'margin:0' }, '手続きの進み具合や今後のご連絡は、公式LINEでお知らせします。'),
     h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener' }, 'LINEで友だち追加する')));
 }
+// 送信後の案内：① サポート料のお支払い → ② 公式LINE → 今後の流れ
 function nextSteps(again = false) {
-  return h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, lineBlock(), payBlock(again));
+  const pay = payBlock(again, CONFIG.LINE_URL ? '① ' : '');
+  const line = lineBlock(pay ? '② ' : '');
+  const flow = h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+    h('strong', {}, '今後の流れ'),
+    h('p', { class: 'small muted', style: 'margin:0' }, '今後の流れについては、事務員からご連絡いたします。')));
+  return h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, pay, line, flow);
 }
-function payBlock(again = false) {
+function payBlock(again = false, no = '') {
   if (!CONFIG.STRIPE_PAYMENT_LINK) return null;
   let href;
   try {
@@ -540,7 +546,7 @@ function payBlock(again = false) {
     href = url.toString();
   } catch { return null; }
   return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('strong', {}, (CONFIG.LINE_URL ? '② ' : '') + 'サポート料 9,800円のお支払い'),
+    h('strong', {}, no + 'サポート料 9,800円のお支払い'),
     h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
     h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
 }
@@ -1649,10 +1655,12 @@ function sameSurnameBtn() {
     const sur = String(d.name_ja || '').trim().split(/[\s\u3000]+/)[0];
     if (!sur && !d.last_romaji) { toast('先に申込者のお名前を入れてください'); return; }
     if (sur && !String(d.ben_name_ja || '').startsWith(sur)) setField('ben_name_ja', sur + ' ' + String(d.ben_name_ja || '').replace(/^\s+/, ''));
+    const kanaSur = String(d.name_kana || '').trim().split(/[\s\u3000]+/)[0];
+    if (kanaSur && !String(d.ben_name_kana || '').startsWith(kanaSur)) { setField('ben_name_kana', kanaSur + ' ' + String(d.ben_name_kana || '').replace(/^\s+/, '')); markDirty('ben_name_kana'); fillRomaji('ben_'); }
     if (d.last_romaji) setField('ben_last_romaji', d.last_romaji);
     if (d.nationality) setField('ben_nationality', d.nationality);
     if (d.birth_country) setField('ben_birth_country', d.birth_country);
-    markDirty('ben_name_ja'); toast('名字・国籍を申込者と同じにしました');
+    markDirty('ben_name_ja'); toast(kanaSur ? '名字・ふりがな・国籍を申込者と同じにしました' : '名字・国籍を申込者と同じにしました');
   } }, '👪 名字を申込者と同じにする');
 }
 function retakeSheet(slot, problem) {
