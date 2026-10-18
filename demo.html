@@ -320,6 +320,21 @@ a.btn{text-decoration:none}
 .kbd-steps .num{width:24px;height:24px;font-size:.78rem;background:var(--surface)}
 .kbd-mic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:var(--surface);border:1px solid var(--line);vertical-align:middle}
 .kbd-mic svg{width:16px;height:16px}
+
+/* LINEなどのアプリの中で開いた時の案内 */
+.inapp{position:sticky;top:0;z-index:60;display:grid;gap:8px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));background:#FFF3CC;color:#6B4E00;border-bottom:1px solid #C9961A;font-size:.88rem;line-height:1.55}
+.inapp p{margin:0}
+.inapp .inapp-btns{display:flex;flex-wrap:wrap;gap:8px}
+.inapp .btn{min-height:40px;padding:6px 14px;font-size:.86rem}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .inapp{background:#382D10;color:#F2D58A;border-color:#D9AE3E}}
+/* かかる時間の目安 */
+.eta{justify-self:center;margin:0;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-weight:700;font-size:.9rem}
+.flow-min{font-size:.74rem;color:var(--muted);font-weight:500}
+.eta-step{margin:-8px 0 12px;font-size:.8rem;color:var(--muted)}
+/* 担当者から「この項目だけ直してください」と頼まれた時 */
+.fix-note{margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--ai);color:var(--ai-ink);border:1px solid var(--ai-line);display:grid;gap:4px}
+.fix-note p{margin:0;white-space:pre-wrap}
+.bank-hint{display:block;margin-top:4px;font-size:.8rem;font-weight:700;color:var(--seal)}
 </style>
 </head>
 <body>
@@ -342,7 +357,7 @@ a.btn{text-decoration:none}
    保存・スプレッドシート送信はしない（データベースにも、写真の置き場にも残らない）。
    読み取りは体験版専用の窓口 onboarding-demo を使う（保存・送信の機能がない窓口） */
 const DEMO_FUNCTION = 'onboarding-demo';
-const DEMO_AI_MODES = new Set(['transcribe', 'card', 'mynumber', 'image', 'voice', 'company']);
+const DEMO_AI_MODES = new Set(['transcribe', 'card', 'mynumber', 'bank', 'image', 'voice', 'company']);
 // 担当者が先に入れておく「ご契約内容」（本番でも、お客様が開く前に担当者が入れている）
 const DEMO_PRESET = { product_type: 'EVO', contract_years: '15年', monthly_usd: '200', fund_choice: '分散ファンド', introducer_name: '山田（仮）' };
 async function demoAI(body) {
@@ -568,6 +583,8 @@ const FLOW_ILL = {
 // 開き直した時に、ブラウザが前回のスクロール位置へ戻さないようにする
 try { history.scrollRestoration = 'manual'; } catch {}
 async function boot() {
+  if (openOutside()) return;
+  inAppBanner();
   if (!TOKEN && ENTRY_CODE) return bootEntry();
   if (!TOKEN) return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
@@ -579,10 +596,49 @@ async function boot() {
   data = {};
   for (const f of Object.values(FIELD_MAP)) if (f.def) data[f.k] = f.def;
   Object.assign(data, saved || {});
+  if (data._fix) { ping(true, null); return viewFix(); }
   const prog = loadProgress();
+  ping(true, prog.agreed || prog.fresh ? (prog.step || 1) : 0);
   if (prog.fresh) { saveProgress({ fresh: false }); viewForm(1); }
   else if (prog.agreed) { viewForm(prog.step || 1); toast('前回の続きから再開しました。入力した内容は保存されています。', 4500); }
   else viewWelcome();
+}
+/* ---------- どこまで進んだかを担当者に知らせる（最後に開いた日時・今いる画面。入力内容は送らない） ---------- */
+let pingedStep = -1;
+function ping(open = false, at = step) {
+  if (!open && at === pingedStep) return;
+  pingedStep = at;
+  Promise.resolve(sb.rpc('onboarding_invite_ping', { p_token: TOKEN, p_step: at, p_open: open })).catch(() => {});
+}
+/* ---------- LINEなどのアプリの中で開いた時は、いつものブラウザ（Safari・Chrome）で開き直す ---------- */
+// アプリの中の画面では、カメラ・マイク・写真選びがうまく動かないことがあるため
+const UA = navigator.userAgent || '';
+const IN_LINE = /\bLine\//i.test(UA);
+const IN_APP = IN_LINE || /FBAN|FBAV|FB_IAB|Instagram|KAKAOTALK|YJApp-|\bMessenger\b/i.test(UA);
+// LINEは、リンクに openExternalBrowser=1 を付けると、いつものブラウザで開いてくれる
+function openOutside() {
+  if (!IN_LINE) return false;
+  const u = new URL(location.href);
+  if (u.searchParams.get('openExternalBrowser') === '1') return false;  // 付けてもLINEの中のままなら、案内だけ出す
+  u.searchParams.set('openExternalBrowser', '1');
+  location.replace(u.toString());
+  return true;
+}
+function inAppBanner() {
+  if (!IN_APP || document.querySelector('.inapp')) return;
+  const url = new URL(location.href); url.searchParams.delete('openExternalBrowser');
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url.toString()); }
+    catch { const t = h('textarea'); t.value = url.toString(); document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
+    toast('リンクをコピーしました。SafariやChromeを開いて、上の欄に貼り付けてください。', 6000);
+  };
+  const bar = h('div', { class: 'inapp', role: 'note' },
+    h('p', {}, h('strong', {}, '⚠ ' + (IN_LINE ? 'LINE' : 'アプリ') + 'の中で開いています。'), 'カメラや録音がうまく動かないことがあるので、SafariやChromeで開いてください。'),
+    h('p', { class: 'small' }, '画面の右上か右下にあるメニュー（「…」や「︙」）から「ブラウザで開く」「Safariで開く」を選びます。'),
+    h('div', { class: 'inapp-btns' },
+      h('button', { class: 'btn outline', type: 'button', onclick: copy }, 'リンクをコピー'),
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => bar.remove() }, 'このまま進む')));
+  document.body.prepend(bar);
 }
 // 入口リンクから開いた時：この端末で途中のお申込みがあれば続きへ。なければ最初の画面を出し、「はじめる」でお客様専用のリンクを作る
 const ENTRY_LS = 'onboarding-entry-' + ENTRY_CODE;
@@ -651,6 +707,10 @@ function payBlock(again = false, no = '') {
     h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
     h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
 }
+// かかる時間の目安（分）：1 書類を撮る／2 話して入力／3 確認／4 送信。実際にかかった時間を見て直してください
+const ETA = { 1: 3, 2: 4, 3: 2, 4: 1 };
+const ETA_TOTAL = ETA[1] + ETA[2] + ETA[3] + ETA[4];
+const etaLeft = n => Object.keys(ETA).filter(k => +k >= n).reduce((a, k) => a + ETA[k], 0);
 function viewWelcome(onStart = null) {
   const agree = h('input', { type: 'checkbox', id: 'agree' });
   const start = h('button', { class: 'btn primary wide tall', type: 'button', disabled: true }, 'はじめる');
@@ -663,7 +723,8 @@ function viewWelcome(onStart = null) {
     data.invite_for ? h('p', { class: 'for-name' }, String(data.invite_for).trim() + ' 様用のお申込みページです') : null,
     staffName ? h('p', { class: 'for-name' }, '担当：' + staffName) : null,
     h('h1', {}, 'お申込みは', h('br'), 'スマホでかんたん'),
-    h('p', { class: 'sub' }, '書類を撮影し、残りを音声と手入力で進めます。所要時間は入力内容によって変わります。'),
+    h('p', { class: 'sub' }, '書類を撮影し、残りを音声と手入力で進めます。途中でやめても、入力した内容は保存されます。'),
+    h('p', { class: 'eta' }, '⏱ かかる時間の目安：約' + ETA_TOTAL + '分'),
     h('section', { class: 'need' },
       h('div', { class: 'need-head' }, h('h2', {}, 'ご用意いただくもの'), h('span', { class: 'badge2' }, 'このうち2つ')),
       h('div', { class: 'need-grid' }, card('passport', 'あれば必ず'), card('license'), card('mynumber'), card('juminhyo')),
@@ -672,11 +733,11 @@ function viewWelcome(onStart = null) {
         h('li', {}, h('strong', {}, '💳 お支払いに使うクレジットカード'), h('span', {}, 'デビットカードでも可能です。番号の面を撮影します')),
         h('li', {}, h('strong', {}, '👤 受取人（受益者）の情報'), h('span', {}, '氏名・ふりがな・生年月日・続柄。受取人の免許証があれば撮影で入ります。決まっていなければ、あとで入力もできます')))),
     h('ol', { class: 'flow', 'aria-label': '流れ' },
-      h('li', {}, ill(FLOW_ILL.shot, 'flow-ill'), h('span', { class: 'flow-label' }, '撮る')),
+      h('li', {}, ill(FLOW_ILL.shot, 'flow-ill'), h('span', { class: 'flow-label' }, '撮る'), h('span', { class: 'flow-min' }, '約' + ETA[1] + '分')),
       h('li', { class: 'arrow', 'aria-hidden': 'true' }, '›'),
-      h('li', {}, ill(FLOW_ILL.talk, 'flow-ill'), h('span', { class: 'flow-label' }, '話す')),
+      h('li', {}, ill(FLOW_ILL.talk, 'flow-ill'), h('span', { class: 'flow-label' }, '話す'), h('span', { class: 'flow-min' }, '約' + ETA[2] + '分')),
       h('li', { class: 'arrow', 'aria-hidden': 'true' }, '›'),
-      h('li', {}, ill(FLOW_ILL.send, 'flow-ill'), h('span', { class: 'flow-label' }, '送る'))),
+      h('li', {}, ill(FLOW_ILL.send, 'flow-ill'), h('span', { class: 'flow-label' }, '確認して送る'), h('span', { class: 'flow-min' }, '約' + (ETA[3] + ETA[4]) + '分'))),
     h('details', { class: 'consent' },
       h('summary', {}, '個人情報の取り扱い（タップで表示）'),
       h('ul', {},
@@ -778,10 +839,11 @@ function refreshStep() {
     }
     return;
   }
-  const y = window.scrollY; renderStep(); window.scrollTo(0, y);
+  const y = window.scrollY; FIX ? renderFix() : renderStep(); window.scrollTo(0, y);
 }
 function renderStep() {
   saveProgress({ step });
+  ping(false, step);
   if (step >= 2) watchZip();
   const docsOk = docStatus(data).ok;
   progEl.replaceChildren(...STEPS.map((t, i) => {
@@ -810,6 +872,7 @@ function renderStep() {
   } else if (step === 2) {
     const rest = remainingLines();
     setTimeout(maybeLookupEmployer, 400);
+    setTimeout(() => bankLookup(true), 400);
     guessEmploymentStart();
     const mode = loadProgress().inputMode || '';
     const modeSwitch = (to, text) => h('button', { class: 'btn ghost wide sm', type: 'button', onclick: () => setInputMode(to) }, text);
@@ -841,6 +904,7 @@ function renderStep() {
       h('p', { class: 'note' }, '🔢 特に電話番号・郵便番号・支店番号などの数字は、1文字ずつ確認してください（「⚠️ 間違いがないか確認」の印が付いています）。'),
       expiryWarn(), ...SECTIONS.map(confirmCard)];
     setTimeout(maybeLookupEmployer, 400);
+    setTimeout(() => bankLookup(true), 400);
     if (editing) {
       const id = editing;
       nextLabel = '直し終わった（確認を続ける）';
@@ -886,6 +950,7 @@ function renderStep() {
     nextLabel = '送信する'; nextFn = submit; canNext = false;
     agree.addEventListener('change', () => { nextBtn.disabled = !agree.checked || !st.ok; });
   }
+  if (step < 4) body.splice(1, 0, h('p', { class: 'eta-step' }, '⏱ 残りの目安：約' + etaLeft(step) + '分'));
   mainEl.replaceChildren(...body.filter(Boolean));
   paintCardNeed();
   // 「話して入力」「文字で入力」を選んだ後に戻るを押したら、まず入力のしかたを選ぶ画面へ戻す
@@ -1015,7 +1080,7 @@ function confirmCard(sec) {
       if (f.k === 'phone_area') { label = '電話番号'; v = phoneText(); }
       if (YEN.has(f.k) && v) { const m = manText(v); v = yenText(v) + '円' + (m ? '（' + m.replace(/^＝ /, '') + '）' : ''); }
       const num = NUM_CHECK.has(f.k), ai = aiKeys.has(f.k) || (f.k === 'phone_area' && aiKeys.has('phone_local'));
-      const bad = fieldError(f.k) || (f.k === 'postal_code' ? zipWarning() : '') || (f.k === 'phone_area' && !mobileOk() ? '携帯番号は090・080・070から始まる11桁です' : '');
+      const bad = fieldError(f.k) || (f.k === 'postal_code' ? zipWarning() : '') || (f.k === 'bank_branch_no' ? bankWarning() : '') || (f.k === 'phone_area' && !mobileOk() ? '携帯番号は090・080・070から始まる11桁です' : '');
       return h('div', { class: 'cf-row' + (ai ? ' ai' : '') + (num ? ' num-check' : '') }, h('span', { class: 'cf-label' }, label, num && v ? h('span', { class: 'num-badge' }, '⚠️ 間違いがないか確認') : null), h('span', { class: v ? 'cf-val' : 'cf-val empty' }, v || '⚠ 未入力', bad ? h('small', { class: 'err', style: 'display:block;font-size:.8rem;font-weight:700;letter-spacing:0' }, '⚠ ' + bad) : null,
         f.k === 'employer_address' ? h('small', { class: 'muted', style: 'display:block;font-size:.8rem;font-weight:400;letter-spacing:0' }, 'お申込みには本社の住所が必要です。支店や営業所の住所なら「直す」で本社の住所に変えてください。') : null)); }),
     vis.some(f => f.k === 'employer_name') && String(data.employer_name || '').trim() ? employerLookupBtn() : null,
@@ -1075,6 +1140,12 @@ function renderField(f) {
     input.addEventListener('input', () => watchZip());
   }
   if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
+  if (f.k === 'bank_name' || f.k === 'bank_branch') {
+    input.setAttribute('list', f.k === 'bank_name' ? 'bank-list' : 'branch-list');
+    input.addEventListener('focus', () => bankDatalist(), { once: true });
+    input.addEventListener('change', () => bankLookup());
+  }
+  if (f.k === 'bank_branch_no') { input.addEventListener('input', paintBank); setTimeout(paintBank, 0); }
   if (VALIDATE[f.k]) {
     const msg = h('small', { class: 'err field-err', role: 'alert' });
     const check = () => { const e = fieldError(f.k, input.value); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
@@ -1211,6 +1282,78 @@ async function submit() {
   viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, nextSteps());
 }
 
+/* ---------- 担当者から「この項目だけ直してください」と頼まれた時（送信したあとの手直し） ---------- */
+// リンクに直してほしい項目（_fix.keys：画面の区切りの id・docs・番号）が付いている時は、その項目だけを出す
+let FIX = false, fixAgreed = false;
+const fixKeys = () => new Set(((data._fix || {}).keys) || []);
+const fixFieldKeys = () => { const keys = fixKeys(); return new Set(SECTIONS.filter(s => keys.has(s.id)).flatMap(s => s.fields.map(f => f.k))); };
+function viewFix() {
+  FIX = true; step = 0; editing = null; inputs = {}; counters = [];
+  saveEl = h('button', { class: 'save', type: 'button', role: 'status' }, '');
+  saveEl.addEventListener('click', () => { if (dirty.size) save(); });
+  mainEl = h('main', { class: 'wrap wiz' });
+  navEl = h('nav', { class: 'dock', 'aria-label': '送信' });
+  app.replaceChildren(h('header', { class: 'topbar' }, h('h1', { class: 'tb-title' }, '内容の確認・修正'), saveEl), mainEl, navEl);
+  renderFix();
+  window.scrollTo(0, 0);
+}
+function fixBox(title, ...kids) {
+  return h('section', { class: 'sec manual-box' }, h('div', { class: 'sec-body', style: 'padding-top:16px' }, h('strong', {}, title), ...kids));
+}
+function renderFix() {
+  const fx = data._fix || {}, keys = fixKeys();
+  inputs = {};
+  watchZip();
+  if (keys.has('funds')) setTimeout(() => bankLookup(), 400);
+  const secretNote = () => h('p', { class: 'small muted', style: 'margin:0' }, '大切な番号なので、このツールには保存しません。「送信する」を押した時に、スプレッドシートへ直接届きます。');
+  const body = [
+    h('p', { class: 'lead' }, '✏️ 担当者から、次の項目の確認・修正をお願いされています。直したら、いちばん下の「送信する」を押してください。'),
+    fx.note ? h('div', { class: 'fix-note' }, h('strong', {}, '担当者からのメッセージ'), h('p', {}, fx.note)) : null,
+    keys.has('docs') ? (docsPanelEl = renderDocsPanel()) : null,
+    ...SECTIONS.filter(sec => keys.has(sec.id)).map(sec => {
+      const kids = [];
+      if (sec.id === 'beneficiary') kids.push(sameSurnameBtn(), h('button', { class: 'btn outline wide', type: 'button', onclick: () => pickImage('ben_license') }, icon('card'), '受取人の免許証を撮影して入力'));
+      visibleFields(sec).forEach(f => { kids.push(renderField(f)); paint(f.k); });
+      if (sec.id === 'payment') kids.push(cardEntry());
+      if (sec.id === 'funds') kids.push(accountEntry());
+      return fixBox(sec.title, ...kids);
+    }),
+    keys.has('card_number') && !keys.has('payment') ? fixBox('お支払いカードの番号', cardEntry()) : null,
+    keys.has('account_number') && !keys.has('funds') ? fixBox('口座番号', secretNote(), accountEntry()) : null,
+    keys.has('mynumber') ? fixBox('マイナンバー', secretNote(), secretInput(SECRET_FIELDS.find(f => f.k === 'mynumber'))) : null,
+  ];
+  const agree = h('input', { type: 'checkbox', id: 'agree-fix' }); agree.checked = fixAgreed;
+  body.push(h('label', { class: 'check', for: 'agree-fix' }, agree, '内容に間違いがないことを確認しました'));
+  mainEl.replaceChildren(...body.filter(Boolean));
+  paintCardNeed();
+  const send = h('button', { class: 'btn primary wide', type: 'button', disabled: !fixAgreed }, '送信する');
+  send.addEventListener('click', submitFix);
+  agree.addEventListener('change', () => { fixAgreed = agree.checked; send.disabled = !agree.checked; });
+  navEl.replaceChildren(h('div', { class: 'nav-wrap' }, h('div', { class: 'dock-in nav-in' }, h('span'), send)));
+}
+async function submitFix() {
+  const keys = fixKeys(), shown = fixFieldKeys();
+  const focus = k => { const r = inputs[k]; if (r) { r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' }); r.input.focus(); } };
+  const bad = invalidKeys().filter(k => shown.has(k));
+  if (bad.length) { toast('⚠ ' + fieldError(bad[0])); focus(bad[0]); return; }
+  if (bgTasks.size) { toast('写真の読み取り中です。終わるまで少しお待ちください。'); return; }
+  if (keys.has('docs') && !docStatus(data).ok) { toast(!data.has_passport ? 'パスポートをお持ちか選択してください。' : '本人確認書類の写真がそろっていません（2つ必要です）。', 5000); return; }
+  if (shown.has('phone_area') && !mobileOk()) { toast('携帯番号の形式を確認してください（090・080・070から始まる11桁）。', 6000); focus('phone_area'); return; }
+  if (keys.has('card_number') && !String(secretVals.card_number || '').trim()) { toast('カード番号を入れてください。'); return; }
+  if ((keys.has('account_number') || keys.has('funds')) && accountError() && !confirm(`口座番号が7桁ではありません（いま${accountDigits().length}桁）。\nこのまま送信しますか？`)) return;
+  const done = busy('送信中…');
+  ALL_KEYS.forEach(k => dirty.add(k));
+  if (!await save(false)) { done(); toast('入力内容を保存できませんでした。通信状態を確認して、もう一度送信してください。', 6000); return; }
+  let sheetRes = null;
+  try { sheetRes = await callAI({ mode: 'sheet', secret: { ...secretVals } }); } catch (e) { sheetRes = { ok: false, error: e.message }; }
+  if (!sheetRes || !sheetRes.ok) { done(); toast('スプレッドシートへ送信できませんでした：' + ((sheetRes && sheetRes.error) || '接続エラー'), 6000); return; }
+  const ok = await save(true);
+  done();
+  if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
+  forgetSecrets();
+  viewMessage('担当者へ送信しました！', '直していただいた内容を担当者へ送りました。ご協力ありがとうございました。', true);
+}
+
 /* ---------- AI ---------- */
 function fieldSpec(keys) { return keys.map(k => FIELD_MAP[k]).filter(Boolean).map(f => ({ k: f.k, label: f.label, opts: f.opts, hint: f.hint })); }
 async function callAI(body) {
@@ -1236,6 +1379,7 @@ function applyAI(res, preset = {}, opts = {}) {
   }
   if ('fund_amount' in vals) syncFundAnnual();
   if ('birth_date' in vals) guessEmploymentStart();
+  if ('bank_name' in vals || 'bank_branch' in vals) setTimeout(() => bankLookup(), 0);
   updateCounts(); scheduleSave(300);
   if (!n) { toast(opts.emptyMsg || '読み取れる項目がありませんでした。明るい場所でもう一度お試しください。', 5000); refreshStep(); return; }
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
@@ -1248,6 +1392,7 @@ fileInput.addEventListener('change', async () => {
   const f0 = fileInput.files && fileInput.files[0];
   if (fileInput.dataset.slot) { const slot = fileInput.dataset.slot; fileInput.dataset.slot = ''; fileInput.value = ''; if (f0) await handleDocFile(slot, f0); return; }
   if (fileInput.dataset.doc === 'credit_card') { fileInput.value = ''; if (f0) await scanCard(f0); return; }
+  if (fileInput.dataset.doc === 'bank_card') { fileInput.value = ''; if (f0) await scanBank(f0); return; }
   const file = f0, doc = DOCS[fileInput.dataset.doc];
   if (!file || !doc) return;
   const done = bgStart('写真を読み取り中'), since = Date.now();
@@ -1449,6 +1594,7 @@ function renderDocsPanel() {
       h('div', { class: 'tip' }, ill(TIP_ILL.focus, 'tip-ill'), h('span', {}, 'ピントを合わせる'))),
     ...groups,
     cardDocGroup(),
+    STAFF ? null : bankDocGroup(),
     STAFF && Object.keys(docsOf(d)).length ? h('button', { class: 'btn danger sm', type: 'button', onclick: purgeDocs }, '書類の写真をすべて削除（ITA提出後に）') : null));
   return el;
 }
@@ -1490,7 +1636,8 @@ function secretCard(title) {
 // 口座番号は銀行の情報と一緒に（ツールには保存しない）
 function accountEntry() {
   const f = SECRET_FIELDS.find(x => x.k === 'account_number');
-  return secretInput({ ...f, label: '口座番号（7桁）', badge: true, check: accountError, hint: 'ツールには保存せず、送信の時にスプレッドシートへ直接送ります。「話して入力」で読み上げても入ります' });
+  const input = secretInput({ ...f, label: '口座番号（7桁）', badge: true, check: accountError, hint: 'ツールには保存せず、送信の時にスプレッドシートへ直接送ります。「話して入力」で読み上げても入ります' });
+  return STAFF ? input : h('div', { style: 'display:grid;gap:10px' }, bankScanBtn(), input);
 }
 // 同じ番号の欄が画面に2つある時も、片方に入れたらもう片方にも入るようにする
 function secretInput(f) {
@@ -1747,6 +1894,122 @@ function maybeLookupEmployer() {
 }
 function employerLookupBtn() {
   return h('button', { class: 'btn outline wide', type: 'button', onclick: () => lookupEmployer() }, '🔍 会社名から本社の住所・ホームページを調べる');
+}
+
+/* ---------- 銀行・支店：全国の金融機関の一覧（bank/banks.json）から、支店番号を自動で入れる ---------- */
+// bank/banks.json は zengin-code（https://github.com/zengin-code/source-data）の 2026-08-24 版から作った一覧
+// 形：{ "0005": ["三菱UFJ", "ミツビシユ－エフジエイ", "本店:001|丸の内:002|…"], … }
+let bankFile = null;
+const loadBanks = () => bankFile || (bankFile = fetch('bank/banks.json').then(r => r.ok ? r.json() : null).catch(() => null)
+  .then(j => { if (!j) { bankFile = null; return null; } return j; }));
+// 画面に出す名前（一覧は「三菱UFJ」「川口信金」のような略称なので、正式な呼び方にする）
+const bankDisplay = (code, name) => +code < 1000 || code === '9900' ? name + '銀行'
+  : name.replace(/信金$/, '信用金庫').replace(/信組$/, '信用組合').replace(/労金$/, '労働金庫');
+const normBank = s => String(s ?? '').normalize('NFKC').replace(/[\s　]/g, '').replace(/株式会社|\(株\)/g, '').toUpperCase()
+  .replace(/信用金庫$/, '信金').replace(/信用組合$/, '信組').replace(/労働金庫$/, '労金').replace(/銀行$/, '');
+// 「栄」→「栄支店」。「本店営業部」「〇〇出張所」などはそのまま
+const branchLabel = name => /(店|部|所)$/.test(name) ? name : name + '支店';
+const normBranch = s => String(s ?? '').normalize('NFKC').replace(/[\s　]/g, '').toUpperCase().replace(/支店$|支所$/, '');
+// 名前が1つに決まる時だけ返す。prefix＝true の時は、同じ名前がなければ「先頭が同じ名前」が1つだけの時も返す
+// ※支店は完全に同じ名前の時だけ（「栄」を「栄町」と取り違えると、違う支店番号が入ってしまうため）
+function pickOne(list, want, nameOf, prefix = false) {
+  if (!want) return null;
+  const exact = list.filter(x => nameOf(x) === want);
+  if (exact.length) return exact.length === 1 ? exact[0] : null;
+  if (!prefix || want.length < 2) return null;
+  const pre = list.filter(x => nameOf(x).startsWith(want));
+  return pre.length === 1 ? pre[0] : null;
+}
+async function findBank(name) {
+  const j = await loadBanks(); if (!j) return null;
+  const hit = pickOne(Object.entries(j), normBank(name), ([, v]) => normBank(v[0]), true);
+  if (!hit) return null;
+  const [code, [short, , br]] = hit;
+  return { code, name: bankDisplay(code, short), branches: br ? br.split('|').map(x => { const i = x.lastIndexOf(':'); return { name: x.slice(0, i), code: x.slice(i + 1) }; }) : [] };
+}
+let bankSeen = '', bankHit = null;
+// 銀行名・支店名が入ったら支店番号を引く（空か、自動で入れた番号の時だけ入れ替える。手で入れた番号は変えない）
+async function bankLookup(quiet = false) {
+  const d = D(), key = d.bank_name + '|' + d.bank_branch;
+  if (key === bankSeen) return bankHit;
+  bankSeen = key; bankHit = null;
+  if (!String(d.bank_name || '').trim()) { paintBank(); return null; }
+  const bank = await findBank(d.bank_name);
+  if (!bank || bank.code === '9900') { paintBank(); return null; }  // ゆうちょ銀行は「記号・番号」なので支店番号は引かない
+  bankDatalist(bank);
+  const br = pickOne(bank.branches, normBranch(d.bank_branch), b => normBranch(b.name));
+  bankHit = br ? { bank, br } : { bank, br: null };
+  const cur = zen2han(d.bank_branch_no).replace(/\D/g, '');
+  if (br && cur !== br.code && (!cur || aiKeys.has('bank_branch_no'))) {
+    setField('bank_branch_no', br.code, true, false); scheduleSave();
+    if (!quiet) toast(`支店番号（${br.code}）を自動で入れました。`, 4000);
+    if (FIX || step === 3) refreshStep();
+  } else if (step === 3 && bankWarning()) refreshStep();  // 確認画面に注意を出す
+  paintBank();
+  return bankHit;
+}
+// 手で入れた支店番号が、銀行の一覧と違う時の注意
+function bankWarning(d = D()) {
+  if (!bankHit || !bankHit.br || d.bank_name + '|' + d.bank_branch !== bankSeen) return '';
+  const cur = zen2han(d.bank_branch_no).replace(/\D/g, '');
+  return cur && cur !== bankHit.br.code ? `${bankHit.bank.name} ${branchLabel(bankHit.br.name)}の支店番号は「${bankHit.br.code}」です。通帳やキャッシュカードで確認してください` : '';
+}
+function paintBank() {
+  const r = inputs.bank_branch_no; if (!r) return;
+  let el = r.wrap.querySelector('.bank-hint');
+  if (!el) { el = h('small', { class: 'bank-hint', role: 'status' }); r.wrap.append(el); }
+  const w = bankWarning();
+  el.className = w ? 'err field-err bank-hint' : 'bank-hint';
+  el.replaceChildren(w ? '⚠ ' + w : bankHit && bankHit.br ? `✓ ${bankHit.bank.name} ${branchLabel(bankHit.br.name)}（一覧で確認済み）` : '');
+  if (w) el.append(h('button', { class: 'btn outline sm zip-fix', type: 'button', onclick: () => { setField('bank_branch_no', bankHit.br.code); markDirty('bank_branch_no'); paintBank(); } }, bankHit.br.code + ' にする'));
+}
+// 入力欄で、銀行名・支店名の候補を出す
+let bankListEl = null, branchListEl = null, branchListFor = '';
+async function bankDatalist(bank = null) {
+  if (!bankListEl) {
+    bankListEl = h('datalist', { id: 'bank-list' }); branchListEl = h('datalist', { id: 'branch-list' });
+    document.body.append(bankListEl, branchListEl);
+    const j = await loadBanks();
+    if (j) bankListEl.replaceChildren(...Object.entries(j).map(([c, v]) => h('option', { value: bankDisplay(c, v[0]) })));
+  }
+  if (bank && branchListFor !== bank.code && bank.code !== '9900') {
+    branchListFor = bank.code;
+    branchListEl.replaceChildren(...bank.branches.map(b => h('option', { value: b.name })));
+  }
+}
+// キャッシュカード・通帳を撮影して、銀行・支店・支店番号・口座番号を入れる（写真は保存しない。口座番号はツールに保存しない）
+let bankPending = false;
+function bankScanBtn() {
+  return h('button', { class: 'btn outline wide', type: 'button', disabled: bankPending, onclick: () => pickImage('bank_card') }, '🏦 ' + (bankPending ? '読み取り中…' : 'キャッシュカード・通帳を撮影して入力'));
+}
+const bankGot = () => !!(String(D().bank_name || '').trim() && String(D().bank_branch_no || '').trim() && accountDigits());
+function bankDocGroup() {
+  const got = bankGot();
+  return h('div', { class: 'doc-group' + (got ? ' done' : '') },
+    h('div', { class: 'doc-name' }, h('span', { class: 'doc-ill' }, icon('card2')), h('span', { class: 'doc-title' }, 'キャッシュカード・通帳（あれば）'), got ? h('span', { class: 'doc-ok' }, '✓ 読み取り済み') : null),
+    h('div', { class: 'doc-row' },
+      h('div', { class: 'doc-label' }, h('span', {}, '銀行名・支店・口座番号が書いてある面'), h('small', { class: 'muted' }, bankPending ? '読み取り中…' : got ? '読み取り済み' : 'まだです（なくても進めます）'),
+        h('small', { class: 'hint' }, '撮ると、銀行・支店番号・口座番号を読み上げなくて済みます。写真は保存しません')),
+      h('div', { class: 'doc-actions' },
+        h('button', { class: 'btn sm ' + (got ? 'ghost' : 'outline'), type: 'button', disabled: bankPending, onclick: () => pickImage('bank_card') }, bankPending ? '読み取り中' : got ? '撮り直す' : '撮影する'))));
+}
+async function scanBank(file) {
+  const endBg = bgStart('キャッシュカード・通帳を読み取り中'), since = Date.now();
+  bankPending = true; refreshDocs();
+  const done = () => { endBg(); bankPending = false; refreshDocs(); };
+  try {
+    const image = await toJpegBase64(file);
+    const res = await callAI({ mode: 'bank', image, mediaType: 'image/jpeg' });
+    done();
+    const gotAccount = !!(res && res.account);
+    if (gotAccount) { secretVals.account_number = res.account; syncSecret('account_number'); }
+    const n = Object.keys((res && res.values) || {}).length;
+    if (n) applyAI(res, {}, { since, noScroll: true });
+    bankSeen = ''; const hit = await bankLookup(true);
+    if (!n && !gotAccount) { toast('読み取れませんでした。明るい場所で、銀行名・支店・口座番号が写るように撮り直してください。', 6000); return; }
+    toast((hit && hit.br ? `${hit.bank.name} ${branchLabel(hit.br.name)}（${hit.br.code}）` : '銀行の情報') + (gotAccount ? 'と口座番号' : '') + 'を入れました。送信前の画面で確認してください。', 6000);
+    refreshStep();
+  } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
 }
 
 /* ---------- 便利機能：有効期限チェック・名字コピー・写真の撮り直し ---------- */

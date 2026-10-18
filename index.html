@@ -209,6 +209,18 @@ a.btn{text-decoration:none}
 .kbd-steps .num{width:24px;height:24px;font-size:.78rem;background:var(--surface)}
 .kbd-mic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:var(--surface);border:1px solid var(--line);vertical-align:middle}
 .kbd-mic svg{width:16px;height:16px}
+
+/* お客様の進み具合・フォロー */
+.row.ava{grid-template-areas:"ava name chip" "ava date chip" "ava prog prog"}
+.row-prog{grid-area:prog;font-size:.78rem;color:var(--ink);margin-top:2px}
+.row-prog:empty{display:none}
+.follow-tag{display:inline-block;margin-right:6px;padding:0 8px;border-radius:999px;background:#FDECEA;color:#8A2A1D;border:1px solid #F2B8AE;font-weight:700;font-size:.74rem}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .follow-tag{background:#3A1E1A;color:#F2B8AE;border-color:#6B3328}}
+.follow-btn[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink)}
+.invite-actions{display:grid;gap:8px}
+.fix-list{display:grid;gap:6px}
+.fix-list label{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;font-size:.92rem}
+.fix-list input{width:20px;height:20px;flex:none}
 </style>
 </head>
 <body>
@@ -484,33 +496,42 @@ async function viewList() {
   stopVoice(); state = null;
   const search = h('input', { type: 'search', class: 'search', placeholder: '名前で探す', 'aria-label': '名前で探す' });
   const ul = h('ul', { class: 'list' }, h('li', { class: 'muted pad' }, '読み込み中…'));
-  let hello = helloCard(null);
+  let hello = helloCard(null), onlyFollow = false;
+  const followBtn = h('button', { class: 'btn outline wide follow-btn', type: 'button', hidden: true, 'aria-pressed': 'false' });
+  followBtn.addEventListener('click', () => { onlyFollow = !onlyFollow; followBtn.setAttribute('aria-pressed', String(onlyFollow)); draw(); });
   app.replaceChildren(
     h('header', { class: 'topbar' },
       h('h1', { class: 'tb-title' }, '申込み一覧'),
       h('button', { class: 'btn ghost sm', onclick: async () => { await sb.auth.signOut(); viewLogin(); } }, 'ログアウト')),
     h('main', { class: 'wrap' },
       hello,
+      followBtn,
       h('button', { class: 'btn primary wide btn-two', onclick: newCustomer },
         h('span', { class: 'btn-main' }, listIll(LIST_ILL.add, 'btn-ill'), '新しいお客様を追加'),
         h('span', { class: 'btn-sub' }, '個別の面談で、1人ずつ申込みを作る')),
       entryCard(), h('hr', { class: 'entry-sep' }), search, ul));
-  const { data, error } = await sb.from(CONFIG.TABLE).select('id,status,data,updated_at').order('updated_at', { ascending: false }).limit(300);
+  const [{ data, error }] = await Promise.all([
+    sb.from(CONFIG.TABLE).select('id,status,data,updated_at').order('updated_at', { ascending: false }).limit(300),
+    loadInvites()]);
   if (error) { ul.replaceChildren(h('li', { class: 'err pad' }, '一覧を読み込めませんでした：' + error.message)); return; }
   const { data: isStaff } = await sb.rpc('is_onboarding_staff');
   if (isStaff !== true) { ul.replaceChildren(h('li', { class: 'err pad' }, 'このアカウントには使う権限がありません。管理者に追加を頼んでください。')); return; }
   const fresh = helloCard(data); hello.replaceWith(fresh); hello = fresh;
-  const draw = () => {
+  const follows = data.filter(r => needsFollow(r, inviteMap.get(r.id)));
+  followBtn.hidden = !follows.length;
+  followBtn.textContent = '📣 フォローが必要なお客様：' + follows.length + '人（タップで絞り込み）';
+  function draw() {
     const q = search.value.trim().toLowerCase();
-    const rows = data.filter(r => !q || nameOf(r.data).toLowerCase().includes(q));
+    const rows = (onlyFollow ? follows : data).filter(r => !q || nameOf(r.data).toLowerCase().includes(q));
     ul.replaceChildren();
     if (!rows.length) { ul.append(data.length ? h('li', { class: 'muted pad' }, '該当するお客様がいません。') : h('li', { class: 'empty' }, listIll(LIST_ILL.empty, 'empty-ill'), h('p', { class: 'muted', style: 'margin:0' }, 'まだ申込みがありません。', h('br'), '「新しいお客様を追加」から始めましょう。'))); return; }
     for (const r of rows) ul.append(h('li', {}, h('button', { class: 'row ava', onclick: () => viewCustomer(r) },
       listIll(avatarSvg(r.status), 'row-ava'),
       h('span', { class: 'row-name' }, nameOf(r.data)),
       h('span', { class: 'chip ' + statusClass(r.status) }, r.status),
-      h('span', { class: 'row-date' }, fmtDate(r.updated_at) + (r.data && r.data._entry === 'self' ? '・自分で申込み' : '') + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '') + (r.data && r.data._gform ? (r.data._gform.status === 'sent' ? '・シート送信済み' : '・シート未送信') : '')))));
-  };
+      h('span', { class: 'row-date' }, fmtDate(r.updated_at) + (r.data && r.data._entry === 'self' ? '・自分で申込み' : '') + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '') + (r.data && r.data._gform ? (r.data._gform.status === 'sent' ? '・シート送信済み' : '・シート未送信') : '')),
+      rowProgress(r))));
+  }
   search.addEventListener('input', draw);
   draw();
 }
@@ -532,7 +553,7 @@ function entryCard() {
     link = r; draw();
   };
   const draw = () => {
-    const url = new URL('customer.html', location.href); url.search = '?fp=' + link.code;
+    const url = new URL('customer.html', location.href); url.search = '?fp=' + link.code + '&openExternalBrowser=1';
     const msg = 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます。\n' + url;
     const nameIn = h('input', { type: 'text', value: link.staff_name || '', placeholder: '例：赤田', 'aria-label': '担当FP' });
     const copy = async (text, label) => {
@@ -591,6 +612,9 @@ function viewCustomer(row) {
     main, dock);
   updateCounts();
   window.scrollTo(0, 0);
+  // お客様の進み具合・リンクの期限は、開くたびに最新にする
+  const id = state.id;
+  loadInvites().then(() => { if (state && state.id === id) redrawInviteCard(); });
 }
 function renderSection(sec, idx) {
   const count = h('span', { class: 'count' });
@@ -688,6 +712,128 @@ function updateCounts() {
   }
 }
 
+/* ---------- お客様の進み具合（お客様用リンクから入力している人） ---------- */
+// お客様に入れてもらう主な項目（受取人は「指定しない」でもよいので1つ、書類2点もまとめて1つとして数える）
+const PROG_KEYS = ['name_ja', 'name_kana', 'gender', 'birth_date', 'id_number', 'id_issue_date', 'id_expiry', 'email', 'phone_area', 'address_ja', 'postal_code',
+  'employer_type', 'employer_name', 'employer_address', 'industry', 'position', 'job_detail', 'employment_start', 'income_amount',
+  'card_kind', 'card_brand', 'card_company', 'bank_name', 'bank_branch', 'bank_branch_no', 'bank_open_date', 'fund_method', 'fund_amount', 'savings_amount', 'purpose'];
+// お客様の画面の番号（0＝最初の画面、1〜4＝書類を撮る・話して入力・確認・送信）
+const SEEN_STEPS = ['最初の画面', '書類の撮影', '話して入力', '内容の確認', '送信の画面'];
+function progressOf(d = {}) {
+  const filled = PROG_KEYS.filter(k => String(d[k] ?? '').trim()).length;
+  const ben = d.ben_none === 'はい' || String(d.ben_name_ja || '').trim() ? 1 : 0;
+  const docs = docStatus(d).ok ? 1 : 0;
+  const total = PROG_KEYS.length + 2, done = filled + ben + docs;
+  return { pct: Math.round(done / total * 100), left: total - done, docsOk: !!docs };
+}
+const daysLeft = iso => Math.max(0, Math.ceil((new Date(iso) - Date.now()) / 86400000));
+const fmtDay = iso => { const t = new Date(iso); return (t.getMonth() + 1) + '月' + t.getDate() + '日'; };
+const fmtAt = iso => fmtDate(iso).replace(' 更新', '');
+// リンクの状態：none（まだ作っていない）・active（入力待ち）・expired（期限切れ）・submitted（送信済み）
+function inviteState(inv) {
+  if (!inv) return 'none';
+  if (inv.submitted_at) return 'submitted';
+  return new Date(inv.expires_at) > new Date() ? 'active' : 'expired';
+}
+// 声をかけた方がいいお客様：未送信のリンクがあって、期限切れ・期限が近い・2日以上止まっている・まだ開いていない
+const STALL_MS = 2 * 86400000;
+function needsFollow(r, inv) {
+  const st = inviteState(inv);
+  if (st === 'expired') return 'リンクの期限切れ';
+  if (st !== 'active') return '';
+  if (daysLeft(inv.expires_at) <= 2) return '期限まであと' + daysLeft(inv.expires_at) + '日';
+  const seen = r.data && r.data._seen;
+  if (Date.now() - new Date(seen ? seen.at : inv.created_at) > STALL_MS) return seen ? '2日以上止まっています' : 'まだ開かれていません';
+  return '';
+}
+function progressText(r, inv) {
+  const st = inviteState(inv);
+  if (st === 'none') return '';
+  if (st === 'submitted') return (inv.fix ? '直してもらった内容が届きました（' : 'お客様が送信しました（') + fmtAt(inv.submitted_at) + '）';
+  const d = r.data || {}, seen = d._seen, p = progressOf(d);
+  return [inv.fix ? '修正をお願い中' : '',
+    seen ? `入力 ${p.pct}%（あと${p.left}項目）・${SEEN_STEPS[seen.step] || ''}・最後に開いた ${fmtAt(seen.at)}` : 'まだ開かれていません',
+    st === 'expired' ? 'リンクの期限切れ' : 'リンクの期限 ' + fmtDay(inv.expires_at) + '（あと' + daysLeft(inv.expires_at) + '日）'].filter(Boolean).join('・');
+}
+function rowProgress(r) {
+  const inv = inviteMap.get(r.id), follow = needsFollow(r, inv), text = progressText(r, inv);
+  return h('span', { class: 'row-prog' }, follow ? h('span', { class: 'follow-tag' }, '📣 ' + follow) : null, text);
+}
+// 自分のお客様の、いちばん新しいお客様用リンク（customer_id → リンク）
+let inviteMap = new Map();
+async function loadInvites() {
+  const { data, error } = await sb.rpc('onboarding_my_invites');
+  if (!error && Array.isArray(data)) inviteMap = new Map(data.map(x => [x.customer_id, x]));
+  return inviteMap;
+}
+// LINEで押した時も、いつものブラウザ（Safari・Chrome）で開くように openExternalBrowser=1 を付ける
+const inviteUrl = token => { const u = new URL('customer.html', location.href); u.search = '?t=' + token + '&openExternalBrowser=1'; return u.toString(); };
+function reminderText(d, inv) {
+  const p = progressOf(d), name = String(d.invite_for || d.name_ja || '').trim();
+  return [name ? '【' + name + ' 様】お申込み入力のお願い' : 'お申込み入力のお願い', '',
+    d._seen
+      ? 'お申込み情報の入力が途中になっています（あと' + p.left + '項目' + (p.docsOk ? '' : '・書類の撮影がまだです') + '）。入力した内容は保存されているので、続きから進められます。'
+      : '先日お送りした、お申込み情報の入力リンクをあらためてお送りします。スマホで書類を撮影して、10分ほどで入力できます。',
+    'リンクの期限は' + fmtDay(inv.expires_at) + '（あと' + daysLeft(inv.expires_at) + '日）です。', '', inviteUrl(inv.token)].join('\n');
+}
+async function copyText(text, label = 'コピーしました') {
+  try { await navigator.clipboard.writeText(text); }
+  catch { const t = h('textarea'); t.value = text; document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
+  toast(label);
+}
+async function extendInvite() {
+  const done = busy('期限を延ばしています…');
+  const { data: exp, error } = await sb.rpc('onboarding_invite_extend', { p_customer: state.id, p_days: 7 });
+  done();
+  if (error || !exp) { toast('延ばせませんでした' + (error ? '：' + error.message : '')); return; }
+  await loadInvites(); redrawInviteCard();
+  toast('リンクの期限を' + fmtDay(exp) + 'まで延ばしました（リンクは同じです）');
+}
+function redrawInviteCard() { if (inviteCardEl && inviteCardEl.isConnected) inviteCardEl.replaceWith(renderInviteCard()); }
+
+/* ---------- 「この項目だけ直してください」：送信後に、選んだ項目だけを開くリンクを送る ---------- */
+// お客様の画面の区切り（customer.html の SECTIONS の id）・書類・番号。サーバーの FIX_LABELS と同じにする
+const FIX_ITEMS = [
+  ['docs', '本人確認書類の写真（撮り直し）'], ['me', 'お名前・生年月日'], ['idcard', '本人確認書類の内容（番号・日付）'],
+  ['contact', 'ご連絡先（メール・電話）'], ['address', 'ご住所'], ['work', 'お仕事・収入'], ['beneficiary', '受取人'],
+  ['tax', '税金について'], ['contract', 'ご契約内容'], ['payment', 'お支払いカード（会社・種類）'], ['funds', '資金について（銀行・支店）'],
+  ['card_number', 'カード番号（もう一度入力）'], ['account_number', '口座番号（もう一度入力）'], ['mynumber', 'マイナンバー（もう一度入力）'],
+];
+const fixLabel = k => (FIX_ITEMS.find(x => x[0] === k) || [k, k])[1].replace(/（.*$/, '');
+function openFixSheet() {
+  const checks = FIX_ITEMS.map(([k, label]) => { const c = h('input', { type: 'checkbox', value: k }); return { c, el: h('label', {}, c, label) }; });
+  const note = h('textarea', { class: 'transcript', rows: '3', maxlength: '500', placeholder: '例：免許証の裏面がぼやけていたので、撮り直しをお願いします。' });
+  const go = h('button', { class: 'btn primary wide', type: 'button' }, '直してもらうリンクを作る');
+  const close = () => back.remove();
+  go.addEventListener('click', async () => {
+    const keys = checks.filter(x => x.c.checked).map(x => x.c.value);
+    if (!keys.length) { toast('直してほしい項目を選んでください'); return; }
+    const inv = inviteMap.get(state.id);
+    if (inviteState(inv) === 'active' && !inv.fix && !confirm('お客様はまだ入力の途中です。直してもらうリンクを作ると、今のリンクは使えなくなります。作りますか？')) return;
+    await flushSave();
+    const done = busy('リンクを作成中…');
+    const { data: token, error } = await sb.rpc('create_onboarding_invite', { p_customer: state.id, p_days: 7, p_fix_keys: keys, p_fix_note: note.value.trim() || null });
+    done();
+    if (error || !token) { toast('リンクを作れませんでした：' + (error ? error.message : '')); return; }
+    close();
+    await loadInvites(); redrawInviteCard();
+    const forName = String(state.data.invite_for || state.data.name_ja || '').trim();
+    const msg = (forName ? '【' + forName + ' 様】' : '') + 'お申込み内容の確認のお願い\n\n'
+      + 'お申込みありがとうございます。次の項目について、確認・修正をお願いします：' + keys.map(fixLabel).join('、') + '\n'
+      + (note.value.trim() ? '（' + note.value.trim() + '）\n' : '')
+      + 'こちらのリンクから、その項目だけ直せます（7日間有効）。\n' + inviteUrl(token);
+    showLinkSheet(msg, inviteUrl(token), (forName ? forName + ' 様に' : '') + '直してもらうリンクができました');
+  });
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '直してもらう項目' },
+    h('div', { class: 'sheet-top' }, h('h2', {}, '直してもらう項目を選ぶ'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'お客様には、選んだ項目だけが表示されます。直して送信すると、スプレッドシートに「ツール（修正）」の行が追加されます。'),
+    h('div', { class: 'fix-list' }, ...checks.map(x => x.el)),
+    h('label', { class: 'lbl' }, 'お客様へのメッセージ（任意）', note),
+    go));
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+  document.body.append(back);
+}
+
 /* ---------- お客様用リンク ---------- */
 function renderInviteCard() {
   const got = state.data._customer_updated_at;
@@ -698,13 +844,27 @@ function renderInviteCard() {
   const g = state.data._gform;
   const gInfo = g ? h('p', { class: g.status === 'sent' ? 'note' : 'warn' },
       g.status === 'sent' ? 'スプレッドシート：送信済み（' + fmtDate(g.at).replace(' 更新', '') + '）' : 'スプレッドシート：' + g.status) : null;
-  const gBtn = null;
+  const inv = inviteMap.get(state.id), ist = inviteState(inv), row = { data: state.data };
+  const follow = needsFollow(row, inv);
+  const fd = state.data._fix_done;
+  const remind = ist === 'active' ? reminderText(state.data, inv) : '';
   inviteCardEl = h('section', { class: 'sec invite' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('div', {}, h('strong', {}, 'お客様に入力してもらう'),
       h('p', { class: 'muted small', style: 'margin:2px 0 0' }, 'お客様専用のリンクを作って、LINEやメールで送れます。ログイン不要・7日間有効・送信後は使えなくなります。')),
     info,
-    h('button', { class: 'btn outline wide', type: 'button', onclick: makeInvite }, 'お客様用リンクを作る'),
-    gInfo, gBtn));
+    ist !== 'none' ? h('p', { class: 'note' }, '📊 ' + progressText(row, inv)) : null,
+    fd ? h('p', { class: 'note' }, '✏️ お客様が直した内容を送信しました（' + fmtAt(fd.at) + '）：' + (fd.keys || []).map(fixLabel).join('、')) : null,
+    follow ? h('p', { class: 'warn' }, '📣 フォローが必要です：' + follow) : null,
+    ist === 'active' ? h('div', { class: 'invite-actions' },
+      h('button', { class: 'btn primary wide', type: 'button', onclick: () => copyText(remind, 'リマインド文をコピーしました') }, 'リマインド文をコピー'),
+      h('a', { class: 'btn outline wide', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(remind), target: '_blank', rel: 'noopener' }, 'LINEでリマインドを送る'),
+      h('div', { class: 'doc-actions' },
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => copyText(inviteUrl(inv.token), 'リンクをコピーしました') }, '今のリンクをコピー'),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: extendInvite }, '期限を7日延ばす'))) : null,
+    ist === 'expired' ? h('button', { class: 'btn primary wide', type: 'button', onclick: extendInvite }, 'リンクの期限を7日延ばす（リンクは同じ）') : null,
+    h('button', { class: 'btn outline wide', type: 'button', onclick: makeInvite }, ist === 'none' ? 'お客様用リンクを作る' : '新しいリンクを作る（今のリンクは使えなくなります）'),
+    ist === 'submitted' || got || state.status !== '入力中' ? h('button', { class: 'btn outline wide', type: 'button', onclick: openFixSheet }, '✏️ この項目だけ直してもらう') : null,
+    gInfo));
   return inviteCardEl;
 }
 let inviteCardEl = null;
@@ -736,12 +896,15 @@ async function makeInvite() {
   const { data: token, error } = await sb.rpc('create_onboarding_invite', { p_customer: state.id, p_days: 7 });
   done();
   if (error || !token) { toast('リンクを作れませんでした：' + (error ? error.message : '')); return; }
-  const url = new URL('customer.html', location.href); url.search = '?t=' + token;
-  const link = url.toString();
-  const isFile = location.protocol === 'file:';
+  await loadInvites(); redrawInviteCard();
+  const link = inviteUrl(token);
   const forName = String(state.data.invite_for || '').trim();
   // LINEのプレビュー枠の題名は変えられないので、文章の先頭で「誰用のリンクか」を一目で分かるようにする
-  const msg = (forName ? '【' + forName + ' 様用】お申込み情報のご入力リンクです\n\n' : '') + 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます（7日間有効）。\n' + link;
+  const msg = (forName ? '【' + forName + ' 様用】お申込み情報のご入力リンクです\n\n' : '') + 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます（7日間有効・10分ほど）。\n' + link;
+  showLinkSheet(msg, link, (forName ? forName + ' 様用の' : 'お客様用') + 'リンクができました', forName);
+}
+function showLinkSheet(msg, link, title, forName = '') {
+  const isFile = location.protocol === 'file:';
   const linkBox = h('textarea', { class: 'transcript', rows: '6', readonly: true }); linkBox.value = msg;
   const copy = h('button', { class: 'btn primary wide', type: 'button' }, forName ? '案内文ごとコピー（' + forName + ' 様用と入ります）' : '案内文ごとコピー');
   copy.addEventListener('click', async () => {
@@ -750,7 +913,7 @@ async function makeInvite() {
   });
   const close = () => back.remove();
   const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'お客様用リンク' },
-    h('div', { class: 'sheet-top' }, h('h2', {}, (forName ? forName + ' 様用の' : 'お客様用') + 'リンクができました'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
+    h('div', { class: 'sheet-top' }, h('h2', {}, title), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
     isFile ? h('p', { class: 'note' }, '今はパソコンのファイルを直接開いているので、このリンクはこのパソコンでしか開けません（テスト用）。お客様に送るには、ツールをネット上に置く必要があります。') : null,
     linkBox, copy,
     h('a', { class: 'btn outline wide', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(msg), target: '_blank', rel: 'noopener' }, 'LINEで送る'),
