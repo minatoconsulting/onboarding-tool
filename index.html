@@ -577,7 +577,7 @@ function viewCustomer(row) {
     renderInviteCard(),
     (docsPanelEl = renderDocsPanel()),
     ...SECTIONS.slice(1).map((s, i) => renderSection(s, i + 1)),
-    secretCard('スプレッドシートに送る（番号はここで入力）'),
+    secretCard('🔒 マイナンバー・クレジットカード番号（送信の直前に入力）'),
     h('button', { class: 'btn primary wide', type: 'button', onclick: sendSheet }, 'スプレッドシートに送る'),
     h('div', { class: 'danger-zone' }, h('button', { class: 'btn danger', onclick: deleteCustomer }, 'このお客様を削除')));
   const dock = h('nav', { class: 'dock', 'aria-label': '入力の方法' }, h('div', { class: 'dock-in' },
@@ -1060,7 +1060,7 @@ async function purgeDocs() {
 /* ---------- 番号（ツールには保存しない：送信時にスプレッドシートへ直接） ---------- */
 const SECRET_FIELDS = [
   { k: 'mynumber', label: 'マイナンバー（12桁）', type: 'tel' },
-  { k: 'card_number', label: 'カード番号', type: 'tel' },
+  { k: 'card_number', label: 'クレジットカード番号', type: 'tel' },
   { k: 'card_expiry', label: 'カード有効期限（月/年）', hint: '例：08/29' },
   { k: 'account_number', label: '口座番号', type: 'tel' },
 ];
@@ -1074,7 +1074,8 @@ let secretSeq = 0;
 function secretCard(title) {
   return h('section', { class: 'sec secret' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, title),
-    h('p', { class: 'small muted', style: 'margin:0' }, 'ここに入れた番号はツールには保存されず、送信の時にスプレッドシートへ直接送られます。画面を閉じると消えるので、送信の直前に入力してください。'),
+    h('p', { class: 'small muted', style: 'margin:0' }, '大切な番号なので、このツールには保存しません。「送信」を押したときに、スプレッドシートへ直接届きます。'),
+    h('p', { class: 'small muted', style: 'margin:0' }, '画面を閉じると消えるので、送る直前に入力してください。'),
     ...SECRET_FIELDS.filter(f => f.k !== 'account_number').map(secretInput)));
 }
 // 口座番号は銀行の情報と一緒に（ツールには保存しない）
