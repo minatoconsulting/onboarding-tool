@@ -99,6 +99,11 @@ a.btn.ghost{color:var(--muted)}
 .hello-stats span{padding:2px 10px;border-radius:999px;background:var(--surface);font-size:.78rem;font-weight:700;color:var(--muted)}
 .hello-stats b{color:var(--ink);font-size:.9rem;margin-left:2px}
 .btn-ill{width:22px;height:22px}
+.btn-two{flex-direction:column;gap:2px;min-height:62px;padding:10px 16px}
+.btn-two .btn-main{display:inline-flex;align-items:center;gap:6px}
+.btn-sub{font-size:.76rem;font-weight:500;line-height:1.4;opacity:.85}
+.entry-card>summary>span{text-align:center}
+.entry-sub{display:block;font-size:.76rem;font-weight:500;color:var(--muted);line-height:1.4}
 .entry-ill{flex:0 0 auto;width:26px;height:26px}
 .row.ava{grid-template-columns:auto 1fr auto;grid-template-areas:"ava name chip" "ava date chip"}
 .row-ava{grid-area:ava;width:40px;height:40px;margin-right:2px}
@@ -486,7 +491,9 @@ async function viewList() {
       h('button', { class: 'btn ghost sm', onclick: async () => { await sb.auth.signOut(); viewLogin(); } }, 'ログアウト')),
     h('main', { class: 'wrap' },
       hello,
-      h('button', { class: 'btn primary wide', onclick: newCustomer }, listIll(LIST_ILL.add, 'btn-ill'), '新しいお客様を追加'),
+      h('button', { class: 'btn primary wide btn-two', onclick: newCustomer },
+        h('span', { class: 'btn-main' }, listIll(LIST_ILL.add, 'btn-ill'), '新しいお客様を追加'),
+        h('span', { class: 'btn-sub' }, '個別の面談で、1人ずつ申込みを作る')),
       entryCard(), h('hr', { class: 'entry-sep' }), search, ul));
   const { data, error } = await sb.from(CONFIG.TABLE).select('id,status,data,updated_at').order('updated_at', { ascending: false }).limit(300);
   if (error) { ul.replaceChildren(h('li', { class: 'err pad' }, '一覧を読み込めませんでした：' + error.message)); return; }
@@ -512,7 +519,7 @@ async function viewList() {
 function entryCard() {
   const body = h('div', { class: 'sec-body', style: 'padding-top:12px' }, h('p', { class: 'muted small', style: 'margin:0' }, '読み込み中…'));
   const det = h('details', { class: 'sec invite entry-card' },
-    h('summary', { class: 'sec-body', style: 'padding:14px 16px;cursor:pointer' }, listIll(LIST_ILL.entry, 'entry-ill'), h('strong', { style: 'vertical-align:middle' }, 'お客様が自分で申し込むリンク')), body);
+    h('summary', { class: 'sec-body', style: 'padding:14px 16px;cursor:pointer' }, listIll(LIST_ILL.entry, 'entry-ill'), h('span', {}, h('strong', {}, 'お客様が自分で申し込むリンク'), h('span', { class: 'entry-sub' }, 'セミナーなどで、大勢にまとめて配る'))), body);
   let link = null;
   const load = async (staffName = null) => {
     const { data: r, error } = await sb.rpc('onboarding_my_entry_link', { p_staff_name: staffName });
