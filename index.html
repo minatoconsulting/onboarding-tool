@@ -123,6 +123,15 @@ a.btn.ghost{color:var(--muted)}
 .login p,.setup p{margin:0}
 .lbl{display:grid;gap:4px;font-size:.88rem;font-weight:500}
 .lbl input{min-height:48px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+.auth-links{display:grid;gap:6px;justify-items:center;margin-top:6px}
+.linkbtn{background:none;border:0;color:var(--seal);font:inherit;font-size:.92rem;text-decoration:underline;padding:6px;cursor:pointer}
+.code-in{letter-spacing:.35em;text-align:center;font-size:1.3rem !important;font-variant-numeric:tabular-nums}
+.ok-msg{color:var(--seal);margin:0}
+.join-box{display:grid;gap:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.mem-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.mem-row:last-child{border-bottom:0}
+.mem-main{flex:1;min-width:0;display:grid;gap:2px}
+.mem-main strong{overflow-wrap:anywhere;font-size:.95rem}
 
 .backdrop{position:fixed;inset:0;z-index:50;background:rgba(8,16,20,.5);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:720px;background:var(--surface);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:12px;max-height:92vh;overflow:auto}
@@ -367,7 +376,7 @@ const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
 const DOCS = {
   license: { label: '運転免許証（申込者）', set: { id_type: '運転免許証' },
     keys: ['name_ja','first_romaji','last_romaji','birth_date','id_number','id_issue_date','id_expiry','address_ja','address_kana','postal_code','prefecture','city','addr1','addr2'] },
-  mynumber: { label: 'マイナンバーカードの表面（申込者）', set: {},
+  mynumber: { label: 'マイナンバーカードの表面（申込者・追記欄も含む）', set: {},
     keys: ['name_ja','first_romaji','last_romaji','gender','birth_date','address_ja','address_kana','postal_code','prefecture','city','addr1','addr2'] },
   ben_license: { label: '運転免許証（受益者）', set: { ben_id_type: '運転免許証' },
     keys: ['ben_name_ja','ben_first_romaji','ben_last_romaji','ben_birth_date','ben_id_number','ben_id_issue_date','ben_id_expiry'] },
@@ -446,9 +455,18 @@ function viewSetup() {
     h('p', { class: 'muted small' }, 'どちらも Supabase の Project Settings → API で確認できます。')));
 }
 
-/* ---------- ログイン ---------- */
-function viewLogin() {
+/* ---------- ログイン・新規登録・パスワード再設定 ---------- */
+// 新規登録：メールアドレス・パスワード・合言葉を入れると、すぐ使えるようになる（メール確認なし。登録窓口 onboarding-signup で合言葉を確かめる）
+// パスワードを忘れた時：管理者が「メンバー管理」で仮パスワードを発行する → 仮パスワードでログインすると、新しいパスワードを決める画面が出る
+const SIGNUP_FN = 'onboarding-signup';
+const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+function authPage(title, sub, ...kids) {
   stopVoice();
+  app.replaceChildren(h('main', { class: 'login' }, h('h1', {}, title), sub ? h('p', { class: 'muted' }, sub) : null, ...kids));
+  const first = app.querySelector('input'); if (first) setTimeout(() => first.focus(), 50);
+}
+const pwInput = (auto = 'new-password') => h('input', { type: 'password', autocomplete: auto, minlength: 8 });
+function viewLogin(msg = '') {
   const email = h('input', { type: 'email', autocomplete: 'username', inputmode: 'email' });
   const pw = h('input', { type: 'password', autocomplete: 'current-password' });
   const err = h('p', { class: 'err', role: 'alert' });
@@ -460,12 +478,174 @@ function viewLogin() {
     viewList();
   }}, 'ログイン');
   pw.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
-  app.replaceChildren(h('main', { class: 'login' },
-    h('h1', {}, '申込入力'),
-    h('p', { class: 'muted' }, '免許証の撮影と音声で、ITAの申込情報をまとめます。'),
+  authPage('申込入力', '免許証の撮影と音声で、ITAの申込情報をまとめます。',
+    msg ? h('p', { class: 'ok-msg', role: 'status' }, msg) : null,
     h('label', { class: 'lbl' }, 'メールアドレス', email),
     h('label', { class: 'lbl' }, 'パスワード', pw),
-    btn, err));
+    btn, err,
+    h('div', { class: 'auth-links' },
+      h('button', { class: 'linkbtn', type: 'button', onclick: () => viewSignup() }, 'はじめての方：新規登録はこちら'),
+      h('button', { class: 'linkbtn', type: 'button', onclick: () => viewForgot() }, 'パスワードを忘れた方はこちら')));
+}
+const SIGNUP_MSG = {
+  bad: '合言葉が違います。管理者に確認して、もう一度入れてください。',
+  locked: '合言葉を何度も間違えたため、1時間ほど登録できません。時間をおいてお試しください。',
+  closed: '現在、新規登録の受付を停止しています。管理者にご連絡ください。',
+  bad_email: 'メールアドレスを正しく入れてください。',
+  bad_password: 'パスワードは8文字以上にしてください（簡単すぎるものは使えません）。',
+  error: '登録できませんでした。電波の良い場所で、もう一度お試しください。',
+};
+function viewSignup() {
+  const email = h('input', { type: 'email', autocomplete: 'username', inputmode: 'email' });
+  const pw = pwInput(), pw2 = pwInput();
+  const code = h('input', { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary wide', type: 'button', onclick: async () => {
+    err.textContent = '';
+    const e = email.value.trim().toLowerCase();
+    if (!emailOk(e)) { err.textContent = SIGNUP_MSG.bad_email; return; }
+    if (pw.value.length < 8) { err.textContent = 'パスワードは8文字以上にしてください。'; return; }
+    if (pw.value !== pw2.value) { err.textContent = 'パスワードが2回とも同じになっているか確認してください。'; return; }
+    if (!code.value.trim()) { err.textContent = '合言葉を入れてください（分からない時は管理者に聞いてください）。'; return; }
+    btn.disabled = true;
+    const done = busy('登録中…');
+    try {
+      const { data, error } = await sb.functions.invoke(SIGNUP_FN, { body: { mode: 'signup', email: e, password: pw.value, code: code.value.trim() } });
+      const r = error ? 'error' : String((data && data.result) || 'error');
+      if (r === 'exists') {
+        err.replaceChildren('このメールアドレスは登録済みです。ログインしてください（「すごろく」と同じアカウントの方も、そのパスワードでログインできます）。',
+          h('button', { class: 'linkbtn', type: 'button', onclick: () => viewLogin('ログインしたあと、合言葉を入れると使えるようになります。') }, 'ログイン画面へ'));
+        return;
+      }
+      if (r !== 'ok') { err.textContent = SIGNUP_MSG[r] || SIGNUP_MSG.error; return; }
+      const { error: e2 } = await sb.auth.signInWithPassword({ email: e, password: pw.value });
+      if (e2) { viewLogin('登録できました。メールアドレスとパスワードでログインしてください。'); return; }
+      toast('登録できました。ようこそ！', 4000);
+      viewList();
+    } finally { done(); btn.disabled = false; }
+  }}, '登録する');
+  authPage('新規登録', 'ビジネスメンバーの方の登録です。管理者から聞いた合言葉が必要です。',
+    h('label', { class: 'lbl' }, 'メールアドレス', email),
+    h('label', { class: 'lbl' }, 'パスワード（8文字以上）', pw),
+    h('label', { class: 'lbl' }, 'パスワード（確認のため、もう一度）', pw2),
+    h('label', { class: 'lbl' }, '合言葉', code, h('small', { class: 'muted' }, '管理者から聞いた合言葉を入れてください')),
+    btn, err,
+    h('div', { class: 'auth-links' }, h('button', { class: 'linkbtn', type: 'button', onclick: () => viewLogin() }, '登録済みの方：ログインに戻る')));
+}
+function viewForgot() {
+  authPage('パスワードを忘れた時', null,
+    h('section', { class: 'join-box' },
+      h('strong', {}, '管理者に「仮パスワード」を発行してもらってください'),
+      h('ol', { class: 'small', style: 'margin:0;padding-left:1.2em;display:grid;gap:6px' },
+        h('li', {}, '管理者に、登録したメールアドレスを伝えて「パスワードを忘れた」と連絡する'),
+        h('li', {}, '管理者から届いた仮パスワードでログインする'),
+        h('li', {}, '新しいパスワードを決める画面が出るので、自分のパスワードに変える'))),
+    h('button', { class: 'btn primary wide', type: 'button', onclick: () => viewLogin() }, 'ログインに戻る'));
+}
+// 仮パスワードでログインした時：自分のパスワードに変えてもらう
+function viewChangePw() {
+  const pw = pwInput(), pw2 = pwInput();
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary wide', type: 'button', onclick: async () => {
+    err.textContent = '';
+    if (pw.value.length < 8) { err.textContent = 'パスワードは8文字以上にしてください。'; return; }
+    if (pw.value !== pw2.value) { err.textContent = 'パスワードが2回とも同じになっているか確認してください。'; return; }
+    btn.disabled = true;
+    const { error } = await sb.auth.updateUser({ password: pw.value });
+    btn.disabled = false;
+    if (error && !/same.*password|different from the old/i.test(error.message || '')) { err.textContent = 'パスワードを変えられませんでした。8文字以上で、英字と数字を混ぜてください。'; return; }
+    await sb.rpc('onboarding_pw_changed');
+    toast('新しいパスワードにしました。', 4000);
+    viewList();
+  }}, 'パスワードを変更する');
+  authPage('新しいパスワードを決める', '仮パスワードでログインしました。次からは、ここで決めたパスワードでログインします。',
+    h('label', { class: 'lbl' }, '新しいパスワード（8文字以上）', pw),
+    h('label', { class: 'lbl' }, '新しいパスワード（確認のため、もう一度）', pw2),
+    btn, err);
+}
+// 合言葉を確かめて、このアカウントを使えるようにする
+async function joinWithCode(code) {
+  const { data, error } = await sb.rpc('onboarding_join', { p_code: code });
+  return error ? 'error' : String(data);
+}
+const JOIN_MSG = {
+  bad: '合言葉が違います。管理者に確認して、もう一度入れてください。',
+  locked: '合言葉を何度も間違えたため、1時間ほど入力できません。時間をおいてお試しください。',
+  closed: '現在、新規登録の受付を停止しています。管理者にご連絡ください。',
+  error: '確認できませんでした。電波の良い場所で、もう一度お試しください。',
+  login: 'ログインし直してください。',
+};
+// ログインはできたが、まだ使う許可がない時（合言葉を間違えた・ほかのアプリで作ったアカウントなど）
+function viewJoin(reason = '') {
+  const code = h('input', { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+  const err = h('p', { class: 'err', role: 'alert' }, JOIN_MSG[reason] || '');
+  const btn = h('button', { class: 'btn primary wide', type: 'button', onclick: async () => {
+    err.textContent = '';
+    if (!code.value.trim()) { err.textContent = '合言葉を入れてください。'; return; }
+    btn.disabled = true;
+    const r = await joinWithCode(code.value.trim());
+    btn.disabled = false;
+    if (r === 'ok') { toast('使えるようになりました。ようこそ！', 4000); viewList(); return; }
+    if (r === 'login') { await sb.auth.signOut(); viewLogin(); return; }
+    err.textContent = JOIN_MSG[r] || JOIN_MSG.error;
+  }}, '使えるようにする');
+  code.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+  authPage('合言葉の入力', 'このアカウントで使うには、管理者から聞いた合言葉が必要です。',
+    h('label', { class: 'lbl' }, '合言葉', code), btn, err,
+    h('div', { class: 'auth-links' }, h('button', { class: 'linkbtn', type: 'button', onclick: async () => { await sb.auth.signOut(); viewLogin(); } }, 'ログアウト')));
+}
+
+/* ---------- 管理者：合言葉の変更・メンバーの管理 ---------- */
+async function viewAdmin() {
+  stopVoice();
+  const body = h('main', { class: 'wrap' }, h('p', { class: 'muted' }, '読み込み中…'));
+  app.replaceChildren(h('header', { class: 'topbar' },
+    h('button', { class: 'btn ghost sm', type: 'button', onclick: () => viewList() }, '‹ 一覧'),
+    h('h1', { class: 'tb-title' }, 'メンバー管理')), body);
+  const [{ data: code, error: e1 }, { data: members, error: e2 }] = await Promise.all([sb.rpc('onboarding_admin_get_code'), sb.rpc('onboarding_admin_members')]);
+  if (e1 || e2) { body.replaceChildren(h('p', { class: 'err' }, '読み込めませんでした：' + ((e1 || e2).message || ''))); return; }
+  const codeIn = h('input', { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', value: code || '' });
+  const codeMsg = h('p', { class: 'small', role: 'status' }, code ? '' : '⚠ 合言葉がまだ決まっていないので、新規登録はできません。');
+  const saveCode = async (v) => {
+    const { data: r, error } = await sb.rpc('onboarding_admin_set_code', { p_code: v });
+    if (error || r !== 'ok') { toast(r === 'short' ? '合言葉は6文字以上にしてください。' : r === 'long' ? '合言葉は40文字までです。' : '保存できませんでした。', 4500); return; }
+    toast(v ? '合言葉を保存しました。' : '新規登録の受付を止めました。', 4000); viewAdmin();
+  };
+  const signupUrl = location.origin + location.pathname;
+  const copyInvite = async () => {
+    const text = `申込入力ツールの登録のご案内です。\n① ${signupUrl} を開く\n②「新規登録はこちら」を押す\n③ メールアドレス・パスワード・合言葉を入れて「登録する」\n合言葉：${codeIn.value.trim()}`;
+    try { await navigator.clipboard.writeText(text); toast('案内文をコピーしました。LINEなどに貼り付けて送ってください。', 5000); }
+    catch { prompt('この文をコピーしてください', text); }
+  };
+  body.replaceChildren(
+    h('section', { class: 'join-box' },
+      h('strong', {}, '🔑 新規登録の合言葉'),
+      h('p', { class: 'small muted', style: 'margin:0' }, '新しいメンバーは、この合言葉を入れると使えるようになります。漏れた時は変えてください（登録済みの人はそのまま使えます）。'),
+      h('label', { class: 'lbl' }, '合言葉（6文字以上）', codeIn), codeMsg,
+      h('button', { class: 'btn primary wide', type: 'button', onclick: () => saveCode(codeIn.value.trim()) }, '合言葉を保存'),
+      code ? h('button', { class: 'btn outline wide', type: 'button', onclick: copyInvite }, '📋 新しいメンバーへの案内文をコピー') : null,
+      code ? h('button', { class: 'btn ghost wide', type: 'button', onclick: () => { if (confirm('新規登録の受付を止めますか？（合言葉を消します。登録済みの人はそのまま使えます）')) saveCode(''); } }, '新規登録の受付を止める') : null),
+    h('section', { class: 'join-box', style: 'margin-top:16px' },
+      h('strong', {}, '👥 メンバー（' + members.length + '人）'),
+      h('div', {}, ...members.map(m => h('div', { class: 'mem-row' },
+        h('div', { class: 'mem-main' }, h('strong', {}, m.email),
+          h('span', { class: 'small muted' }, (m.is_admin ? '管理者・' : '') + (m.joined_by === 'code' ? '合言葉で登録' : '管理者が追加') + '・' + new Date(m.created_at).toLocaleDateString('ja-JP') + '・お客様 ' + m.customers + '人')),
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: async () => {
+          if (!confirm(m.email + ' さんの仮パスワードを発行しますか？\n（今のパスワードは使えなくなります）')) return;
+          const done = busy('発行中…');
+          const { data: r, error } = await sb.functions.invoke(SIGNUP_FN, { body: { mode: 'reset', email: m.email } });
+          done();
+          if (error || !r || !r.password) { toast('発行できませんでした。', 4000); return; }
+          const text = `申込入力ツールの仮パスワードです。\nメールアドレス：${m.email}\n仮パスワード：${r.password}\nログインすると、新しいパスワードを決める画面が出ます。\n${location.origin + location.pathname}`;
+          try { await navigator.clipboard.writeText(text); } catch {}
+          prompt('仮パスワードを発行しました（クリップボードにもコピー済み）。本人に送ってください。', r.password);
+        } }, '仮パスワード'),
+        m.is_admin ? null : h('button', { class: 'btn danger sm', type: 'button', onclick: async () => {
+          if (!confirm(m.email + ' さんを使えないようにしますか？\n（お客様のデータは消えません。もう一度使う時は、合言葉を入れてもらいます）')) return;
+          const { data: r, error } = await sb.rpc('onboarding_admin_remove', { p_email: m.email });
+          if (error || r !== 'ok') { toast('停止できませんでした。', 4000); return; }
+          toast('停止しました。'); viewAdmin();
+        } }, '停止'))))));
 }
 
 /* ---------- お客様一覧 ---------- */
@@ -498,10 +678,12 @@ async function viewList() {
   const ul = h('ul', { class: 'list' }, h('li', { class: 'muted pad' }, '読み込み中…'));
   let hello = helloCard(null), onlyFollow = false;
   const followBtn = h('button', { class: 'btn outline wide follow-btn', type: 'button', hidden: true, 'aria-pressed': 'false' });
+  const adminBtn = h('button', { class: 'btn ghost sm', type: 'button', hidden: true, onclick: () => viewAdmin() }, 'メンバー管理');
   followBtn.addEventListener('click', () => { onlyFollow = !onlyFollow; followBtn.setAttribute('aria-pressed', String(onlyFollow)); draw(); });
   app.replaceChildren(
     h('header', { class: 'topbar' },
       h('h1', { class: 'tb-title' }, '申込み一覧'),
+      adminBtn,
       h('button', { class: 'btn ghost sm', onclick: async () => { await sb.auth.signOut(); viewLogin(); } }, 'ログアウト')),
     h('main', { class: 'wrap' },
       hello,
@@ -515,7 +697,10 @@ async function viewList() {
     loadInvites()]);
   if (error) { ul.replaceChildren(h('li', { class: 'err pad' }, '一覧を読み込めませんでした：' + error.message)); return; }
   const { data: isStaff } = await sb.rpc('is_onboarding_staff');
-  if (isStaff !== true) { ul.replaceChildren(h('li', { class: 'err pad' }, 'このアカウントには使う権限がありません。管理者に追加を頼んでください。')); return; }
+  if (isStaff !== true) { viewJoin(); return; }
+  const { data: mustChange } = await sb.rpc('onboarding_must_change_pw');
+  if (mustChange === true) { viewChangePw(); return; }
+  sb.rpc('onboarding_is_admin').then(({ data: admin }) => { if (admin === true && adminBtn.isConnected) adminBtn.hidden = false; });
   const fresh = helloCard(data); hello.replaceWith(fresh); hello = fresh;
   const follows = data.filter(r => needsFollow(r, inviteMap.get(r.id)));
   followBtn.hidden = !follows.length;
@@ -1073,12 +1258,32 @@ const DOC_SLOTS = [
 ];
 DOCS.passport = { label: 'パスポートの顔写真ページ（申込者）', set: { id_type: 'パスポート' },
   keys: ['first_romaji', 'last_romaji', 'gender', 'birth_date', 'nationality', 'id_number', 'id_country', 'id_issue_date', 'id_expiry'] };
-DOCS.license_back = { label: '運転免許証の裏面（申込者・住所変更などの記載欄）', set: {},
+DOCS.license_back = { label: '運転免許証の裏面（申込者・備考欄の住所変更）', set: {},
   keys: ['address_ja', 'address_kana', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
 DOCS.juminhyo = { label: '住民票（申込者）', set: {},
   keys: ['name_ja', 'birth_date', 'gender', 'address_ja', 'address_kana', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'] };
 
 const docsOf = d => (d && d._docs) || {};
+/* ---------- 引っ越した後の住所（免許証の裏面・マイナンバーカードの追記欄・住民票）を、表面の古い住所より優先する ---------- */
+const ADDR_KEYS = ['address_ja', 'address_kana', 'postal_code', 'prefecture', 'city', 'addr1', 'addr2'];
+// マイナンバーカードの表面だけ、追記欄に新しい住所があるかをAIに答えてもらう
+const ADDR_MOVED = { k: 'addr_moved', label: '追記欄の住所変更', opts: ['はい'], hint: 'カード表面の下の「追記欄」に、転居などの新しい住所が書いてあれば「はい」。書いてなければ出力しない' };
+// この写真の住所が「新しい住所」かどうか（住民票はいつも今の住所）
+function addrIsNew(slot, read) {
+  const v = (read && read.values) || {};
+  if (!ADDR_KEYS.some(k => String(v[k] ?? '').trim())) return false;
+  return slot === 'license_back' || slot === 'juminhyo' || (slot === 'mynumber_front' && v.addr_moved === 'はい');
+}
+function applyAddrPriority(slot, read, d) {
+  const v = read && read.values; if (!v) return;
+  const isNew = addrIsNew(slot, read);
+  delete v.addr_moved;
+  if (isNew) { d._addr_src = slot; markDirty('_addr_src'); return; }
+  // 撮り直したら新しい住所の記載がなかった時は、優先を外す
+  if (d._addr_src === slot) { delete d._addr_src; markDirty('_addr_src'); return; }
+  // 新しい住所を読み取った写真がある時は、表面の古い住所で上書きしない
+  if (d._addr_src && docsOf(d)[d._addr_src]) ADDR_KEYS.forEach(k => delete v[k]);
+}
 const docDone = (d, doc) => DOC_SLOTS.filter(x => x.doc === doc).every(x => docsOf(d)[x.slot]);
 function docStatus(d) {
   const done = Object.keys(DOC_TYPES).filter(k => docDone(d, k));
@@ -1127,7 +1332,7 @@ async function handleDocFile(slot, file) {
     if (s.ai) {
       plan = docPlan(s.ai, D());
       try {
-        read = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: [...fieldSpec(plan.keys), PHOTO_CHECK] });
+        read = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: [...fieldSpec(plan.keys), PHOTO_CHECK, ...(slot === 'mynumber_front' ? [ADDR_MOVED] : [])] });
       } catch { readError = true; }
       const problem = read && read.values && read.values.photo_problem;
       if (problem) { done(); retakeSheet(slot, '写真に問題があるかもしれません：' + problem); return; }
@@ -1151,6 +1356,7 @@ async function handleDocFile(slot, file) {
     const d = D(); d._docs = { ...docsOf(d), [slot]: new Date().toISOString() };
     refreshDocs();
     if (read) {
+      applyAddrPriority(slot, read, d);
       applyAI(read, plan.set, { since, emptyMsg: slot === 'license_back'
         ? '裏面を保存しました ✓（住所変更の記載はありませんでした）'
         : '写真を保存しました ✓（自動で入る項目はありませんでした）' });
@@ -1339,18 +1545,40 @@ async function scanCard(file) {
   const done = () => { endBg(); cardPending = false; refreshDocs(); };
   try {
     const image = await toJpegBase64(file);
-    const res = await callAI({ mode: 'card', image, mediaType: 'image/jpeg' });
+    const d = D(), holder = { kanji: String(d.name_ja || '').trim(), romaji: [d.last_romaji, d.first_romaji].filter(Boolean).join(' ') };
+    const res = await callAI({ mode: 'card', image, mediaType: 'image/jpeg', holder });
     done();
     const c = (res && res.card) || {};
-    if (c.number) secretVals.card_number = c.number;
-    if (c.expiry) secretVals.card_expiry = c.expiry;
-    if (res && res.values && Object.keys(res.values).length) applyAI(res, {}, { since });
-    syncSecret('card_number'); syncSecret('card_expiry');
-    toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所で撮り直すか、手で入力してください。'
-      : c.check === false ? '⚠ カード番号が正しくない可能性があります。カードと見比べて直してください。'
-      : !c.expiry ? 'カード番号を入れました。有効期限は手で入力してください。'
-      : 'カード番号と有効期限を入れました。カードと見比べて確認してください。', 6000);
+    const fill = (other = false) => {
+      if (c.number) secretVals.card_number = c.number;
+      if (c.expiry) secretVals.card_expiry = c.expiry;
+      if (c.number) { if (other) secretVals.card_holder = 'other'; else delete secretVals.card_holder; }
+      if (res && res.values && Object.keys(res.values).length) applyAI(res, {}, { since });
+      syncSecret('card_number'); syncSecret('card_expiry'); refreshDocs();
+      toast(!c.number ? 'カード番号を読み取れませんでした。明るい場所で撮り直すか、手で入力してください。'
+        : c.check === false ? '⚠ カード番号が正しくない可能性があります。カードと見比べて直してください。'
+        : !c.expiry ? 'カード番号を入れました。有効期限は手で入力してください。'
+        : 'カード番号と有効期限を入れました。カードと見比べて確認してください。', 6000);
+    };
+    // 名義がお申込者と違うようなら、いったん止めて確認してもらう（確認すれば、そのカードで進める）
+    if (c.number && c.holder === 'different') holderSheet(holder.kanji, () => fill(true));
+    else fill();
   } catch (e) { done(); toast('読み取りに失敗しました：' + e.message, 6000); }
+}
+function holderSheet(name, onOk) {
+  const ok = h('input', { type: 'checkbox', id: 'holder-ok' });
+  const go = h('button', { class: 'btn outline wide', type: 'button', disabled: true, onclick: () => { back.remove(); onOk(); } }, 'このカードで進む');
+  ok.addEventListener('change', () => { go.disabled = !ok.checked; });
+  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'カードの名義の確認' },
+    h('h2', {}, 'カードの名義をご確認ください'),
+    h('p', { class: 'warn' }, '⚠ このカードは、お申込者様' + (name ? '（' + name + ' 様）' : '') + 'とは別の方の名義のようです。'),
+    h('p', { class: 'small muted' }, 'お支払いには、お申込者様ご本人の名義のカードをお使いください。カード番号はまだ入れていません。'),
+    h('button', { class: 'btn primary wide', type: 'button', onclick: () => { back.remove(); pickImage('credit_card'); } }, 'ご本人名義のカードで撮り直す'),
+    h('label', { class: 'check', for: 'holder-ok' }, ok, '名義を確認しました。このカードで申し込みます'),
+    go,
+    h('button', { class: 'btn ghost wide', type: 'button', onclick: () => back.remove() }, 'やめる')));
+  back.addEventListener('click', e => { if (e.target === back) back.remove(); });
+  document.body.append(back);
 }
 
 /* ---------- 勤務先：会社名から本社の住所・ホームページをネットで調べる ---------- */
