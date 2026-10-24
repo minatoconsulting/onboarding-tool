@@ -305,6 +305,16 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .btn.toggle[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
 .sheet p[role=status]:empty{display:none}
 .btn.line-btn{background:#06C755;border-color:#06C755;color:#fff;font-weight:700}
+/* 送信後の案内で「次はここ」を指す、上下に動く矢印 */
+.go-arrow{display:grid;justify-items:center;gap:0;margin:2px 0 -6px;color:var(--seal);font-weight:800;font-size:.92rem;line-height:1.2}
+.go-arrow b{font-size:1.9rem;line-height:1;animation:gobounce 1s ease-in-out infinite}
+.go-arrow.line{color:#06A447}
+@keyframes gobounce{0%,100%{transform:translateY(-3px)}50%{transform:translateY(7px)}}
+.sec.go-here{border:2px solid var(--seal);box-shadow:0 0 0 4px var(--seal-soft)}
+.sec.go-here.line{border-color:#06C755;box-shadow:0 0 0 4px color-mix(in srgb,#06C755 22%,transparent)}
+.pay-done{margin:0;font-size:.86rem;font-weight:700;color:var(--seal)}
+.remain{justify-self:center;margin:-4px 0 4px;padding:8px 18px;border-radius:999px;background:var(--seal-soft);color:var(--seal);font-weight:800;font-size:1.05rem}
+@media (prefers-reduced-motion:reduce){.go-arrow b{animation:none}}
 .bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;width:calc(100% - 32px);max-width:560px;padding:8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700;line-height:1.45;pointer-events:none}
 .man{display:block;margin-top:4px;font-weight:700;color:var(--seal)}
 /* 下から出るメニュー（写真を撮る等）が開いている間は、読み取り中の表示を画面の上に出す（メニューのボタンと重ならないように） */
@@ -400,7 +410,7 @@ const SECTIONS = [
     F('employer_website', '勤務先のホームページ', { hint: 'なければ「なし」' }),
     F('industry', '業種', { hint: '例：医療機関、不動産', chips: ['医療・福祉', '保育・児童福祉', '教育', '不動産', '建設', '製造', 'IT・通信', '小売・サービス', '飲食', '運輸・物流', '金融・保険', '公務'] }),
     F('position', '役職', { chips: ['一般社員', '管理職', '役員', '代表者'] }),
-    F('job_detail', 'お仕事の内容', { type: 'textarea', hint: '例：中央病院の看護師' }),
+    F('job_detail', 'お仕事の内容', { type: 'textarea', hint: '例：病院の看護師／カフェのホールスタッフ／自動車部品の製造／不動産の販売マネージャー／美容室のオーナー' }),
     F('employment_start', '今の勤務先で働き始めた日（だいたいでOK）', { type: 'date' }),
     F('income_currency', '年収の通貨', { def: 'JPY' }),
     F('income_amount', '年収（円）', { type: 'number', hint: '例：450万円なら 4,500,000' }),
@@ -627,37 +637,65 @@ async function startEntry() {
 }
 function viewMessage(title, body, ok = false, extra = null) {
   app.replaceChildren(h('main', { class: 'hero center' },
-    ok ? ill(DONE_ILL, 'done-ill') : h('div', { class: 'big-icon', 'aria-hidden': 'true' }, '!'), h('h1', {}, title), h('p', { class: 'muted' }, body), extra));
+    ok ? ill(DONE_ILL, 'done-ill') : h('div', { class: 'big-icon', 'aria-hidden': 'true' }, '!'), h('h1', {}, title), body ? h('p', { class: 'muted' }, body) : null, extra));
 }
-// サポート料の支払い（Stripeの画面を開く。カード番号はStripeが受け取り、このツールには来ない）
+// 送信後の案内で、次にやること（① お支払い → ② 公式LINE）を矢印で指す。ボタンを押すと次へ進む（押したことはこの端末に覚えておく）
+// （端末に保存できないブラウザでも、開いている間は goDone で覚えておく）
+let refreshGo = () => {};
+const goDone = {};
+function goNext(kind) { goDone[kind + 'Opened'] = true; saveProgress({ [kind + 'Opened']: true }); refreshGo(true); }
+// 公式LINEの友だち追加
 function lineBlock(no = '') {
   if (!CONFIG.LINE_URL) return null;
-  return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+  return h('section', { class: 'sec', 'data-go': 'line', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, no + '公式LINEに登録してください'),
-    h('p', { class: 'small muted', style: 'margin:0' }, '手続きの進み具合や今後のご連絡は、公式LINEでお知らせします。'),
-    h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener' }, 'LINEで友だち追加する')));
+    h('p', { class: 'small muted', style: 'margin:0' }, 'ご契約後のお手続き（住所変更・カードの変更・引き出しなど）についての、お問い合わせ窓口です。'),
+    h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener', onclick: () => goNext('line') }, 'LINEで友だち追加する')));
 }
-// 送信後の案内：① サポート料のお支払い → ② 公式LINE → 今後の流れ
-function nextSteps(again = false) {
+// 送信後の案内：残りの数 → ① サポート料のお支払い → ② 公式LINE → 今後の流れ
+function nextSteps(again = false, thanks = '') {
   const pay = payBlock(again, CONFIG.LINE_URL ? '① ' : '');
   const line = lineBlock(pay ? '② ' : '');
+  const remain = h('p', { class: 'remain' });
+  const arrow = h('div', { class: 'go-arrow', 'aria-hidden': 'true' }, h('span'), h('b', {}, '↓'));
+  refreshGo = (scroll = false) => {
+    const p = { ...loadProgress(), ...goDone };
+    const todo = [pay && !p.payOpened && pay, line && !p.lineOpened && line].filter(Boolean);
+    const target = todo[0] || null;
+    [pay, line].forEach(s => s && s.classList.toggle('go-here', s === target));
+    if (line) line.classList.add('line');
+    const payNote = pay && pay.querySelector('.pay-done');
+    if (payNote) payNote.hidden = !p.payOpened;
+    if (!target) { arrow.remove(); remain.textContent = 'お手続きはこれで完了です！'; return; }
+    remain.textContent = todo.length === 1 ? 'あと1つで完了です！' : '残りあと' + todo.length + 'つだけです！';
+    arrow.classList.toggle('line', target === line);
+    arrow.firstChild.textContent = target === line ? (pay ? '次はこちら' : 'こちらから') : 'まずはこちら';
+    target.before(arrow);
+    if (scroll) arrow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   const flow = () => h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, '今後の流れ'),
-    h('p', { class: 'small muted', style: 'margin:0' }, '今後の流れについては、事務員からご連絡いたします。')));
+    h('p', { class: 'small muted', style: 'margin:0' }, '事務員より今後の流れをご案内いたします。'),
+    h('ul', { class: 'small muted', style: 'margin:0;padding-left:1.2em;display:grid;gap:4px' },
+      h('li', {}, '認証手続きのご案内を、ご登録のメールアドレスへお送りします。'),
+      h('li', {}, 'お客様によっては、手書きの書類をご用意いただく場合があります。'))));
   // お支払い・公式LINEは、いまやらなくても「あとで」で飛ばせる（このリンクをもう一度開けば、また案内が出る）
   const skip = pay || line ? h('button', { class: 'btn ghost wide', type: 'button', onclick: () => viewMessage('お申込みの送信は完了です',
     (pay ? 'サポート料のお支払い' : '') + (pay && line ? 'と' : '') + (line ? '公式LINEの登録' : '') + 'は、あとからでも大丈夫です。このページのリンクをもう一度開くと、また案内が出ます。', true,
     h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, flow())) }, 'あとでやる（スキップ）') : null;
-  return h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, pay, line, flow(), skip);
+  const box = h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, pay || line ? remain : null, thanks ? h('p', { class: 'muted', style: 'margin:0' }, thanks) : null, pay, line, flow(), skip);
+  refreshGo();
+  return box;
 }
 // 業務委託契約書のリンクと「お支払い完了で同意」の一文（公式LINEで案内していた時と同じ決まり）
 function contractBlock() {
   if (!CONFIG.CONTRACT_URL) return [];
   return [
+    h('p', { class: 'small muted', style: 'margin:0' }, '契約書の内容をご確認ください。お支払いの完了をもって、契約内容にご同意いただいたものとさせていただきます。'),
     h('a', { class: 'btn outline wide', href: CONFIG.CONTRACT_URL, target: '_blank', rel: 'noopener' }, '📄 業務委託契約書を確認する'),
-    h('p', { class: 'small muted', style: 'margin:0' }, '契約書の内容をご確認のうえ、お支払いへお進みください。お支払いの完了をもって、契約内容にご同意いただいたものとさせていただきます。'),
   ];
 }
+// サポート料の支払い（Stripeの画面を開く。カード番号はStripeが受け取り、このツールには来ない）
 function payBlock(again = false, no = '') {
   if (!CONFIG.STRIPE_PAYMENT_LINK) return null;
   let href;
@@ -667,11 +705,12 @@ function payBlock(again = false, no = '') {
     if (email) url.searchParams.set('prefilled_email', email);
     href = url.toString();
   } catch { return null; }
-  return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
+  return h('section', { class: 'sec', 'data-go': 'pay', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, no + 'サポート料 9,800円のお支払い'),
-    h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
-    ...contractBlock(),
-    h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
+    h('p', { class: 'small muted', style: 'margin:0' }, '決済システムStripe（ストライプ）の安全なお支払い画面が開きます。' + (again ? 'お支払い済みの方は不要です。' : '')),
+    h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener', onclick: () => goNext('pay') }, 'お支払い画面を開く'),
+    h('p', { class: 'pay-done', hidden: true }, '✓ お支払い画面を開きました。お支払いが済んだら、次へお進みください。'),
+    ...contractBlock()));
 }
 // かかる時間の目安（分）：1 書類を撮る／2 話して入力／3 確認／4 送信。実際にかかった時間を見て直してください
 const ETA = { 1: 3, 2: 4, 3: 2, 4: 1 };
@@ -1277,7 +1316,7 @@ async function submit() {
   if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
   stopVoice();
   sentDone = true; forgetSecrets();
-  viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, nextSteps());
+  viewMessage('担当者へ送信しました！', null, true, nextSteps(false, 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。'));
 }
 
 /* ---------- 担当者から「この項目だけ直してください」と頼まれた時（送信したあとの手直し） ---------- */
