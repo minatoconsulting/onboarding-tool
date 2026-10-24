@@ -704,7 +704,12 @@ function lineBlock(no = '') {
   return h('section', { class: 'sec', 'data-go': 'line', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, no + '公式LINEに登録してください'),
     h('p', { class: 'small muted', style: 'margin:0' }, 'ご契約後のお手続き（住所変更・カードの変更・引き出しなど）についての、お問い合わせ窓口です。'),
-    h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener', onclick: () => goNext('line') }, 'LINEで友だち追加する')));
+    h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener', onclick: () => { goNext('line'); lineClicked(); } }, 'LINEで友だち追加する')));
+}
+// 「LINEで友だち追加する」を押した日時を、スプレッドシートの「公式LINEボタン」に記録する（失敗してもお客様には何も出さない）
+function lineClicked() {
+  if (!TOKEN) return;
+  sb.functions.invoke(CONFIG.FUNCTION_NAME, { body: { mode: 'line_click' }, headers: { 'x-invite-token': TOKEN } }).catch(() => {});
 }
 // 送信後の案内：残りの数 → ① サポート料のお支払い → ② 公式LINE → 今後の流れ
 function nextSteps(again = false, thanks = '') {
@@ -757,6 +762,8 @@ function payBlock(again = false, no = '') {
     const url = new URL(CONFIG.STRIPE_PAYMENT_LINK);
     const email = String((data && data.email) || '').trim();
     if (email) url.searchParams.set('prefilled_email', email);
+    // 支払いが終わった時にStripeから届く通知で「どのお客様か」が分かるように、このリンクの番号を付ける（スプレッドシートの「サポート料」に記録される）
+    if (TOKEN) url.searchParams.set('client_reference_id', TOKEN);
     href = url.toString();
   } catch { return null; }
   return h('section', { class: 'sec', 'data-go': 'pay', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
