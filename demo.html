@@ -1193,6 +1193,8 @@ function kanaToRoma(text) {
   for (let i = 0; i < k.length; i++) {
     const c = k[i], next = k[i + 1];
     if (c === 'ー') continue;
+    // 長音（おう・おお・うう）は1文字にする。ただし次が母音の時（いのうえ → INOUE）は省かない
+    if ((c === 'う' && /[OU]$/.test(out) || c === 'お' && /O$/.test(out)) && !'あいうえお'.includes(next || '_') && out) continue;
     if (c === 'っ') { const r = KANA_ROMA[next] || ''; out += r.startsWith('CH') ? 'T' : r.charAt(0); continue; }
     let r = KANA_ROMA[c]; if (!r) return '';
     if ('ゃゅょ'.includes(next || '_') && r.endsWith('I') && r.length > 1) {
@@ -1202,7 +1204,7 @@ function kanaToRoma(text) {
     if (c === 'ん' && /^[BMP]/.test(KANA_ROMA[next] || '')) r = 'M';
     out += r;
   }
-  return out.replace(/OU|OO/g, 'O').replace(/UU/g, 'U');
+  return out;
 }
 // ふりがなからローマ字を作る（p は '' ＝ご本人、'ben_' ＝受取人）
 function fillRomaji(p) {
@@ -1274,7 +1276,35 @@ async function save(final = false) {
   for (const [k, v] of Object.entries(patch)) { if (v) serverHas.add(k); else serverHas.delete(k); }
   saveEl.textContent = '保存済み'; saveEl.classList.remove('bad'); return true;
 }
-window.addEventListener('pagehide', () => { if (saveTimer) save(); });
+// 画面を閉じる・別のアプリに切り替える時は、待たずに届く送り方（keepalive）で保存する
+function saveBeforeLeave() {
+  if (TOKEN === 'demo-trial' || (!saveTimer && !dirty.size)) return;
+  const patch = {};
+  for (const k of dirty) { const v = String(data[k] ?? '').trim(); if (v || serverHas.has(k)) patch[k] = v; }
+  if (!Object.keys(patch).length) return;
+  // 届いたかは分からないので、保存待ちの印はそのままにしておく（画面に戻ったら、もう一度保存する）
+  try {
+    fetch(CONFIG.SUPABASE_URL + '/rest/v1/rpc/onboarding_invite_save', {
+      method: 'POST', keepalive: true,
+      headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + CONFIG.SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_token: TOKEN, p_data: patch, p_final: false }),
+    });
+  } catch {}
+}
+window.addEventListener('pagehide', saveBeforeLeave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveBeforeLeave();
+  else if (saveEl && dirty.size) scheduleSave(300);
+});
+// 大切な番号（カード番号など）はこの画面にしか残らないので、送信する前に閉じようとしたら確かめる
+let sentDone = false;
+window.addEventListener('beforeunload', e => {
+  if (!sentDone && Object.values(secretVals).some(v => String(v || '').trim())) { e.preventDefault(); e.returnValue = ''; }
+});
+function sendFailed(err) {
+  const why = /fetch|network|接続|timeout|502|503|504/i.test(String(err || '')) ? '通信がうまくいきませんでした。' : '担当者のところへ届けられませんでした。';
+  alert(why + '\n\n入力した内容は保存されています。\nカード番号などの大切な番号は、この画面にしか残っていません。\n画面を閉じずに、電波の良い場所で、もう一度「送信する」を押してください。\n\n何度やってもうまくいかない時は、画面を閉じずに担当者にご連絡ください。');
+}
 
 async function submit() {
   const bad = invalidKeys();
@@ -1295,14 +1325,12 @@ async function submit() {
   if (!await save(false)) { done(); toast('入力内容を保存できませんでした。通信状態を確認して、もう一度送信してください。', 6000); return; }
   let sheetRes = null;
   try { sheetRes = await callAI({ mode: 'sheet', secret: { ...secretVals } }); } catch (e) { sheetRes = { ok: false, error: e.message }; }
-  if (!sheetRes || !sheetRes.ok) {
-    done(); toast('スプレッドシートへ送信できませんでした：' + ((sheetRes && sheetRes.error) || '接続エラー'), 6000); return;
-  }
+  if (!sheetRes || !sheetRes.ok) { done(); sendFailed(sheetRes && sheetRes.error); return; }
   const ok = await save(true);
   done();
   if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
   stopVoice();
-  forgetSecrets();
+  sentDone = true; forgetSecrets();
   viewMessage('担当者へ送信しました！', 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。', true, nextSteps());
 }
 
@@ -1370,11 +1398,11 @@ async function submitFix() {
   if (!await save(false)) { done(); toast('入力内容を保存できませんでした。通信状態を確認して、もう一度送信してください。', 6000); return; }
   let sheetRes = null;
   try { sheetRes = await callAI({ mode: 'sheet', secret: { ...secretVals } }); } catch (e) { sheetRes = { ok: false, error: e.message }; }
-  if (!sheetRes || !sheetRes.ok) { done(); toast('スプレッドシートへ送信できませんでした：' + ((sheetRes && sheetRes.error) || '接続エラー'), 6000); return; }
+  if (!sheetRes || !sheetRes.ok) { done(); sendFailed(sheetRes && sheetRes.error); return; }
   const ok = await save(true);
   done();
   if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
-  forgetSecrets();
+  sentDone = true; forgetSecrets();
   viewMessage('担当者へ送信しました！', '直していただいた内容を担当者へ送りました。ご協力ありがとうございました。', true);
 }
 
@@ -1732,7 +1760,24 @@ function paintYears() {
 }
 
 /* ---------- 入力チェック（決まった形でないとエラーを出す） ---------- */
+// ふりがな：ひらがな（カタカナも可）で、姓と名の間にスペース1つ
+const kanaError = v => /^[ぁ-ゖァ-ヺー]+[ 　][ぁ-ゖァ-ヺー]+$/.test(v.trim()) ? '' : 'ふりがなは、ひらがなで、姓と名の間にスペースを入れてください（例：やまだ はなこ）';
+// 過去の日付だけ（生年月日・交付日など）
+const pastDate = label => v => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return '';
+  if (v < '1900-01-01') return label + 'を確認してください';
+  const today = new Date(); const t = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  return v > t ? label + 'が、今日より後の日付になっています' : '';
+};
 const VALIDATE = {
+  name_kana: kanaError,
+  ben_name_kana: kanaError,
+  birth_date: pastDate('生年月日'),
+  ben_birth_date: pastDate('受取人の生年月日'),
+  id_issue_date: pastDate('交付日'),
+  ben_id_issue_date: pastDate('受取人の書類の交付日'),
+  bank_open_date: pastDate('口座開設日'),
+  email: v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()) ? '' : 'メールアドレスを確認してください（例：hanako@gmail.com）',
   contract_years: yearsError,
   bank_branch_no: v => /^\d{3}$/.test(v) ? '' : '支店番号は3桁の数字です（例：123）',
   postal_code: v => /^\d{3}-?\d{4}$/.test(zen2han(v).trim()) ? '' : '郵便番号は7桁の数字です（例：460-0008）',
