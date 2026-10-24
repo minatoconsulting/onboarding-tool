@@ -679,7 +679,7 @@ function helloCard(rows) {
         h('span', {}, '提出済み', h('b', {}, String(n('ITA提出済み')))))));
 }
 async function viewList() {
-  stopVoice(); state = null;
+  stopVoice(); state = null; clearSecrets();
   const search = h('input', { type: 'search', class: 'search', placeholder: '名前で探す', 'aria-label': '名前で探す' });
   const ul = h('ul', { class: 'list' }, h('li', { class: 'muted pad' }, '読み込み中…'));
   let hello = helloCard(null), onlyFollow = false;
@@ -775,7 +775,8 @@ async function newCustomer() {
 
 /* ---------- お客様の入力画面 ---------- */
 function viewCustomer(row) {
-  state = { id: row.id, status: row.status, data: { _ai: [], _guess: [], ...(row.data || {}) }, voiceDraft: '' };
+  clearSecrets();
+  state ={ id: row.id, status: row.status, data: { _ai: [], _guess: [], ...(row.data || {}) }, voiceDraft: '' };
   dirty = new Set(); statusDirty = false;
   inputs = {}; counters = [];
   titleEl = h('h1', { class: 'tb-title' }, nameOf(state.data));
@@ -1207,10 +1208,13 @@ fileInput.addEventListener('change', async () => {
   const doc = DOCS[fileInput.dataset.doc];
   if (!file || !doc || !state) return;
   const done = bgStart('写真を読み取り中'), since = Date.now();
+  const cid = curId(), who = nameOf(D());
   try {
     const image = await toJpegBase64(file);
     const res = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: doc.label, fields: fieldSpec(doc.keys) });
-    done(); applyAI(res, doc.set, { since });
+    done();
+    if (curId() !== cid) { staleToast(who, '写真'); return; }
+    applyAI(res, doc.set, { since });
   } catch (e) {
     done(); toast('読み取りに失敗しました：' + e.message, 5000);
   } finally { fileInput.value = ''; }
@@ -1332,6 +1336,7 @@ async function handleDocFile(slot, file) {
   const endBg = bgStart(DOC_TYPES[s.doc] + (s.doc === 'passport' || s.doc === 'juminhyo' ? '' : '（' + s.label + '）') + 'を' + (s.ai || s.secret ? '読み取り中' : '保存中'));
   const since = Date.now(); pendingSlots.add(slot); refreshDocs();
   const done = () => { endBg(); pendingSlots.delete(slot); refreshDocs(); };
+  const cid = curId(), who = nameOf(D()), what = DOC_TYPES[s.doc];
   try {
     const image = await toJpegBase64(file, 2000);
     let plan = null, read = null, readError = false;
@@ -1340,16 +1345,20 @@ async function handleDocFile(slot, file) {
       try {
         read = await callAI({ mode: 'image', image, mediaType: 'image/jpeg', docLabel: plan.label, fields: [...fieldSpec(plan.keys), PHOTO_CHECK, ...(slot === 'mynumber_front' ? [ADDR_MOVED] : [])] });
       } catch { readError = true; }
+      if (curId() !== cid) { done(); staleToast(who, what); return; }
       const problem = read && read.values && read.values.photo_problem;
       if (problem) { done(); retakeSheet(slot, '写真に問題があるかもしれません：' + problem); return; }
     }
+    // 写真は、撮った時に開いていたお客様の分として保存する
     const storeBody = { mode: 'store', slot, image };
-    if (STAFF) storeBody.customer_id = state.id;
+    if (STAFF) storeBody.customer_id = cid;
     await callAI(storeBody);
+    if (curId() !== cid) { done(); toast(`${who}の${what}の写真は保存しました。読み取った内容は入れていないので、${who}を開いて確認してください。`, 7000); return; }
     let secretMsg = '';
     if (s.secret === 'mynumber') {
       try {
         const r = await callAI({ mode: 'mynumber', image, mediaType: 'image/jpeg' });
+        if (curId() !== cid) { done(); toast(`${who}の${what}の写真は保存しました。個人番号は入れていないので、${who}を開いて入力してください。`, 7000); return; }
         if (r && r.number) {
           secretVals.mynumber = r.number; syncSecret('mynumber');
           secretMsg = r.check === false ? '⚠ 個人番号が正しくない可能性があります。送信前の画面でカードと見比べてください。' : '個人番号を読み取りました ✓ 送信前の画面で確認してください。';
@@ -1444,6 +1453,8 @@ const secretVals = {};
 const SECRET_KEY = !STAFF && typeof TOKEN === 'string' ? 'onboarding-secret-' + TOKEN.slice(0, 16) : null;
 if (SECRET_KEY) { try { Object.assign(secretVals, JSON.parse(sessionStorage.getItem(SECRET_KEY) || '{}')); } catch {} }
 function keepSecrets() { if (SECRET_KEY) { try { sessionStorage.setItem(SECRET_KEY, JSON.stringify(secretVals)); } catch {} } }
+// 担当者画面：お客様を切り替えたら番号を空にする（前のお客様の番号が次のお客様に残らないように）
+function clearSecrets() { for (const k of Object.keys(secretVals)) delete secretVals[k]; }
 function forgetSecrets() { if (SECRET_KEY) { try { sessionStorage.removeItem(SECRET_KEY); } catch {} } }
 let secretSeq = 0;
 function secretCard(title) {
@@ -1524,6 +1535,11 @@ const bgTasks = new Set();
 const pendingSlots = new Set();
 let cardPending = false, bgPill = null;
 const userEditAt = {};  // 手で直した時刻（読み取り中に手で入れた値は、あとから上書きしない）
+// 読み取り中に別のお客様を開いたら、読み取った内容は今のお客様には入れない
+const curId = () => state && state.id;
+function staleToast(who, what) {
+  toast(`${who}の${what}の読み取り中に別のお客様を開いたので、読み取った内容は入れていません。${who}を開いてやり直してください。`, 7000);
+}
 function bgStart(msg) {
   const t = { msg }; bgTasks.add(t); paintBg();
   return () => { bgTasks.delete(t); paintBg(); };
@@ -1549,11 +1565,13 @@ async function scanCard(file) {
   const endBg = bgStart('カードを読み取り中'), since = Date.now();
   cardPending = true; refreshDocs();
   const done = () => { endBg(); cardPending = false; refreshDocs(); };
+  const cid = curId(), who = nameOf(D());
   try {
     const image = await toJpegBase64(file);
     const d = D(), holder = { kanji: String(d.name_ja || '').trim(), romaji: [d.last_romaji, d.first_romaji].filter(Boolean).join(' ') };
     const res = await callAI({ mode: 'card', image, mediaType: 'image/jpeg', holder });
     done();
+    if (curId() !== cid) { staleToast(who, 'カード'); return; }
     const c = (res && res.card) || {};
     const fill = (other = false) => {
       if (c.number) secretVals.card_number = c.number;
@@ -1594,9 +1612,11 @@ async function lookupEmployer(auto = false) {
   if (!name) { if (!auto) toast('先に勤務先の名前を入れてください。'); return; }
   employerLooked = name;
   const done = bgStart('勤務先を調べています（30秒ほど）'), since = Date.now();
+  const cid = curId(), who = nameOf(D());
   try {
     const res = await callAI({ mode: 'company', name, area: String(D().address_ja || '').slice(0, 12), fields: fieldSpec(['employer_address', 'employer_website', 'industry']) });
     done();
+    if (curId() !== cid) { staleToast(who, '勤務先'); return; }
     applyAI(res, {}, { since, emptyMsg: '勤務先の情報が見つかりませんでした。正式な会社名で試すか、手で入力してください。' });
   } catch (e) { done(); toast('調べられませんでした：' + e.message, 6000); }
 }

@@ -349,6 +349,8 @@ const CONFIG = {
   FUNCTION_NAME: 'onboarding-extract',
   // サポート料（9,800円）の Stripe 支払いリンク。Stripeの管理画面で作った https://buy.stripe.com/... を貼る（空ならボタンを出さない）
   STRIPE_PAYMENT_LINK: 'https://buy.stripe.com/6oUdR9gqI65t1oLb7t7EQ00',
+  // お支払いの前に読んでもらう業務委託契約書（Googleドライブの共有リンク。空なら出さない）
+  CONTRACT_URL: 'https://drive.google.com/file/d/1En5eZ0N2E9Pd6QbGAvhNjIirUO9ApD81/view?usp=sharing',
   // 送信が終わった後に案内する公式LINE（友だち追加のリンク）
   LINE_URL: 'https://line.me/R/ti/p/@092ulblk',
 };
@@ -470,6 +472,8 @@ const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, 
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'onboarding-guest' },
 });
 let data = {}, aiKeys = new Set(), guessKeys = new Set(), dirty = new Set();
+// サーバーに値が入っている項目（お客様が空にした時だけ「消す」を送る）
+let serverHas = new Set();
 let inputs = {}, counters = [], saveEl = null, saveTimer = null, savePromise = null, voiceDraft = '';
 let rec = null, recording = false, voiceStream = null;
 
@@ -538,7 +542,10 @@ async function boot() {
   if (st === 'used') return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true, nextSteps(true));
   if (st === 'expired') return viewMessage('リンクの期限が切れています', 'お手数ですが、担当者に新しいリンクをご依頼ください。');
   if (st !== 'ok') return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
-  const { data: saved } = await sb.rpc('onboarding_invite_get', { p_token: TOKEN });
+  const { data: saved, error: getError } = await sb.rpc('onboarding_invite_get', { p_token: TOKEN });
+  // 前回の内容を読み込めなかった時は、空の画面を出さない（入れた内容が消えたように見えるため）
+  if (getError) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。入力した内容は保存されています。');
+  serverHas = new Set(Object.keys(saved || {}).filter(k => typeof saved[k] === 'string' && saved[k].trim()));
   data = {};
   for (const f of Object.values(FIELD_MAP)) if (f.def) data[f.k] = f.def;
   Object.assign(data, saved || {});
@@ -643,6 +650,14 @@ function nextSteps(again = false) {
     h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, flow())) }, 'あとでやる（スキップ）') : null;
   return h('div', { style: 'display:grid;gap:12px;width:100%;max-width:440px' }, pay, line, flow(), skip);
 }
+// 業務委託契約書のリンクと「お支払い完了で同意」の一文（公式LINEで案内していた時と同じ決まり）
+function contractBlock() {
+  if (!CONFIG.CONTRACT_URL) return [];
+  return [
+    h('a', { class: 'btn outline wide', href: CONFIG.CONTRACT_URL, target: '_blank', rel: 'noopener' }, '📄 業務委託契約書を確認する'),
+    h('p', { class: 'small muted', style: 'margin:0' }, '契約書の内容をご確認のうえ、お支払いへお進みください。お支払いの完了をもって、契約内容にご同意いただいたものとさせていただきます。'),
+  ];
+}
 function payBlock(again = false, no = '') {
   if (!CONFIG.STRIPE_PAYMENT_LINK) return null;
   let href;
@@ -655,6 +670,7 @@ function payBlock(again = false, no = '') {
   return h('section', { class: 'sec', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, no + 'サポート料 9,800円のお支払い'),
     h('p', { class: 'small muted', style: 'margin:0' }, 'Stripe（ストライプ）の安全なお支払い画面が開きます。スマホのカメラでカードを読み取ったり、Apple Pay・Google Payも使えます。' + (again ? 'お支払い済みの方は不要です。' : '')),
+    ...contractBlock(),
     h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener' }, 'お支払い画面を開く')));
 }
 // かかる時間の目安（分）：1 書類を撮る／2 話して入力／3 確認／4 送信。実際にかかった時間を見て直してください
@@ -1183,7 +1199,8 @@ async function save(final = false) {
   clearTimeout(saveTimer); saveTimer = null;
   if (savePromise) { try { await savePromise; } catch {} }
   const keys = final ? ALL_KEYS : [...dirty];
-  const patch = {}; for (const k of keys) patch[k] = String(data[k] ?? '').trim();
+  const patch = {};
+  for (const k of keys) { const v = String(data[k] ?? '').trim(); if (v || serverHas.has(k)) patch[k] = v; }
   dirty = new Set();
   if (!final && !keys.length) { saveEl.textContent = '保存済み'; return true; }
   saveEl.textContent = '保存中…';
@@ -1200,6 +1217,7 @@ async function save(final = false) {
     if (res === 'closed') toast('リンクの期限が切れたか、送信済みです。担当者にご連絡ください。', 6000);
     return false;
   }
+  for (const [k, v] of Object.entries(patch)) { if (v) serverHas.add(k); else serverHas.delete(k); }
   saveEl.textContent = '保存済み'; saveEl.classList.remove('bad'); return true;
 }
 window.addEventListener('pagehide', () => { if (saveTimer) save(); });
