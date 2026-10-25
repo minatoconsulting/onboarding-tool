@@ -203,6 +203,11 @@ a.btn.ghost{color:var(--muted)}
 .sec.secret{border:1px dashed var(--ai-line)}
 .card-entry{display:grid;gap:12px}
 .sec.prep-box{border:3px solid var(--seal);box-shadow:0 0 0 5px var(--seal-soft)}
+/* 「お客様に入力してもらう」の下の区切り：ここから下はお客様の入力項目（担当者が先に入れてもよい） */
+.staff-optional{margin:26px 0 18px;display:grid;gap:6px;text-align:center}
+.staff-optional .so-line{display:flex;align-items:center;gap:12px;color:var(--ai-ink);font-weight:700;font-size:.95rem}
+.staff-optional .so-line::before,.staff-optional .so-line::after{content:'';flex:1;border-top:3px solid var(--ai-line);border-radius:2px}
+.staff-optional p{margin:0;font-size:.85rem;color:var(--muted)}
 .sec.prep-box .sec-title::before{content:'まず入力';display:inline-block;margin-right:8px;font-size:.72rem;font-weight:800;color:var(--seal-ink);background:var(--seal);border-radius:999px;padding:2px 10px;vertical-align:middle}
 .voice-foot{margin:0;font-size:.72rem;line-height:1.55;color:var(--muted)}
 .photo-pick{display:grid;gap:10px}
@@ -824,6 +829,10 @@ function viewCustomer(row) {
   const main = h('main', { class: 'wrap' },
     renderSection(SECTIONS[0], 0),
     renderInviteCard(),
+    // ここから下はお客様に入力してもらう項目。分かる範囲で担当者が先に入れてもよい
+    h('div', { class: 'staff-optional', role: 'separator' },
+      h('div', { class: 'so-line' }, 'ここから下はお客様の入力項目'),
+      h('p', {}, '分かる範囲があれば、担当者が先に入力しておくこともできます。')),
     (docsPanelEl = renderDocsPanel()),
     ...SECTIONS.slice(1).map((s, i) => renderSection(s, i + 1)),
     secretCard('🔒 マイナンバー・クレジットカード番号（送信の直前に入力）'),
