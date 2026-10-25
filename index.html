@@ -312,12 +312,11 @@ const SECTIONS = [
     F('addr2', '住所2', { hint: '建物名など' }),
     F('addr_country', '国名', { def: '日本' }),
   ]},
-  { id: 'invest', title: '契約内容（ITA打ち込み依頼）', fields: [
+  // 信託と保険会社は決まっているので選ばない（信託：ITA International Trust／保険会社：ITA International Insurer）
+  { id: 'invest', title: '契約内容（ITA打ち込み依頼）', note: '信託は「ITA International Trust」、保険会社は「ITA International Insurer」で決まっています（選ぶ必要はありません）。', fields: [
     F('product', 'ITAでの商品名（任意）', { hint: '例：S&P 500 インデックス 15年プラン - シリーズ III' }),
     F('annual_usd', '総年間拠出金（米ドル）', { type: 'number', hint: '月額を入れると自動で12倍が入ります' }),
     F('frequency', '支払頻度', { type: 'select', opts: ['毎月', '四半期', '半年', '毎年'], def: '毎月' }),
-    F('trust', '信託', { type: 'select', opts: ['ITA International Trust', 'Investors Trust Cayman', '信託なし'] }),
-    F('insurer', '保険会社', { type: 'select', opts: ['ITA International Insurer', 'ITA Asia Limited'] }),
     F('insured', '被保険者', { type: 'select', opts: ['第一申込者（本人）', '他の被保険者'], def: '第一申込者（本人）' }),
   ]},
   { id: 'beneficiary', title: '受益者', capture: 'ben_license', fields: [
