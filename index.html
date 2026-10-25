@@ -158,6 +158,10 @@ a.btn.ghost{color:var(--muted)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));z-index:70;width:max-content;max-width:min(92vw,560px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 .danger-zone{margin-top:28px;display:grid}
+.trash-btn{margin-top:18px}
+.trash-row{display:grid;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.trash-row .row-actions{display:flex;flex-wrap:wrap;gap:6px}
+.trash-row .row-actions .btn{flex:1 1 auto}
 @media (prefers-reduced-motion:reduce){.mic[aria-pressed="true"]::after,.spinner{animation:none}.chev{transition:none}}
 
 .script{border:1px dashed var(--seal);background:var(--seal-soft);border-radius:12px;padding:12px 14px;max-height:38vh;overflow:auto}
@@ -755,6 +759,11 @@ async function viewList() {
   const search = h('input', { type: 'search', class: 'search', placeholder: '名前で探す', 'aria-label': '名前で探す' });
   const ul = h('ul', { class: 'list' }, h('li', { class: 'muted pad' }, '読み込み中…'));
   let hello = helloCard(null), onlyFollow = false, filter = '';
+  // 削除したお客様（10日間はゴミ箱から元に戻せる）
+  const trashBtn = h('button', { class: 'btn ghost wide trash-btn', type: 'button', hidden: true, onclick: () => viewTrash() });
+  sb.from(CONFIG.TABLE).select('id', { count: 'exact', head: true }).not('deleted_at', 'is', null).then(({ count }) => {
+    if (count) { trashBtn.textContent = '🗑 削除したお客様（' + count + '人・10日間は元に戻せます）'; trashBtn.hidden = false; }
+  });
   const filterNote = h('p', { class: 'filter-note', hidden: true });
   // あいさつの数字ボタン（入力中・入力完了・提出済み・支払い待ち）で絞り込む
   const paintStats = () => hello.querySelectorAll('[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === filter)));
@@ -777,9 +786,9 @@ async function viewList() {
         h('span', { class: 'btn-sub' }, '個別の面談で、1人ずつ申込みを作る')),
       entryCard(),
       h('a', { class: 'btn outline wide demo-btn', href: 'demo.html', target: '_blank', rel: 'noopener' }, '🧪 体験版を試す（お客様の画面を体験）'),
-      h('hr', { class: 'entry-sep' }), search, filterNote, ul));
+      h('hr', { class: 'entry-sep' }), search, filterNote, ul, trashBtn));
   const [{ data, error }] = await Promise.all([
-    sb.from(CONFIG.TABLE).select('id,status,data,updated_at').order('updated_at', { ascending: false }).limit(300),
+    sb.from(CONFIG.TABLE).select('id,status,data,updated_at').is('deleted_at', null).order('updated_at', { ascending: false }).limit(300),
     loadInvites()]);
   if (error) { ul.replaceChildren(h('li', { class: 'err pad' }, '一覧を読み込めませんでした：' + error.message)); return; }
   const { data: isStaff } = await sb.rpc('is_onboarding_staff');
@@ -1375,18 +1384,63 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('beforeunload', e => { if (state && (saveTimer || savePromise)) { e.preventDefault(); e.returnValue = ''; } });
 
+// 削除するとゴミ箱へ（10日間は元に戻せる。10日たつと onboarding-trash-cleanup が写真ごと完全に消す）
+const TRASH_DAYS = 10;
 async function deleteCustomer() {
-  if (!confirm(`「${nameOf(state.data)}」の情報を削除します。本人確認書類の写真も消えます。元に戻せません。よろしいですか？`)) return;
+  if (!confirm(`「${nameOf(state.data)}」を削除します。\n${TRASH_DAYS}日間は「削除したお客様」から元に戻せます。${TRASH_DAYS}日たつと、本人確認書類の写真も含めて完全に消えます。\n削除している間は、お客様に送ったリンクも開けなくなります。よろしいですか？`)) return;
+  if (!await flushSave()) { toast('入力内容を保存できていないので、やめました。保存してから、もう一度お試しください。', 6000); return; }
   clearTimeout(saveTimer); saveTimer = null; dirty = new Set(); statusDirty = false;
   const done = busy('削除中…');
-  // 先に書類の写真を消す（行だけ消すと、写真が持ち主のいないまま残ってしまう）
-  // （開いた後にお客様が写真を撮っていることもあるので、毎回消す）
-  try { await callAI({ mode: 'purge', customer_id: state.id }); }
-  catch (e) { done(); toast('書類の写真を削除できなかったので、やめました：' + e.message, 6000); return; }
-  const { error } = await sb.from(CONFIG.TABLE).delete().eq('id', state.id);
+  const { error } = await sb.from(CONFIG.TABLE).update({ deleted_at: new Date().toISOString() }).eq('id', state.id);
   done();
   if (error) { toast('削除できませんでした：' + error.message); return; }
+  toast('削除しました（' + TRASH_DAYS + '日間は元に戻せます）', 5000);
   viewList();
+}
+// すぐに完全に消す（ゴミ箱の中から）。先に書類の写真を消す（行だけ消すと、写真が持ち主のいないまま残ってしまう）
+async function deleteForever(row) {
+  if (!confirm(`「${nameOf(row.data)}」を完全に削除します。本人確認書類の写真も消えます。元に戻せません。よろしいですか？`)) return false;
+  const done = busy('削除中…');
+  try { await callAI({ mode: 'purge', customer_id: row.id }); }
+  catch (e) { done(); toast('書類の写真を削除できなかったので、やめました：' + e.message, 6000); return false; }
+  const { error } = await sb.from(CONFIG.TABLE).delete().eq('id', row.id);
+  done();
+  if (error) { toast('削除できませんでした：' + error.message); return false; }
+  toast('完全に削除しました'); return true;
+}
+async function restoreCustomer(row) {
+  const done = busy('元に戻しています…');
+  const { error } = await sb.from(CONFIG.TABLE).update({ deleted_at: null }).eq('id', row.id);
+  done();
+  if (error) { toast('元に戻せませんでした：' + error.message); return false; }
+  toast('「' + nameOf(row.data) + '」を元に戻しました'); return true;
+}
+/* ---------- 削除したお客様（ゴミ箱） ---------- */
+async function viewTrash() {
+  stopVoice(); state = null; clearSecrets();
+  const ul = h('div', { style: 'display:grid;gap:8px;margin-top:14px' }, h('p', { class: 'muted' }, '読み込み中…'));
+  app.replaceChildren(
+    h('header', { class: 'topbar' },
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': '一覧にもどる', onclick: () => viewList() }, icon('back')),
+      h('h1', { class: 'tb-title' }, '削除したお客様')),
+    h('main', { class: 'wrap' },
+      h('p', { class: 'note' }, '削除したお客様は' + TRASH_DAYS + '日間ここに残り、「元に戻す」で一覧に戻せます。' + TRASH_DAYS + '日たつと、本人確認書類の写真も含めて自動で完全に消えます。'),
+      ul));
+  const draw = async () => {
+    const { data, error } = await sb.from(CONFIG.TABLE).select('id,status,data,updated_at,deleted_at').not('deleted_at', 'is', null).order('deleted_at', { ascending: false }).limit(300);
+    if (error) { ul.replaceChildren(h('p', { class: 'err' }, '読み込めませんでした：' + error.message)); return; }
+    if (!data.length) { ul.replaceChildren(h('p', { class: 'muted' }, '削除したお客様はいません。')); return; }
+    ul.replaceChildren(...data.map(r => {
+      const left = Math.max(0, Math.ceil((new Date(r.deleted_at).getTime() + TRASH_DAYS * 86400000 - Date.now()) / 86400000));
+      return h('div', { class: 'trash-row' },
+        h('div', {}, h('strong', {}, nameOf(r.data)), ' ', staffTag(r.data)),
+        h('span', { class: 'small muted' }, '削除した日 ' + fmtAt(r.deleted_at) + '・あと' + left + '日で完全に削除'),
+        h('div', { class: 'row-actions' },
+          h('button', { class: 'btn primary sm', type: 'button', onclick: async () => { if (await restoreCustomer(r)) draw(); } }, '元に戻す'),
+          h('button', { class: 'btn danger sm', type: 'button', onclick: async () => { if (await deleteForever(r)) draw(); } }, '今すぐ完全に削除')));
+    }));
+  };
+  draw();
 }
 
 /* ---------- AIの呼び出し ---------- */
