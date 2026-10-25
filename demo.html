@@ -419,6 +419,11 @@ const CONFIG = {
   CONTRACT_URL: 'https://drive.google.com/file/d/1En5eZ0N2E9Pd6QbGAvhNjIirUO9ApD81/view?usp=sharing',
   // 送信が終わった後に案内する公式LINE（友だち追加のリンク）
   LINE_URL: 'demo',
+  // サポート料 22,000円のグループ（別会社）：担当者が「サポート料」で22,000円を選んだお客様には、こちらを出す
+  // 別会社の決済ページなので、お支払いの記録はスプレッドシートに付かない（支払いリンク・契約書は空ならボタンを出さない）
+  STRIPE_PAYMENT_LINK_22000: 'https://sl.lmes.jp/l/ezGO6o2RnD',
+  CONTRACT_URL_22000: '',
+  LINE_URL_22000: 'https://lin.ee/pMV5LAf',
 };
 
 const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
@@ -699,12 +704,18 @@ let refreshGo = () => {};
 const goDone = {};
 function goNext(kind) { goDone[kind + 'Opened'] = true; saveProgress({ [kind + 'Opened']: true }); refreshGo(true); }
 // 公式LINEの友だち追加
+// サポート料の金額で、お支払い先・契約書・公式LINEを切り替える（担当者が選んだ data.support_fee。お客様は変更できない）
+function plan() {
+  if (String((data && data.support_fee) || '') === '22,000円')
+    return { fee: '22,000円', pay: CONFIG.STRIPE_PAYMENT_LINK_22000, contract: CONFIG.CONTRACT_URL_22000, line: CONFIG.LINE_URL_22000, ours: false };
+  return { fee: '9,800円', pay: CONFIG.STRIPE_PAYMENT_LINK, contract: CONFIG.CONTRACT_URL, line: CONFIG.LINE_URL, ours: true };
+}
 function lineBlock(no = '') {
-  if (!CONFIG.LINE_URL) return null;
+  if (!plan().line) return null;
   return h('section', { class: 'sec', 'data-go': 'line', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('strong', {}, no + '公式LINEに登録してください'),
     h('p', { class: 'small muted', style: 'margin:0' }, 'ご契約後のお手続き（住所変更・カードの変更・引き出しなど）についての、お問い合わせ窓口です。'),
-    h('a', { class: 'btn wide line-btn', href: CONFIG.LINE_URL, target: '_blank', rel: 'noopener', onclick: () => { goNext('line'); lineClicked(); } }, 'LINEで友だち追加する')));
+    h('a', { class: 'btn wide line-btn', href: plan().line, target: '_blank', rel: 'noopener', onclick: () => { goNext('line'); lineClicked(); } }, 'LINEで友だち追加する')));
 }
 // 「LINEで友だち追加する」を押した日時を、スプレッドシートの「公式LINEボタン」に記録する（失敗してもお客様には何も出さない）
 function lineClicked() {
@@ -713,7 +724,7 @@ function lineClicked() {
 }
 // 送信後の案内：残りの数 → ① サポート料のお支払い → ② 公式LINE → 今後の流れ
 function nextSteps(again = false, thanks = '') {
-  const pay = payBlock(again, CONFIG.LINE_URL ? '① ' : '');
+  const pay = payBlock(again, plan().line ? '① ' : '');
   const line = lineBlock(pay ? '② ' : '');
   const remain = h('p', { class: 'remain' });
   const arrow = h('div', { class: 'go-arrow', 'aria-hidden': 'true' }, h('span'), h('b', {}, '↓'));
@@ -748,27 +759,30 @@ function nextSteps(again = false, thanks = '') {
 }
 // 業務委託契約書のリンクと「お支払い完了で同意」の一文（公式LINEで案内していた時と同じ決まり）
 function contractBlock() {
-  if (!CONFIG.CONTRACT_URL) return [];
+  const url = plan().contract;
+  if (!url) return [];
   return [
     h('p', { class: 'small muted', style: 'margin:0' }, '契約書の内容をご確認ください。お支払いの完了をもって、契約内容にご同意いただいたものとさせていただきます。'),
-    h('a', { class: 'btn outline wide', href: CONFIG.CONTRACT_URL, target: '_blank', rel: 'noopener' }, '📄 業務委託契約書を確認する'),
+    h('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener' }, '📄 業務委託契約書を確認する'),
   ];
 }
 // サポート料の支払い（Stripeの画面を開く。カード番号はStripeが受け取り、このツールには来ない）
 function payBlock(again = false, no = '') {
-  if (!CONFIG.STRIPE_PAYMENT_LINK) return null;
+  const pl = plan();
+  if (!pl.pay) return null;
   let href;
   try {
-    const url = new URL(CONFIG.STRIPE_PAYMENT_LINK);
+    const url = new URL(pl.pay);
     const email = String((data && data.email) || '').trim();
-    if (email) url.searchParams.set('prefilled_email', email);
+    // 別会社の決済ページ（22,000円）には、メールアドレスもこのツールの番号も渡さない
+    if (email && pl.ours) url.searchParams.set('prefilled_email', email);
     // 支払いが終わった時にStripeから届く通知で「どのお客様か」が分かるように、このリンクの番号を付ける（スプレッドシートの「サポート料」に記録される）
-    if (TOKEN) url.searchParams.set('client_reference_id', TOKEN);
+    if (TOKEN && pl.ours) url.searchParams.set('client_reference_id', TOKEN);
     href = url.toString();
   } catch { return null; }
   return h('section', { class: 'sec', 'data-go': 'pay', style: 'text-align:left;width:100%' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
-    h('strong', {}, no + 'サポート料 9,800円のお支払い'),
-    h('p', { class: 'small muted', style: 'margin:0' }, '決済システムStripe（ストライプ）の安全なお支払い画面が開きます。' + (again ? 'お支払い済みの方は不要です。' : '')),
+    h('strong', {}, no + 'サポート料 ' + pl.fee + 'のお支払い'),
+    h('p', { class: 'small muted', style: 'margin:0' }, (pl.ours ? '決済システムStripe（ストライプ）の安全なお支払い画面が開きます。' : 'お支払いの画面が開きます。') + (again ? 'お支払い済みの方は不要です。' : '')),
     h('a', { class: 'btn primary wide', href, target: '_blank', rel: 'noopener', onclick: () => goNext('pay') }, 'お支払い画面を開く'),
     h('p', { class: 'pay-done', hidden: true }, '✓ お支払い画面を開きました。お支払いが済んだら、次へお進みください。'),
     ...contractBlock()));
