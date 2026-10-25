@@ -258,6 +258,13 @@ a.btn{text-decoration:none}
 .hello-name input{flex:1;min-width:0;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
 .follow-btn[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink)}
 .invite-actions{display:grid;gap:8px}
+.todo-box{display:grid;gap:4px;padding:10px 12px;border-radius:10px;border:1px solid var(--seal);background:var(--surface)}
+.todo-box strong{color:var(--seal)}
+.link-tools{display:grid;gap:6px;padding-top:10px;border-top:1px dashed var(--line)}
+.link-tools-row{display:flex;flex-wrap:wrap;gap:6px}
+.link-tools-row .btn{flex:1 1 auto}
+.more-box summary{cursor:pointer;color:var(--muted);font-size:.85rem;padding:4px 0}
+.more-box[open] summary{margin-bottom:6px}
 .fix-list{display:grid;gap:6px}
 .fix-list label{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;font-size:.92rem}
 .fix-list input{width:20px;height:20px;flex:none}
@@ -1177,7 +1184,10 @@ function renderInviteCard() {
   const inv = inviteMap.get(state.id), ist = inviteState(inv), row = { data: state.data };
   const follow = needsFollow(row, inv);
   const fd = state.data._fix_done;
-  const remind = ist === 'active' ? reminderText(state.data, inv) : '';
+  // まだ開かれていない時は最初の案内文、開いて途中の時は「続きのお願い」を一番上に出す
+  const opened = !!state.data._seen;
+  const remind = ist === 'active' ? (opened ? reminderText(state.data, inv) : inviteMsg(inviteUrl(inv.token))) : '';
+  const newLinkBtn = h('button', { class: 'btn outline wide', type: 'button', onclick: makeInvite }, ist === 'none' ? 'お客様用リンクを作る' : '新しいリンクを作り直す（今のリンクは使えなくなります）');
   inviteCardEl = h('section', { class: 'sec invite' }, h('div', { class: 'sec-body', style: 'padding-top:16px' },
     h('div', {}, h('strong', {}, 'お客様に入力してもらう'),
       h('p', { class: 'muted small', style: 'margin:2px 0 0' }, 'お客様専用のリンクを作って、LINEやメールで送れます。ログイン不要・7日間有効・送信後は使えなくなります。')),
@@ -1192,13 +1202,26 @@ function renderInviteCard() {
       ? '💬 公式LINE：登録ボタンを押しました（' + fmtAt(state.data._line.at) + '）。登録できたかはLステップで確かめてください'
       : '💬 公式LINE：まだ登録ボタンが押されていません') : null,
     ist === 'active' ? h('div', { class: 'invite-actions' },
-      h('button', { class: 'btn primary wide', type: 'button', onclick: () => copyText(remind, 'リマインド文をコピーしました') }, 'リマインド文をコピー'),
-      h('a', { class: 'btn outline wide', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(remind), target: '_blank', rel: 'noopener' }, 'LINEでリマインドを送る'),
-      h('div', { class: 'doc-actions' },
-        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => copyText(inviteUrl(inv.token), 'リンクをコピーしました') }, '今のリンクをコピー'),
-        h('button', { class: 'btn ghost sm', type: 'button', onclick: extendInvite }, '期限を7日延ばす'))) : null,
+      h('div', { class: 'todo-box' },
+        h('strong', {}, opened ? '👉 今やること：続きの入力をお願いする' : '👉 今やること：お客様にリンクを送る'),
+        h('span', { class: 'small muted' }, opened
+          ? 'お客様は入力の途中です。続きをお願いする文（リンク付き）を送れます。'
+          : 'まだ送っていなければ、下の案内文（リンク付き）を送ってください。送ったのにまだ開かれていない時も、同じ案内文をもう一度送れば大丈夫です。')),
+      h('button', { class: 'btn primary wide', type: 'button', onclick: () => copyText(remind, opened ? '続きのお願いをコピーしました' : '案内文をコピーしました') }, opened ? '続きのお願いをコピー（リンク付き）' : '案内文をコピー（リンク付き）'),
+      h('a', { class: 'btn outline wide', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(remind), target: '_blank', rel: 'noopener' }, 'そのままLINEで送る'),
+      h('div', { class: 'link-tools' },
+        h('span', { class: 'small muted' }, 'リンクの操作（いま使えるリンク：' + fmtDay(inv.expires_at) + 'まで）'),
+        h('div', { class: 'link-tools-row' },
+          h('button', { class: 'btn outline sm', type: 'button', onclick: () => copyText(inviteUrl(inv.token), 'リンクだけコピーしました') }, 'リンクだけコピー'),
+          h('button', { class: 'btn outline sm', type: 'button', onclick: extendInvite }, '期限を7日延ばす')))) : null,
+    ist === 'expired' ? h('div', { class: 'todo-box' }, h('strong', {}, '👉 今やること：リンクの期限を延ばす'),
+      h('span', { class: 'small muted' }, '期限が切れて、お客様が開けなくなっています。延ばしても同じリンクのまま使えます。')) : null,
     ist === 'expired' ? h('button', { class: 'btn primary wide', type: 'button', onclick: extendInvite }, 'リンクの期限を7日延ばす（リンクは同じ）') : null,
-    h('button', { class: 'btn outline wide', type: 'button', onclick: makeInvite }, ist === 'none' ? 'お客様用リンクを作る' : '新しいリンクを作る（今のリンクは使えなくなります）'),
+    // まだリンクが無い時だけ大きく出す。ある時は、うまくいかない時用にたたんでおく
+    ist === 'none' ? newLinkBtn : h('details', { class: 'more-box' },
+      h('summary', {}, 'リンクがうまく開けない時（作り直す）'),
+      h('p', { class: 'small muted', style: 'margin:0 0 6px' }, '作り直すと、今のリンクは使えなくなります。お客様が入力した内容は消えません。'),
+      newLinkBtn),
     ist === 'submitted' || got || state.status !== '入力中' ? h('button', { class: 'btn outline wide', type: 'button', onclick: openFixSheet }, '✏️ この項目だけ直してもらう') : null,
     gInfo));
   return inviteCardEl;
@@ -1238,9 +1261,12 @@ async function makeInvite() {
   await loadInvites(); redrawInviteCard();
   const link = inviteUrl(token);
   const forName = String(state.data.invite_for || '').trim();
-  // LINEのプレビュー枠の題名は変えられないので、文章の先頭で「誰用のリンクか」を一目で分かるようにする
-  const msg = (forName ? '【' + forName + ' 様用】お申込み情報のご入力リンクです\n\n' : '') + 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます（7日間有効・10分ほど）。\n' + link;
-  showLinkSheet(msg, link, (forName ? forName + ' 様用の' : 'お客様用') + 'リンクができました', forName);
+  showLinkSheet(inviteMsg(link), link, (forName ? forName + ' 様用の' : 'お客様用') + 'リンクができました', forName);
+}
+// お客様に送る案内文（リンク付き）。LINEのプレビュー枠の題名は変えられないので、文章の先頭で「誰用のリンクか」を一目で分かるようにする
+function inviteMsg(link) {
+  const forName = String(state.data.invite_for || '').trim();
+  return (forName ? '【' + forName + ' 様用】お申込み情報のご入力リンクです\n\n' : '') + 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます（7日間有効・10分ほど）。\n' + link;
 }
 function showLinkSheet(msg, link, title, forName = '') {
   const isFile = location.protocol === 'file:';
