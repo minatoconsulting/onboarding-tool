@@ -608,7 +608,16 @@ async function boot() {
   if (!TOKEN) return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
   if (error) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。');
-  if (st === 'used') return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true, nextSteps(true));
+  if (st === 'used') {
+    // 送信済み：サポート料のグループ（9,800円／22,000円）と、支払い・LINEボタンの記録だけを読んで、お支払い先と矢印を合わせる
+    const { data: after } = await sb.rpc('onboarding_invite_after', { p_token: TOKEN });
+    if (after) {
+      data = { support_fee: after.support_fee || '' };
+      if (after.paid) goDone.payOpened = true;
+      if (after.line) goDone.lineOpened = true;
+    }
+    return viewMessage('送信済みです', 'ご入力ありがとうございました。内容の変更は担当者にご連絡ください。', true, nextSteps(true));
+  }
   if (st === 'expired') return viewMessage('リンクの期限が切れています', 'お手数ですが、担当者に新しいリンクをご依頼ください。');
   if (st !== 'ok') return viewMessage('リンクが正しくありません', '担当者から届いたリンクを、もう一度開いてください。');
   const { data: saved, error: getError } = await sb.rpc('onboarding_invite_get', { p_token: TOKEN });

@@ -236,6 +236,26 @@ a.btn{text-decoration:none}
 .row-prog:empty{display:none}
 .follow-tag{display:inline-block;margin-right:6px;padding:0 8px;border-radius:999px;background:#FDECEA;color:#8A2A1D;border:1px solid #F2B8AE;font-weight:700;font-size:.74rem}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .follow-tag{background:#3A1E1A;color:#F2B8AE;border-color:#6B3328}}
+.follow-btn{margin:0 0 14px}
+/* 一覧の行：お支払い・公式LINEの札と、次にやること */
+.state-tag{display:inline-block;white-space:nowrap;margin:2px 6px 0 0;padding:0 8px;border-radius:999px;font-weight:700;font-size:.74rem;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.state-tag.ok{background:#E3F1EB;border-color:#9CC5B9;color:#1F6457}
+.state-tag.wait{background:var(--ai);border-color:var(--ai-line);color:var(--ai-ink)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .state-tag.ok{background:#1B2F2A;border-color:#2E5A4F;color:#9CC5B9}}
+.next-act{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-2px 0 0;padding:8px 12px;border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;background:var(--paper);font-size:.8rem}
+.next-act .btn{min-height:32px}
+.next-act-txt{flex:1 1 100%;font-weight:700}
+.list li.has-act .row{border-radius:12px 12px 0 0}
+.hello-stats button{padding:2px 10px;border-radius:999px;border:1px solid transparent;background:var(--surface);font:inherit;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer}
+.hello-stats button b{color:var(--ink);font-size:.9rem;margin-left:2px}
+.hello-stats button[aria-pressed="true"]{background:var(--seal);color:var(--seal-ink);border-color:var(--seal)}
+.hello-stats button[aria-pressed="true"] b{color:var(--seal-ink)}
+.filter-note{margin:10px 0 0;font-size:.82rem;color:var(--muted)}
+.demo-btn{margin-top:12px}
+.staff-tag{display:inline-block;white-space:nowrap;margin-right:6px;padding:0 8px;border-radius:999px;background:var(--seal-soft);color:var(--seal);font-weight:700}
+.staff-tag.none{background:var(--ai);color:var(--ai-ink)}
+.hello-name{display:flex;gap:6px;margin-top:8px}
+.hello-name input{flex:1;min-width:0;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
 .follow-btn[aria-pressed="true"]{background:var(--seal);border-color:var(--seal);color:var(--seal-ink)}
 .invite-actions{display:grid;gap:8px}
 .fix-list{display:grid;gap:6px}
@@ -702,23 +722,38 @@ const LIST_ILL = {
 const AVA = { '入力中': ['#EEF2F4', '#8A99A4'], '入力完了': ['#FFF3CC', '#C9961A'], 'ITA提出済み': ['#E3F1EB', '#1F6457'] };
 const avatarSvg = s => { const [bg, fg] = AVA[s] || AVA['入力中']; return '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="20" fill="' + bg + '"/><circle cx="20" cy="16" r="6.5" fill="' + fg + '"/><path d="M8.5 32c1.6-6 6-9 11.5-9s9.9 3 11.5 9" fill="' + fg + '"/></svg>'; };
 function listIll(svg, cls) { const s = h('span', { class: cls, 'aria-hidden': 'true' }); s.innerHTML = svg; return s; }
-function helloCard(rows) {
+// ログインしている担当者の名前（「お客様が自分で申し込むリンク」の担当FPと同じもの）。あいさつと、新しいお客様の担当FPに使う
+let myName = '';
+function helloCard(rows, onName = null) {
   const n = s => rows ? rows.filter(r => r.status === s).length : '…';
   const hr = new Date().getHours();
-  const greet = hr < 11 ? 'おはようございます' : hr < 18 ? 'おつかれさまです' : 'こんばんは';
+  const greet = (myName ? myName + 'さん、' : '') + (hr < 11 ? 'おはようございます' : hr < 18 ? 'おつかれさまです' : 'こんばんは');
+  // 名前がまだ無い時は、ここで入れてもらう
+  const nameIn = h('input', { type: 'text', placeholder: '例：赤田', 'aria-label': 'あなたのお名前' });
+  const askName = rows && !myName && onName ? h('div', {},
+    h('span', { class: 'small' }, 'あなたのお名前（担当FP）を入れてください'),
+    h('div', { class: 'hello-name' }, nameIn,
+      h('button', { class: 'btn primary sm', type: 'button', onclick: () => { if (nameIn.value.trim()) onName(nameIn.value.trim()); } }, '保存'))) : null;
   return h('section', { class: 'hello' }, listIll(LIST_ILL.hello, 'hello-ill'),
-    h('div', { class: 'hello-txt' }, h('strong', {}, greet),
+    h('div', { class: 'hello-txt' }, h('strong', {}, greet), askName,
       h('span', { class: 'small muted' }, '今の申込みの状況です'),
       h('div', { class: 'hello-stats' },
-        h('span', {}, '入力中', h('b', {}, String(n('入力中')))),
-        h('span', {}, '入力完了', h('b', {}, String(n('入力完了')))),
-        h('span', {}, '提出済み', h('b', {}, String(n('ITA提出済み')))))));
+        // 押すと、その状態のお客様だけを一覧に出す（もう一度押すと全員に戻る）
+        ...[['入力中', '入力中'], ['入力完了', '入力完了'], ['提出済み', 'ITA提出済み']].map(([label, st]) =>
+          h('button', { type: 'button', 'data-filter': st, 'aria-pressed': 'false' }, label, h('b', {}, String(n(st))))),
+        rows ? h('button', { type: 'button', 'data-filter': 'unpaid', 'aria-pressed': 'false' }, '支払い待ち', h('b', {}, String(rows.filter(r => payState(r) === 'wait').length))) : null)));
 }
 async function viewList() {
   stopVoice(); state = null; clearSecrets();
   const search = h('input', { type: 'search', class: 'search', placeholder: '名前で探す', 'aria-label': '名前で探す' });
   const ul = h('ul', { class: 'list' }, h('li', { class: 'muted pad' }, '読み込み中…'));
-  let hello = helloCard(null), onlyFollow = false;
+  let hello = helloCard(null), onlyFollow = false, filter = '';
+  const filterNote = h('p', { class: 'filter-note', hidden: true });
+  // あいさつの数字ボタン（入力中・入力完了・提出済み・支払い待ち）で絞り込む
+  const paintStats = () => hello.querySelectorAll('[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === filter)));
+  const wireStats = el => { el.querySelectorAll('[data-filter]').forEach(b => {
+    b.onclick = () => { filter = filter === b.dataset.filter ? '' : b.dataset.filter; paintStats(); draw(); };
+  }); paintStats(); };
   const followBtn = h('button', { class: 'btn outline wide follow-btn', type: 'button', hidden: true, 'aria-pressed': 'false' });
   const adminBtn = h('button', { class: 'btn ghost sm', type: 'button', hidden: true, onclick: () => viewAdmin() }, 'メンバー管理');
   followBtn.addEventListener('click', () => { onlyFollow = !onlyFollow; followBtn.setAttribute('aria-pressed', String(onlyFollow)); draw(); });
@@ -733,7 +768,9 @@ async function viewList() {
       h('button', { class: 'btn primary wide btn-two', onclick: newCustomer },
         h('span', { class: 'btn-main' }, listIll(LIST_ILL.add, 'btn-ill'), '新しいお客様を追加'),
         h('span', { class: 'btn-sub' }, '個別の面談で、1人ずつ申込みを作る')),
-      entryCard(), h('hr', { class: 'entry-sep' }), search, ul));
+      entryCard(),
+      h('a', { class: 'btn outline wide demo-btn', href: 'demo.html', target: '_blank', rel: 'noopener' }, '🧪 体験版を試す（お客様の画面を体験）'),
+      h('hr', { class: 'entry-sep' }), search, filterNote, ul));
   const [{ data, error }] = await Promise.all([
     sb.from(CONFIG.TABLE).select('id,status,data,updated_at').order('updated_at', { ascending: false }).limit(300),
     loadInvites()]);
@@ -743,24 +780,43 @@ async function viewList() {
   const { data: mustChange } = await sb.rpc('onboarding_must_change_pw');
   if (mustChange === true) { viewChangePw(); return; }
   sb.rpc('onboarding_is_admin').then(({ data: admin }) => { if (admin === true && adminBtn.isConnected) adminBtn.hidden = false; });
-  const fresh = helloCard(data); hello.replaceWith(fresh); hello = fresh;
+  const { data: me } = await sb.rpc('onboarding_my_entry_link', { p_staff_name: null });
+  myName = String((me && me.staff_name) || '').trim();
+  const saveName = async name => {
+    const { data: r, error: e } = await sb.rpc('onboarding_my_entry_link', { p_staff_name: name });
+    if (e || !r) { toast('保存できませんでした' + (e ? '：' + e.message : '')); return; }
+    myName = String(r.staff_name || '').trim(); toast('お名前を保存しました');
+    const f = helloCard(data, saveName); hello.replaceWith(f); hello = f; wireStats(hello);
+  };
+  const fresh = helloCard(data, saveName); hello.replaceWith(fresh); hello = fresh; wireStats(hello);
   const follows = data.filter(r => needsFollow(r, inviteMap.get(r.id)));
   followBtn.hidden = !follows.length;
   followBtn.textContent = '📣 フォローが必要なお客様：' + follows.length + '人（タップで絞り込み）';
   function draw() {
     const q = search.value.trim().toLowerCase();
-    const rows = (onlyFollow ? follows : data).filter(r => !q || nameOf(r.data).toLowerCase().includes(q));
+    // 名前でも担当者名でも探せる
+    const hit = r => !q || nameOf(r.data).toLowerCase().includes(q) || String((r.data && r.data.staff_name) || '').toLowerCase().includes(q);
+    const pass = r => !filter || (filter === 'unpaid' ? payState(r) === 'wait' : r.status === filter);
+    const rows = (onlyFollow ? follows : data).filter(r => hit(r) && pass(r));
+    filterNote.hidden = !filter;
+    filterNote.textContent = filter ? '「' + (filter === 'unpaid' ? '支払い待ち' : filter === 'ITA提出済み' ? '提出済み' : filter) + '」のお客様だけを表示中（もう一度押すと全員に戻ります）' : '';
     ul.replaceChildren();
     if (!rows.length) { ul.append(data.length ? h('li', { class: 'muted pad' }, '該当するお客様がいません。') : h('li', { class: 'empty' }, listIll(LIST_ILL.empty, 'empty-ill'), h('p', { class: 'muted', style: 'margin:0' }, 'まだ申込みがありません。', h('br'), '「新しいお客様を追加」から始めましょう。'))); return; }
-    for (const r of rows) ul.append(h('li', {}, h('button', { class: 'row ava', onclick: () => viewCustomer(r) },
+    for (const r of rows) { const act = nextAction(r); ul.append(h('li', { class: act ? 'has-act' : '' }, h('button', { class: 'row ava', onclick: () => viewCustomer(r) },
       listIll(avatarSvg(r.status), 'row-ava'),
       h('span', { class: 'row-name' }, nameOf(r.data)),
       h('span', { class: 'chip ' + statusClass(r.status) }, r.status),
-      h('span', { class: 'row-date' }, fmtDate(r.updated_at) + (r.data && r.data._entry === 'self' ? '・自分で申込み' : '') + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '') + (r.data && r.data._gform ? (r.data._gform.status === 'sent' ? '・シート送信済み' : '・シート未送信') : '')),
-      rowProgress(r))));
+      h('span', { class: 'row-date' }, staffTag(r.data), fmtDate(r.updated_at) + (r.data && r.data._entry === 'self' ? '・自分で申込み' : '') + (r.data && r.data._customer_updated_at ? '・お客様入力あり' : '') + (r.data && r.data._gform ? (r.data._gform.status === 'sent' ? '・シート送信済み' : '・シート未送信') : '')),
+      rowProgress(r)), act)); }
   }
   search.addEventListener('input', draw);
+  search.placeholder = '名前・担当者名で探す';
   draw();
+}
+// 一覧の行に出す担当者名（誰のお客様かが一目で分かるように）
+function staffTag(d) {
+  const name = String((d && d.staff_name) || '').trim();
+  return h('span', { class: 'staff-tag' + (name ? '' : ' none') }, '担当：' + (name || '未入力'));
 }
 /* ---------- 自分で申し込んでもらう入口リンク（担当FPごとに1本・ずっと使える） ---------- */
 // お客様がこのリンクを開いて「はじめる」を押すと、この一覧に自動で追加される（担当者がリンクを作って送らなくてよい）
@@ -772,7 +828,7 @@ function entryCard() {
   const load = async (staffName = null) => {
     const { data: r, error } = await sb.rpc('onboarding_my_entry_link', { p_staff_name: staffName });
     if (error || !r) { body.replaceChildren(h('p', { class: 'err small', style: 'margin:0' }, 'リンクを読み込めませんでした' + (error ? '：' + error.message : ''))); return; }
-    link = r; draw();
+    link = r; myName = String(r.staff_name || '').trim(); draw();
   };
   const set = async args => {
     const { data: r, error } = await sb.rpc('onboarding_entry_link_set', args);
@@ -808,7 +864,7 @@ function entryCard() {
   return det;
 }
 async function newCustomer() {
-  const { data, error } = await sb.from(CONFIG.TABLE).insert({ data: defaults() }).select('id,status,data,updated_at').single();
+  const { data, error } = await sb.from(CONFIG.TABLE).insert({ data: { ...defaults(), ...(myName ? { staff_name: myName } : {}) } }).select('id,status,data,updated_at').single();
   if (error) { toast('追加できませんでした：' + error.message); return; }
   viewCustomer(data);
 }
@@ -996,7 +1052,42 @@ function progressText(r, inv) {
 }
 function rowProgress(r) {
   const inv = inviteMap.get(r.id), follow = needsFollow(r, inv), text = progressText(r, inv);
-  return h('span', { class: 'row-prog' }, follow ? h('span', { class: 'follow-tag' }, '📣 ' + follow) : null, text);
+  return h('span', { class: 'row-prog' }, follow ? h('span', { class: 'follow-tag' }, '📣 ' + follow) : null, text, afterTags(r));
+}
+// 送信後のお支払い・公式LINE（お客様が送信した後だけ出す）。記録は Stripe の通知と、お客様がLINEボタンを押した時に入る
+const submittedOf = r => inviteState(inviteMap.get(r.id)) === 'submitted' || !!(r.data && (r.data._paid || r.data._line));
+// 22,000円のグループは別会社の決済で、支払いの記録がこのツールに届かないので出さない
+const otherPay = r => String((r.data && r.data.support_fee) || '') === '22,000円';
+function payState(r) { return r.data && r.data._paid ? 'ok' : submittedOf(r) && !otherPay(r) ? 'wait' : ''; }
+function lineState(r) { return r.data && r.data._line ? 'ok' : submittedOf(r) ? 'wait' : ''; }
+function afterTags(r) {
+  const pay = payState(r), line = lineState(r);
+  if (!pay && !line) return null;
+  return h('span', { style: 'display:block' },
+    pay ? h('span', { class: 'state-tag ' + pay }, pay === 'ok' ? '💳 支払い済み' : '💳 支払い待ち') : null,
+    h('span', { class: 'state-tag ' + line }, line === 'ok' ? '💬 LINEボタン押した' : '💬 LINEまだ'));
+}
+// 一覧の行の下に出す「次にやること」（1つだけ）。連絡文はコピーしてLINEなどで送る
+function nextAction(r) {
+  const inv = inviteMap.get(r.id), st = inviteState(inv), d = r.data || {};
+  const name = String(d.invite_for || d.name_ja || '').trim(), head = t => (name ? '【' + name + ' 様】' : '') + t;
+  let what = '', text = '', open = false;
+  if (st === 'expired') { what = 'リンクの期限が切れています → お客様を開いて期限を延ばす'; open = true; }
+  else if (st === 'active' && needsFollow(r, inv)) { what = '入力が止まっています → リマインドを送る'; text = reminderText(d, inv); }
+  else if (st === 'submitted' && payState(r) === 'wait') {
+    what = 'サポート料のお支払いがまだです → お支払いのお願いを送る';
+    text = [head('サポート料のお支払いのお願い'), '', 'お申込み情報のご送信、ありがとうございました。',
+      'サポート料（' + (d.support_fee || '9,800円') + '）のお支払いが、まだ確認できておりません。下のリンクを開くと、お支払いの画面へ進めます。', '', inviteUrl(inv.token)].join('\n');
+  } else if (st === 'submitted' && !d._line) {
+    what = '公式LINEの登録ボタンがまだ押されていません → 登録のお願いを送る';
+    text = [head('公式LINEご登録のお願い'), '', 'ご契約後のお手続き（住所変更・カードの変更・引き出しなど）のお問い合わせ窓口として、公式LINEへのご登録をお願いします。',
+      '下のリンクを開くと、登録のボタンがあります。', '', inviteUrl(inv.token)].join('\n');
+  }
+  if (!what) return null;
+  return h('div', { class: 'next-act' }, h('span', { class: 'next-act-txt' }, '👉 ' + what),
+    open ? h('button', { class: 'btn outline sm', type: 'button', onclick: () => viewCustomer(r) }, 'お客様を開く') : null,
+    text ? h('button', { class: 'btn primary sm', type: 'button', onclick: () => copyText(text, '連絡文をコピーしました') }, '連絡文をコピー') : null,
+    text ? h('a', { class: 'btn outline sm', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(text), target: '_blank', rel: 'noopener' }, 'LINEで送る') : null);
 }
 // 自分のお客様の、いちばん新しいお客様用リンク（customer_id → リンク）
 let inviteMap = new Map();
@@ -1094,6 +1185,12 @@ function renderInviteCard() {
     ist !== 'none' ? h('p', { class: 'note' }, '📊 ' + progressText(row, inv)) : null,
     fd ? h('p', { class: 'note' }, '✏️ お客様が直した内容を送信しました（' + fmtAt(fd.at) + '）：' + (fd.keys || []).map(fixLabel).join('、')) : null,
     follow ? h('p', { class: 'warn' }, '📣 フォローが必要です：' + follow) : null,
+    (ist === 'submitted' && state.data.support_fee !== '22,000円') || state.data._paid ? h('p', { class: state.data._paid ? 'note' : 'warn' }, state.data._paid
+      ? '💳 サポート料：支払い済み（' + fmtAt(state.data._paid.at) + (state.data._paid.amount ? '・' + Number(state.data._paid.amount).toLocaleString('ja-JP') + '円' : '') + '）'
+      : '💳 サポート料：まだお支払いの記録がありません') : null,
+    ist === 'submitted' || state.data._line ? h('p', { class: state.data._line ? 'note' : 'warn' }, state.data._line
+      ? '💬 公式LINE：登録ボタンを押しました（' + fmtAt(state.data._line.at) + '）。登録できたかはLステップで確かめてください'
+      : '💬 公式LINE：まだ登録ボタンが押されていません') : null,
     ist === 'active' ? h('div', { class: 'invite-actions' },
       h('button', { class: 'btn primary wide', type: 'button', onclick: () => copyText(remind, 'リマインド文をコピーしました') }, 'リマインド文をコピー'),
       h('a', { class: 'btn outline wide', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(remind), target: '_blank', rel: 'noopener' }, 'LINEでリマインドを送る'),
