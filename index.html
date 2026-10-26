@@ -45,7 +45,6 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tb-title{flex:1;min-width:0;margin:0;font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .save{font-size:.76rem;color:var(--muted);white-space:nowrap;background:none;border:0;padding:4px;cursor:default}
 .save.bad{color:var(--danger);cursor:pointer;text-decoration:underline}
-.status-sel{font-size:.85rem;min-height:36px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:500;cursor:pointer}
 .btn.primary{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);font-weight:700}
@@ -272,6 +271,101 @@ a.btn{text-decoration:none}
 .fix-list{display:grid;gap:6px}
 .fix-list label{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;font-size:.92rem}
 .fix-list input{width:20px;height:20px;flex:none}
+
+/* 確認の画面（ブラウザの確認窓の代わり）：スマホは下からスッと出る・パソコンは真ん中 */
+.ask-back.out{opacity:0;transition:opacity .18s}
+.backdrop{animation:fade .18s ease-out}
+.sheet{animation:up .22s cubic-bezier(.2,.8,.3,1)}
+.sheet.ask{gap:10px}
+.ask h2{font-size:1.12rem}
+.ask-ic{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:1.6rem;background:var(--seal-soft)}
+.ask-ic.danger{background:#FDECEA}
+.ask-text{margin:0;white-space:pre-line;color:var(--muted);font-size:.93rem}
+.ask-btns{display:flex;flex-direction:column-reverse;gap:8px;margin-top:6px}
+.btn.danger-fill{background:var(--danger);border-color:var(--danger);color:var(--surface);font-weight:700}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+@media (min-width:640px){
+  .ask-back{align-items:center}
+  .sheet.ask{max-width:440px;border-radius:18px;padding:22px 22px 18px}
+  .ask-btns{flex-direction:row;justify-content:flex-end}
+  .ask-btns .btn{width:auto;min-width:120px}
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ask-ic.danger{background:#3A1E1A}}
+
+/* 進み具合（入力中 → 入力完了 → 提出済み）をボタンで切り替える */
+.stepper{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px 14px;margin:0 0 14px;display:grid;gap:10px;scroll-margin-top:72px}
+.step-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);position:relative}
+.steps li{position:relative;display:grid}
+.steps li+li::before{content:'';position:absolute;top:19px;right:50%;width:100%;height:3px;border-radius:2px;background:var(--line);transition:background .3s}
+.steps li.done+li::before,.steps li.done+li.now::before{background:var(--seal)}
+.steps button{position:relative;z-index:1;display:grid;justify-items:center;gap:4px;padding:2px 0;border:0;background:none;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--muted)}
+.step-dot{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:.95rem;border:2px solid var(--line);background:var(--surface);transition:transform .2s,background .2s}
+.steps li.done .step-dot{background:var(--seal-soft);border-color:var(--seal);color:var(--seal)}
+.steps li.now .step-dot{background:var(--seal);border-color:var(--seal);color:var(--seal-ink);transform:scale(1.1);box-shadow:0 0 0 5px var(--seal-soft)}
+.steps li.now button{color:var(--ink)}
+.steps button:hover .step-dot{border-color:var(--seal)}
+.step-done{margin:0;text-align:center;font-weight:700;color:var(--seal)}
+.status-chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.status-chip.s-b{border-color:var(--ai-line);color:var(--ai-ink);background:var(--ai)}
+.status-chip.s-c{border-color:var(--seal);color:var(--seal-ink);background:var(--seal)}
+
+/* お祝い（紙吹雪とメッセージ） */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.confetti i{position:absolute;top:-24px;animation:fall linear forwards}
+@keyframes fall{to{transform:translate(var(--x),110vh) rotate(var(--r))}}
+.cheer{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:81;display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100% - 32px);padding:12px 8px 12px 16px;border-radius:16px;background:var(--surface);border:2px solid var(--seal);box-shadow:0 10px 30px rgba(0,0,0,.18);animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+.cheer div{display:grid;gap:2px;min-width:0}
+.cheer strong{font-size:1rem}
+.cheer div span{font-size:.84rem;color:var(--muted)}
+.cheer-emoji{font-size:1.9rem;line-height:1}
+.cheer.big{padding:16px 10px 16px 20px}
+.cheer.big strong{font-size:1.15rem}
+.cheer.big .cheer-emoji{font-size:2.4rem;animation:wiggle .9s ease-in-out 2}
+@keyframes pop{from{transform:translateX(-50%) scale(.6);opacity:0}}
+@keyframes wiggle{25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+
+/* 今月の提出数のグラフ */
+:root{--bar-dim:#B7D3CA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bar-dim:#2E5A4F}}
+.month-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px 12px;margin:0 0 14px;display:grid;gap:10px}
+.month-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.month-big{font-size:.95rem;font-weight:700;line-height:1.1}
+.month-big b{font-size:2.3rem;margin-right:2px;font-variant-numeric:tabular-nums}
+.month-diff{font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--seal-soft);color:var(--seal)}
+.bars{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;height:120px;align-items:end;border-bottom:1px solid var(--line);padding-top:4px}
+.bar{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;cursor:default}
+.bar-n{font-size:.78rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar-fill{width:min(100%,34px);min-height:2px;border-radius:4px 4px 0 0;background:var(--bar-dim);transition:height .6s cubic-bezier(.2,.8,.3,1)}
+.bar.now .bar-fill{background:var(--seal)}
+.bar.now .bar-n{color:var(--ink)}
+.bar:hover .bar-fill{filter:brightness(.92)}
+.bar-labels{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:-4px}
+.bar-labels span{text-align:center;font-size:.76rem;color:var(--muted)}
+.bar-labels span.now{color:var(--ink);font-weight:700}
+.month-note{margin:0;font-size:.72rem;color:var(--muted)}
+
+/* 一覧とお客様の画面の組み立て（スマホは1列。パソコンは左に一覧・右にお客様） */
+.home{padding-bottom:0}
+.side{max-width:720px;margin:0 auto;padding:0 16px 48px}
+.side-head{display:none}
+.split.detail-mode>.side{display:none}
+.row[aria-current="true"]{border-color:var(--seal);box-shadow:0 0 0 3px var(--seal-soft)}
+@media (min-width:1000px){
+  :root{--side-w:min(400px,36vw)}
+  .split{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);align-items:start;min-height:100vh}
+  .split>.side,.split.detail-mode>.side{display:block;grid-column:1;grid-row:1;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto;max-width:none;margin:0;padding:0 14px 32px;background:var(--surface);border-right:1px solid var(--line)}
+  .split>.pane{grid-column:2;grid-row:1;min-width:0}
+  .side-head{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:5;margin:0 -14px;padding:14px 14px 10px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .side-head strong{font-size:1.02rem}
+  .side .search{margin-top:12px}
+  .side .follow-btn{margin:12px 0 0}
+  .split .home{padding-bottom:48px}
+  .split .home .entry-sep{display:none}
+  .split .dock{left:var(--side-w)}
+}
+@media (prefers-reduced-motion:reduce){.sheet,.backdrop,.cheer,.cheer.big .cheer-emoji{animation:none}.bar-fill,.steps li+li::before,.step-dot{transition:none}}
 </style>
 </head>
 <body>
@@ -474,6 +568,71 @@ function toast(msg, ms = 3200) {
   document.body.append(t);
   setTimeout(() => t.remove(), ms);
 }
+/* ---------- 確認の画面（ブラウザの確認窓 confirm の代わり。スマホは下から、パソコンは真ん中に出る） ---------- */
+// 使い方：if (!await ask({ title: '削除しますか？', text: '…', ok: '削除する', danger: true })) return;
+// 押したボタンで true（ok）／false（やめる・外側を押した・Esc）が返る
+function ask({ title, text = '', ok = 'OK', cancel = 'やめる', danger = false, emoji = '', extra = null }) {
+  return new Promise(resolve => {
+    const prev = document.activeElement;
+    let closed = false;
+    const close = v => {
+      if (closed) return; closed = true;
+      document.removeEventListener('keydown', onKey);
+      back.classList.add('out'); setTimeout(() => back.remove(), 180);
+      if (prev && prev.focus) prev.focus();
+      resolve(v);
+    };
+    const onKey = e => { if (e.key === 'Escape') close(false); };
+    const okBtn = h('button', { class: 'btn wide ' + (danger ? 'danger-fill' : 'primary'), type: 'button', onclick: () => close(true) }, ok);
+    const noBtn = cancel ? h('button', { class: 'btn outline wide', type: 'button', onclick: () => close(false) }, cancel) : null;
+    const back = h('div', { class: 'backdrop ask-back' }, h('div', { class: 'sheet ask', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': title },
+      emoji ? h('div', { class: 'ask-ic' + (danger ? ' danger' : ''), 'aria-hidden': 'true' }, emoji) : null,
+      h('h2', {}, title),
+      text ? h('p', { class: 'ask-text' }, text) : null,
+      extra,
+      h('div', { class: 'ask-btns' }, noBtn, okBtn)));
+    back.addEventListener('click', e => { if (e.target === back) close(false); });
+    document.addEventListener('keydown', onKey);
+    document.body.append(back);
+    // 消す・止めるなどの時は、うっかりEnterで進まないように「やめる」を選んだ状態にしておく
+    ((danger && noBtn) || okBtn).focus();
+  });
+}
+// 文字を見せてコピーしてもらう画面（ブラウザの入力窓 prompt の代わり）
+function showText(title, text, value) {
+  const box = h('textarea', { class: 'transcript', readonly: true, rows: String(Math.min(8, String(value).split('\n').length + 1)) });
+  box.value = value;
+  return ask({ title, text, ok: '閉じる', cancel: null,
+    extra: h('div', { style: 'display:grid;gap:8px' }, box, h('button', { class: 'btn outline wide', type: 'button', onclick: () => copyText(value) }, '📋 コピーする')) });
+}
+
+/* ---------- お祝い（入力完了・提出済みにした時に、紙吹雪とひとこと） ---------- */
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function confetti(n) {
+  if (reduceMotion()) return;
+  const colors = ['#2E7D6B', '#F2C14E', '#E07A5F', '#9CC5B9', '#4E9F8D', '#F7D98B'];
+  const box = h('div', { class: 'confetti', 'aria-hidden': 'true' });
+  for (let i = 0; i < n; i++) {
+    const p = h('i'), w = 6 + Math.random() * 6;
+    p.style.cssText = `left:${Math.random() * 100}%;width:${w}px;height:${w * (1.2 + Math.random())}px;background:${colors[i % colors.length]};`
+      + `border-radius:${Math.random() < .3 ? '50%' : '2px'};--x:${Math.round((Math.random() - .5) * 200)}px;--r:${Math.round(Math.random() * 900 - 450)}deg;`
+      + `animation-duration:${(2.2 + Math.random() * 1.8).toFixed(2)}s;animation-delay:${(Math.random() * .5).toFixed(2)}s`;
+    box.append(p);
+  }
+  document.body.append(box);
+  setTimeout(() => box.remove(), 5000);
+}
+function celebrate({ big = false, emoji, title, sub = '' }) {
+  confetti(big ? 130 : 45);
+  try { if (navigator.vibrate) navigator.vibrate(big ? [30, 70, 30] : 25); } catch {}
+  document.querySelectorAll('.cheer').forEach(c => c.remove());
+  const card = h('div', { class: 'cheer' + (big ? ' big' : ''), role: 'status' },
+    h('span', { class: 'cheer-emoji', 'aria-hidden': 'true' }, emoji),
+    h('div', {}, h('strong', {}, title), sub ? h('span', {}, sub) : null),
+    h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: () => card.remove() }, icon('close')));
+  document.body.append(card);
+  setTimeout(() => card.remove(), big ? 6500 : 4000);
+}
 function busy(msg) {
   const b = h('div', { class: 'busy', role: 'alert', 'aria-live': 'assertive' },
     h('div', { class: 'busy-card' }, h('span', { class: 'spinner' }), msg));
@@ -661,7 +820,7 @@ async function viewAdmin() {
   const copyInvite = async () => {
     const text = `申込入力ツールの登録のご案内です。\n① ${signupUrl} を開く\n②「新規登録はこちら」を押す\n③ メールアドレス・パスワード・合言葉を入れて「登録する」\n合言葉：${codeIn.value.trim()}`;
     try { await navigator.clipboard.writeText(text); toast('案内文をコピーしました。LINEなどに貼り付けて送ってください。', 5000); }
-    catch { prompt('この文をコピーしてください', text); }
+    catch { showText('案内文', 'この文をコピーして、LINEなどで送ってください。', text); }
   };
   body.replaceChildren(
     h('section', { class: 'join-box' },
@@ -670,24 +829,24 @@ async function viewAdmin() {
       h('label', { class: 'lbl' }, '合言葉（6文字以上）', codeIn), codeMsg,
       h('button', { class: 'btn primary wide', type: 'button', onclick: () => saveCode(codeIn.value.trim()) }, '合言葉を保存'),
       code ? h('button', { class: 'btn outline wide', type: 'button', onclick: copyInvite }, '📋 新しいメンバーへの案内文をコピー') : null,
-      code ? h('button', { class: 'btn ghost wide', type: 'button', onclick: () => { if (confirm('新規登録の受付を止めますか？（合言葉を消します。登録済みの人はそのまま使えます）')) saveCode(''); } }, '新規登録の受付を止める') : null),
+      code ? h('button', { class: 'btn ghost wide', type: 'button', onclick: async () => { if (await ask({ title: '新規登録の受付を止めますか？', text: '合言葉を消します。登録済みの人はそのまま使えます。', ok: '受付を止める', danger: true, emoji: '✋' })) saveCode(''); } }, '新規登録の受付を止める') : null),
     h('section', { class: 'join-box', style: 'margin-top:16px' },
       h('strong', {}, '👥 メンバー（' + members.length + '人）'),
       h('div', {}, ...members.map(m => h('div', { class: 'mem-row' },
         h('div', { class: 'mem-main' }, h('strong', {}, m.email),
           h('span', { class: 'small muted' }, (m.is_admin ? '管理者・' : '') + (m.joined_by === 'code' ? '合言葉で登録' : '管理者が追加') + '・' + new Date(m.created_at).toLocaleDateString('ja-JP') + '・お客様 ' + m.customers + '人')),
         h('button', { class: 'btn ghost sm', type: 'button', onclick: async () => {
-          if (!confirm(m.email + ' さんの仮パスワードを発行しますか？\n（今のパスワードは使えなくなります）')) return;
+          if (!await ask({ title: '仮パスワードを発行しますか？', text: m.email + ' さんの今のパスワードは使えなくなります。', ok: '発行する', emoji: '🔑' })) return;
           const done = busy('発行中…');
           const { data: r, error } = await sb.functions.invoke(SIGNUP_FN, { body: { mode: 'reset', email: m.email } });
           done();
           if (error || !r || !r.password) { toast('発行できませんでした。', 4000); return; }
           const text = `申込入力ツールの仮パスワードです。\nメールアドレス：${m.email}\n仮パスワード：${r.password}\nログインすると、新しいパスワードを決める画面が出ます。\n${location.origin + location.pathname}`;
           try { await navigator.clipboard.writeText(text); } catch {}
-          prompt('仮パスワードを発行しました（クリップボードにもコピー済み）。本人に送ってください。', r.password);
+          showText('仮パスワードを発行しました', 'クリップボードにもコピー済みです。本人に送ってください。', r.password);
         } }, '仮パスワード'),
         m.is_admin ? null : h('button', { class: 'btn danger sm', type: 'button', onclick: async () => {
-          if (!confirm(m.email + ' さんを使えないようにしますか？\n（お客様のデータは消えません。もう一度使う時は、合言葉を入れてもらいます）')) return;
+          if (!await ask({ title: m.email + ' さんを停止しますか？', text: 'お客様のデータは消えません。もう一度使う時は、合言葉を入れてもらいます。', ok: '停止する', danger: true, emoji: '⛔' })) return;
           const { data: r, error } = await sb.rpc('onboarding_admin_remove', { p_email: m.email });
           if (error || r !== 'ok') { toast('停止できませんでした。', 4000); return; }
           toast('停止しました。'); viewAdmin();
@@ -711,7 +870,7 @@ function orphanBox() {
     } catch (e) { msg.textContent = '調べられませんでした：' + e.message; }
   };
   btn.addEventListener('click', async () => {
-    if (!confirm('削除したお客様の書類写真を消します。元に戻せません。よろしいですか？')) return;
+    if (!await ask({ title: '残っている写真を消しますか？', text: '削除したお客様の書類写真を消します。元に戻せません。', ok: '消す', danger: true, emoji: '🧹' })) return;
     const done = busy('消しています…');
     try { const r = await callAI({ mode: 'purge_orphans' }); done(); toast(`${r.files}枚の写真を消しました。`, 4000); }
     catch (e) { done(); toast('消せませんでした：' + e.message, 6000); }
@@ -754,11 +913,16 @@ function helloCard(rows, onName = null) {
           h('button', { type: 'button', 'data-filter': st, 'aria-pressed': 'false' }, label, h('b', {}, String(n(st))))),
         rows ? h('button', { type: 'button', 'data-filter': 'unpaid', 'aria-pressed': 'false' }, '支払い待ち', h('b', {}, String(rows.filter(r => payState(r) === 'wait').length))) : null)));
 }
+// 一覧のお客様（今月の提出数のグラフと、お祝いの「今月◯件目」にも使う）
+let listRows = [];
+// お客様の一覧（パソコンでは、お客様を開いても左に出したままにする）。{ el, draw, reload }
+let sideList = null;
 async function viewList() {
   stopVoice(); state = null; clearSecrets();
+  sideList = null;
   const search = h('input', { type: 'search', class: 'search', placeholder: '名前で探す', 'aria-label': '名前で探す' });
   const ul = h('ul', { class: 'list' }, h('li', { class: 'muted pad' }, '読み込み中…'));
-  let hello = helloCard(null), onlyFollow = false, filter = '';
+  let hello = helloCard(null), onlyFollow = false, filter = '', data = [], follows = [];
   // 削除したお客様（10日間はゴミ箱から元に戻せる）
   const trashBtn = h('button', { class: 'btn ghost wide trash-btn', type: 'button', hidden: true, onclick: () => viewTrash() });
   sb.from(CONFIG.TABLE).select('id', { count: 'exact', head: true }).not('deleted_at', 'is', null).then(({ count }) => {
@@ -773,23 +937,37 @@ async function viewList() {
   const followBtn = h('button', { class: 'btn outline wide follow-btn', type: 'button', hidden: true, 'aria-pressed': 'false' });
   const adminBtn = h('button', { class: 'btn ghost sm', type: 'button', hidden: true, onclick: () => viewAdmin() }, 'メンバー管理');
   followBtn.addEventListener('click', () => { onlyFollow = !onlyFollow; followBtn.setAttribute('aria-pressed', String(onlyFollow)); draw(); });
-  app.replaceChildren(
+  const chartBox = h('div', {});
+  const sideCount = h('span', { class: 'small muted' });
+  // 左（パソコン）／下（スマホ）：お客様の一覧
+  const side = h('aside', { class: 'side', 'aria-label': 'お客様の一覧' },
+    h('div', { class: 'side-head' }, h('strong', {}, 'お客様'), sideCount),
+    followBtn, search, filterNote, ul, trashBtn);
+  // 右（パソコン）／上（スマホ）：あいさつ・今月のグラフ・お客様を追加
+  const pane = h('div', { class: 'pane' },
     h('header', { class: 'topbar' },
       h('h1', { class: 'tb-title' }, '申込み一覧'),
       adminBtn,
       h('button', { class: 'btn ghost sm', onclick: async () => { await sb.auth.signOut(); viewLogin(); } }, 'ログアウト')),
-    h('main', { class: 'wrap' },
+    h('main', { class: 'wrap home' },
       hello,
-      followBtn,
+      chartBox,
       h('button', { class: 'btn primary wide btn-two', onclick: newCustomer },
         h('span', { class: 'btn-main' }, listIll(LIST_ILL.add, 'btn-ill'), '新しいお客様を追加'),
         h('span', { class: 'btn-sub' }, '個別の面談で、1人ずつ申込みを作る')),
       entryCard(),
       h('a', { class: 'btn outline wide demo-btn', href: 'demo.html', target: '_blank', rel: 'noopener' }, '🧪 体験版を試す（お客様の画面を体験）'),
-      h('hr', { class: 'entry-sep' }), search, filterNote, ul, trashBtn));
-  const [{ data, error }] = await Promise.all([
-    sb.from(CONFIG.TABLE).select('id,status,data,updated_at').is('deleted_at', null).order('updated_at', { ascending: false }).limit(300),
-    loadInvites()]);
+      h('hr', { class: 'entry-sep' })));
+  app.replaceChildren(h('div', { class: 'split home-mode' }, pane, side));
+  // お客様と、お客様用リンクの状態を読み込む（パソコンでお客様を切り替えた時も、これで一覧を新しくする）
+  const load = async () => {
+    const [res] = await Promise.all([
+      sb.from(CONFIG.TABLE).select('id,status,data,updated_at').is('deleted_at', null).order('updated_at', { ascending: false }).limit(300),
+      loadInvites()]);
+    if (!res.error) { data = res.data; listRows = data; }
+    return res.error;
+  };
+  const error = await load();
   if (error) { ul.replaceChildren(h('li', { class: 'err pad' }, '一覧を読み込めませんでした：' + error.message)); return; }
   const { data: isStaff } = await sb.rpc('is_onboarding_staff');
   if (isStaff !== true) { viewJoin(); return; }
@@ -802,12 +980,18 @@ async function viewList() {
     const { data: r, error: e } = await sb.rpc('onboarding_my_entry_link', { p_staff_name: name });
     if (e || !r) { toast('保存できませんでした' + (e ? '：' + e.message : '')); return; }
     myName = String(r.staff_name || '').trim(); toast('お名前を保存しました');
-    const f = helloCard(data, saveName); hello.replaceWith(f); hello = f; wireStats(hello);
+    paintTop();
   };
-  const fresh = helloCard(data, saveName); hello.replaceWith(fresh); hello = fresh; wireStats(hello);
-  const follows = data.filter(r => needsFollow(r, inviteMap.get(r.id)));
-  followBtn.hidden = !follows.length;
-  followBtn.textContent = '📣 フォローが必要なお客様：' + follows.length + '人（タップで絞り込み）';
+  // あいさつ・グラフ・フォローの数を、今の一覧から作り直す
+  const paintTop = () => {
+    const f = helloCard(data, saveName); hello.replaceWith(f); hello = f; wireStats(hello);
+    chartBox.replaceChildren(monthChart(data));
+    follows = data.filter(r => needsFollow(r, inviteMap.get(r.id)));
+    followBtn.hidden = !follows.length;
+    followBtn.textContent = '📣 フォローが必要なお客様：' + follows.length + '人（タップで絞り込み）';
+    sideCount.textContent = data.length + '人';
+  };
+  paintTop();
   function draw() {
     const q = search.value.trim().toLowerCase();
     // 名前でも担当者名でも探せる
@@ -818,7 +1002,7 @@ async function viewList() {
     filterNote.textContent = filter ? '「' + (filter === 'unpaid' ? '支払い待ち' : filter === 'ITA提出済み' ? '提出済み' : filter) + '」のお客様だけを表示中（もう一度押すと全員に戻ります）' : '';
     ul.replaceChildren();
     if (!rows.length) { ul.append(data.length ? h('li', { class: 'muted pad' }, '該当するお客様がいません。') : h('li', { class: 'empty' }, listIll(LIST_ILL.empty, 'empty-ill'), h('p', { class: 'muted', style: 'margin:0' }, 'まだ申込みがありません。', h('br'), '「新しいお客様を追加」から始めましょう。'))); return; }
-    for (const r of rows) { const act = nextAction(r); ul.append(h('li', { class: act ? 'has-act' : '' }, h('button', { class: 'row ava', onclick: () => viewCustomer(r) },
+    for (const r of rows) { const act = nextAction(r); ul.append(h('li', { class: act ? 'has-act' : '' }, h('button', { class: 'row ava', 'aria-current': state && state.id === r.id ? 'true' : null, onclick: () => openCustomer(r) },
       listIll(avatarSvg(r.status), 'row-ava'),
       h('span', { class: 'row-name' }, nameOf(r.data)),
       h('span', { class: 'chip ' + statusClass(r.status) }, r.status),
@@ -828,6 +1012,21 @@ async function viewList() {
   search.addEventListener('input', draw);
   search.placeholder = '名前・担当者名で探す';
   draw();
+  sideList = { el: side, draw, reload: async () => { if (!await load()) { paintTop(); draw(); } } };
+}
+// 一覧からお客様を開く。パソコンで別のお客様を開いている時は、保存してから最新の内容を読み込んで切り替える
+async function openCustomer(r) {
+  if (state) {
+    if (state.id === r.id) return;
+    if (!await flushSave() && !await ask({ title: '保存できていない入力があります', text: '今のお客様の入力が保存できていません。このまま切り替えると、保存できていない入力は消えます。', ok: '切り替える', cancel: '残る', danger: true, emoji: '⚠️' })) return;
+    stopVoice();
+    const { data, error } = await sb.from(CONFIG.TABLE).select('id,status,data,updated_at').eq('id', r.id).single();
+    if (error) { toast('開けませんでした：' + error.message); return; }
+    viewCustomer(data);
+    if (sideList) sideList.reload();
+    return;
+  }
+  viewCustomer(r);
 }
 // 一覧の行に出す担当者名（誰のお客様かが一目で分かるように）
 function staffTag(d) {
@@ -874,7 +1073,7 @@ function entryCard() {
       h('button', { class: 'btn outline wide', type: 'button', onclick: () => copy(String(url), 'リンク') }, 'リンクだけコピー'),
       h('div', { class: 'doc-actions' },
         h('button', { class: 'btn ghost sm', type: 'button', onclick: () => set({ p_active: !link.active }) }, link.active ? '受付を止める' : '受付を再開する'),
-        h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { if (confirm('リンクを作り直すと、今のリンクは使えなくなります。作り直しますか？')) set({ p_renew: true }); } }, 'リンクを作り直す'))].filter(Boolean));
+        h('button', { class: 'btn ghost sm', type: 'button', onclick: async () => { if (await ask({ title: 'リンクを作り直しますか？', text: '今のリンクは使えなくなります（名刺やSNSに載せたリンクも差し替えが必要です）。', ok: '作り直す', danger: true, emoji: '🔗' })) set({ p_renew: true }); } }, 'リンクを作り直す'))].filter(Boolean));
   };
   det.addEventListener('toggle', () => { if (det.open && !link) load(); }, { once: false });
   return det;
@@ -882,7 +1081,9 @@ function entryCard() {
 async function newCustomer() {
   const { data, error } = await sb.from(CONFIG.TABLE).insert({ data: { ...defaults(), ...(myName ? { staff_name: myName } : {}) } }).select('id,status,data,updated_at').single();
   if (error) { toast('追加できませんでした：' + error.message); return; }
+  if (state && !await flushSave()) toast('前のお客様の入力を保存できませんでした', 5000);
   viewCustomer(data);
+  if (sideList) sideList.reload();
 }
 
 /* ---------- お客様の入力画面 ---------- */
@@ -893,11 +1094,13 @@ function viewCustomer(row) {
   inputs = {}; counters = [];
   titleEl = h('h1', { class: 'tb-title' }, nameOf(state.data));
   saveEl = h('button', { class: 'save', type: 'button', role: 'status', onclick: () => { if (saveEl.classList.contains('bad')) save(); } }, '保存済み');
-  const statusSel = h('select', { class: 'status-sel', 'aria-label': '進み具合' }, ...STATUSES.map(s => h('option', { value: s }, s)));
-  statusSel.value = state.status;
-  statusSel.addEventListener('change', () => { state.status = statusSel.value; statusDirty = true; scheduleSave(0); });
+  // 上のバーの小さな札（押すと「進み具合」のボタンの所へ）
+  statusChip = h('button', { class: 'status-chip', type: 'button', 'aria-label': '進み具合を変える', onclick: () => { const st = document.getElementById('stepper'); if (st) st.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }); } });
+  stepperEl = h('section', { class: 'stepper', id: 'stepper', 'aria-label': '進み具合' });
+  paintStatus();
 
   const main = h('main', { class: 'wrap' },
+    stepperEl,
     renderSection(SECTIONS[0], 0),
     renderInviteCard(),
     // ここから下はお客様に入力してもらう項目。分かる範囲で担当者が先に入れてもよい
@@ -913,16 +1116,85 @@ function viewCustomer(row) {
     h('button', { class: 'dock-btn', onclick: () => { const p = document.getElementById('docs-panel'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, icon('card'), h('span', {}, '書類を撮影')),
     h('button', { class: 'dock-btn primary', onclick: () => openVoice(1) }, icon('mic'), h('span', {}, '話して入力'))));
 
-  app.replaceChildren(
+  const pane = h('div', { class: 'pane' },
     h('header', { class: 'topbar' },
       h('button', { class: 'icon-btn', 'aria-label': '一覧にもどる', onclick: async () => { await flushSave(); viewList(); } }, icon('back')),
-      titleEl, saveEl, statusSel),
+      titleEl, saveEl, statusChip),
     main, dock);
+  // パソコンでは左に一覧を出したまま（スマホでは一覧は隠れる）
+  app.replaceChildren(h('div', { class: 'split detail-mode' }, pane, sideList ? sideList.el : null));
+  if (sideList) sideList.draw();
   updateCounts();
   window.scrollTo(0, 0);
   // お客様の進み具合・リンクの期限は、開くたびに最新にする
   const id = state.id;
   loadInvites().then(() => { if (state && state.id === id) redrawInviteCard(); });
+}
+/* ---------- 進み具合（入力中 → 入力完了 → 提出済み）：押すだけで切り替える ---------- */
+const STEP_LABEL = { '入力中': '入力中', '入力完了': '入力完了', 'ITA提出済み': '提出済み' };
+let stepperEl = null, statusChip = null;
+function paintStatus() {
+  const cur = STATUSES.indexOf(state.status), next = STATUSES[cur + 1];
+  statusChip.className = 'status-chip ' + statusClass(state.status);
+  statusChip.textContent = STEP_LABEL[state.status] || state.status;
+  stepperEl.replaceChildren(
+    h('div', { class: 'step-top' }, h('strong', {}, '進み具合'), h('span', { class: 'small muted' }, '丸を押すと切り替わります')),
+    h('ol', { class: 'steps' }, ...STATUSES.map((s, i) => h('li', { class: i < cur ? 'done' : i === cur ? 'now' : '' },
+      h('button', { type: 'button', 'aria-pressed': String(i === cur), onclick: () => setStatus(s) },
+        h('span', { class: 'step-dot', 'aria-hidden': 'true' }, i < cur ? '✓' : String(i + 1)), STEP_LABEL[s])))),
+    next ? h('button', { class: 'btn primary wide', type: 'button', onclick: () => setStatus(next) }, '「' + STEP_LABEL[next] + '」にする ▶')
+      : h('p', { class: 'step-done' }, '🎉 提出まで終わりました'));
+}
+function setStatus(s) {
+  if (!state || s === state.status) return;
+  const forward = STATUSES.indexOf(s) > STATUSES.indexOf(state.status);
+  state.status = s; statusDirty = true;
+  // 提出した日を残す（今月の提出数のグラフに使う）。提出済みから戻した時は消す
+  if (s === 'ITA提出済み') { state.data._submitted_at = new Date().toISOString(); dirty.add('_submitted_at'); }
+  else if (state.data._submitted_at) { state.data._submitted_at = ''; dirty.add('_submitted_at'); }
+  scheduleSave(0);
+  paintStatus();
+  // 一覧（パソコンの左側）とグラフの数も、すぐ合わせる
+  const row = listRows.find(r => r.id === state.id);
+  if (row) { row.status = s; row.data = { ...(row.data || {}), _submitted_at: state.data._submitted_at }; if (sideList) sideList.draw(); }
+  if (!forward) { toast('「' + (STEP_LABEL[s] || s) + '」に戻しました'); return; }
+  const who = nameOf(state.data);
+  if (s === 'ITA提出済み') celebrate({ big: true, emoji: '🎉', title: '提出おつかれさまでした！', sub: who + '・今月 ' + (monthCount(state.id) + 1) + '件目の提出です' });
+  else celebrate({ emoji: '✨', title: '入力完了！', sub: 'あとはITAに提出するだけです' });
+}
+
+/* ---------- 今月の提出数のグラフ ---------- */
+const monthKey = d => d.getFullYear() * 12 + d.getMonth();
+// 提出した日：「提出済み」にした日（_submitted_at）。前からのお客様は記録がないので、最後に更新した日で数える
+function submittedAt(r) {
+  if (r.status !== 'ITA提出済み') return null;
+  const t = new Date((r.data && r.data._submitted_at) || r.updated_at);
+  return isNaN(t) ? null : t;
+}
+function monthCount(skipId = null, key = monthKey(new Date())) {
+  return listRows.filter(r => r.id !== skipId).map(submittedAt).filter(t => t && monthKey(t) === key).length;
+}
+function monthChart(rows) {
+  const cur = monthKey(new Date());
+  const months = Array.from({ length: 6 }, (_, i) => cur - 5 + i);
+  const counts = new Map(months.map(m => [m, 0]));
+  for (const r of rows) { const t = submittedAt(r); if (t && counts.has(monthKey(t))) counts.set(monthKey(t), counts.get(monthKey(t)) + 1); }
+  const now = counts.get(cur), last = counts.get(cur - 1), diff = now - last;
+  const max = Math.max(1, ...counts.values());
+  const name = m => (m % 12 + 1) + '月';
+  const diffText = !now && !last ? '提出したお客様が、ここに増えていきます'
+    : diff > 0 ? '先月より ' + diff + '件多い 🔥' : diff < 0 ? '先月まで あと' + (-diff) + '件' : '先月と同じペース';
+  return h('section', { class: 'month-card', 'aria-label': '今月の提出数' },
+    h('div', { class: 'month-head' },
+      h('div', {}, h('span', { class: 'small muted' }, '今月の提出数'), h('div', { class: 'month-big' }, h('b', {}, String(now)), '件')),
+      h('span', { class: 'month-diff' }, diffText)),
+    h('div', {},
+      h('div', { class: 'bars', role: 'img', 'aria-label': '月ごとの提出数：' + months.map(m => name(m) + ' ' + counts.get(m) + '件').join('、') },
+        ...months.map(m => h('div', { class: 'bar' + (m === cur ? ' now' : ''), title: name(m) + '：' + counts.get(m) + '件' },
+          h('span', { class: 'bar-n' }, String(counts.get(m))),
+          h('span', { class: 'bar-fill', style: 'height:' + Math.round(counts.get(m) / max * 82) + '%' })))),
+      h('div', { class: 'bar-labels', 'aria-hidden': 'true' }, ...months.map(m => h('span', { class: m === cur ? 'now' : '' }, m === cur ? '今月' : name(m))))),
+    h('p', { class: 'month-note' }, '「提出済み」にしたお客様の数です（一覧に出ているお客様のうち。前からのお客様は、最後に更新した月で数えています）'));
 }
 function renderSection(sec, idx) {
   const count = h('span', { class: 'count' });
@@ -1101,7 +1373,7 @@ function nextAction(r) {
   }
   if (!what) return null;
   return h('div', { class: 'next-act' }, h('span', { class: 'next-act-txt' }, '👉 ' + what),
-    open ? h('button', { class: 'btn outline sm', type: 'button', onclick: () => viewCustomer(r) }, 'お客様を開く') : null,
+    open ? h('button', { class: 'btn outline sm', type: 'button', onclick: () => openCustomer(r) }, 'お客様を開く') : null,
     text ? h('button', { class: 'btn primary sm', type: 'button', onclick: () => copyText(text, '連絡文をコピーしました') }, '連絡文をコピー') : null,
     text ? h('a', { class: 'btn outline sm', href: 'https://line.me/R/msg/text/?' + encodeURIComponent(text), target: '_blank', rel: 'noopener' }, 'LINEで送る') : null);
 }
@@ -1155,7 +1427,7 @@ function openFixSheet() {
     const keys = checks.filter(x => x.c.checked).map(x => x.c.value);
     if (!keys.length) { toast('直してほしい項目を選んでください'); return; }
     const inv = inviteMap.get(state.id);
-    if (inviteState(inv) === 'active' && !inv.fix && !confirm('お客様はまだ入力の途中です。直してもらうリンクを作ると、今のリンクは使えなくなります。作りますか？')) return;
+    if (inviteState(inv) === 'active' && !inv.fix && !await ask({ title: 'お客様はまだ入力の途中です', text: '直してもらうリンクを作ると、今のリンクは使えなくなります。作りますか？', ok: '作る', emoji: '✏️' })) return;
     await flushSave();
     const done = busy('リンクを作成中…');
     const { data: token, error } = await sb.rpc('create_onboarding_invite', { p_customer: state.id, p_days: 7, p_fix_keys: keys, p_fix_note: note.value.trim() || null });
@@ -1239,7 +1511,7 @@ let inviteCardEl = null;
 async function sendSheet() {
   if (bgTasks.size) { toast('写真の読み取り中です。終わってから送ってください。'); return; }
   const g = state.data._gform;
-  if (g && g.status === 'sent' && !confirm('すでにスプレッドシートへ送信済みです。もう一度送ると、行が2つになります。送りますか？')) return;
+  if (g && g.status === 'sent' && !await ask({ title: 'もう一度送りますか？', text: 'すでにスプレッドシートへ送信済みです。もう一度送ると、行が2つになります。', ok: 'もう一度送る', emoji: '📄' })) return;
   // 保存できていないと、古い内容のまま送られてしまうので止める
   if (!await flushSave()) { toast('入力内容を保存できていないので、送信をやめました。右上の「保存できませんでした」を押して保存してから、もう一度送ってください。', 7000); return; }
   const done = busy('スプレッドシートに送信中…');
@@ -1253,11 +1525,11 @@ async function sendSheet() {
 }
 async function makeInvite() {
   if (inviteState(inviteMap.get(state.id)) === 'active'
-      && !confirm('今のリンクは、まだ使える状態です（お客様が入力中かもしれません）。\n新しいリンクを作ると、今のリンクは使えなくなります。作りますか？')) return;
+      && !await ask({ title: '新しいリンクを作りますか？', text: '今のリンクは、まだ使える状態です（お客様が入力中かもしれません）。\n新しいリンクを作ると、今のリンクは使えなくなります。', ok: '新しく作る', emoji: '🔗' })) return;
   const prepMissing = ['staff_name', 'invite_for', 'product_type', 'contract_years', 'monthly_usd', 'fund_choice'].filter(k => !String(state.data[k] || '').trim());
   if (prepMissing.length) {
     const names = prepMissing.map(k => '「' + FIELD_MAP[k].label + '」').join('');
-    if (confirm(names + 'がまだ入っていません。リンクの送り間違いを防ぐため、先に入力しますか？')) {
+    if (await ask({ title: 'まだ入っていない項目があります', text: names + 'がまだ入っていません。リンクの送り間違いを防ぐため、先に入力しますか？', ok: '先に入力する', cancel: 'このまま作る', emoji: '📝' })) {
       const r = inputs[prepMissing[0]]; if (r) { r.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' }); r.input.focus(); }
       return;
     }
@@ -1387,7 +1659,8 @@ window.addEventListener('beforeunload', e => { if (state && (saveTimer || savePr
 // 削除するとゴミ箱へ（10日間は元に戻せる。10日たつと onboarding-trash-cleanup が写真ごと完全に消す）
 const TRASH_DAYS = 10;
 async function deleteCustomer() {
-  if (!confirm(`「${nameOf(state.data)}」を削除します。\n${TRASH_DAYS}日間は「削除したお客様」から元に戻せます。${TRASH_DAYS}日たつと、本人確認書類の写真も含めて完全に消えます。\n削除している間は、お客様に送ったリンクも開けなくなります。よろしいですか？`)) return;
+  if (!await ask({ title: `「${nameOf(state.data)}」を削除しますか？`, emoji: '🗑',
+    text: `${TRASH_DAYS}日間は「削除したお客様」から元に戻せます。${TRASH_DAYS}日たつと、本人確認書類の写真も含めて完全に消えます。\n削除している間は、お客様に送ったリンクも開けなくなります。`, ok: '削除する', danger: true })) return;
   if (!await flushSave()) { toast('入力内容を保存できていないので、やめました。保存してから、もう一度お試しください。', 6000); return; }
   clearTimeout(saveTimer); saveTimer = null; dirty = new Set(); statusDirty = false;
   const done = busy('削除中…');
@@ -1399,7 +1672,7 @@ async function deleteCustomer() {
 }
 // すぐに完全に消す（ゴミ箱の中から）。先に書類の写真を消す（行だけ消すと、写真が持ち主のいないまま残ってしまう）
 async function deleteForever(row) {
-  if (!confirm(`「${nameOf(row.data)}」を完全に削除します。本人確認書類の写真も消えます。元に戻せません。よろしいですか？`)) return false;
+  if (!await ask({ title: `「${nameOf(row.data)}」を完全に削除しますか？`, text: '本人確認書類の写真も消えます。元に戻せません。', ok: '完全に削除する', danger: true, emoji: '⚠️' })) return false;
   const done = busy('削除中…');
   try { await callAI({ mode: 'purge', customer_id: row.id }); }
   catch (e) { done(); toast('書類の写真を削除できなかったので、やめました：' + e.message, 6000); return false; }
@@ -1722,7 +1995,7 @@ async function viewDoc(slot) {
   window.open(res.signedUrl, '_blank', 'noopener');
 }
 async function purgeDocs() {
-  if (!confirm('このお客様の書類の写真をすべて削除します。元に戻せません。よろしいですか？')) return;
+  if (!await ask({ title: '書類の写真をすべて削除しますか？', text: 'このお客様の書類の写真をすべて削除します。元に戻せません。', ok: '削除する', danger: true, emoji: '🗑' })) return;
   const done = busy('削除中…');
   try { await callAI({ mode: 'purge', customer_id: state.id }); done(); state.data._docs = {}; refreshDocs(); toast('削除しました'); }
   catch (e) { done(); toast('削除できませんでした：' + e.message); }

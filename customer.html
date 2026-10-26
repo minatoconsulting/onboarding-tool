@@ -315,6 +315,13 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .pay-done{margin:0;font-size:.86rem;font-weight:700;color:var(--seal)}
 .remain{justify-self:center;margin:-4px 0 4px;padding:8px 18px;border-radius:999px;background:var(--seal-soft);color:var(--seal);font-weight:800;font-size:1.05rem}
 @media (prefers-reduced-motion:reduce){.go-arrow b{animation:none}}
+/* 送信できた時の紙吹雪 */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.confetti i{position:absolute;top:-24px;animation:fall linear forwards}
+@keyframes fall{to{transform:translate(var(--x),110vh) rotate(var(--r))}}
+.cheer-pop{animation:cheerpop .6s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cheerpop{from{transform:scale(.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.cheer-pop{animation:none}}
 .bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;width:calc(100% - 32px);max-width:560px;padding:8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700;line-height:1.45;pointer-events:none}
 .man{display:block;margin-top:4px;font-weight:700;color:var(--seal)}
 /* 下から出るメニュー（写真を撮る等）が開いている間は、読み取り中の表示を画面の上に出す（メニューのボタンと重ならないように） */
@@ -648,6 +655,23 @@ async function startEntry() {
     localStorage.setItem('onboarding-progress-' + token.slice(0, 16), JSON.stringify({ agreed: true, step: 1, fresh: true }));
   } catch {}
   openToken(token);
+}
+// 送信できた時のお祝い（紙吹雪）。動きを減らす設定の人には出さない
+function confetti(n = 110) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const colors = ['#2E7D6B', '#F2C14E', '#E07A5F', '#9CC5B9', '#4E9F8D', '#F7D98B'];
+  const box = h('div', { class: 'confetti', 'aria-hidden': 'true' });
+  for (let i = 0; i < n; i++) {
+    const p = h('i'), w = 6 + Math.random() * 6;
+    p.style.cssText = `left:${Math.random() * 100}%;width:${w}px;height:${w * (1.2 + Math.random())}px;background:${colors[i % colors.length]};`
+      + `border-radius:${Math.random() < .3 ? '50%' : '2px'};--x:${Math.round((Math.random() - .5) * 200)}px;--r:${Math.round(Math.random() * 900 - 450)}deg;`
+      + `animation-duration:${(2.2 + Math.random() * 1.8).toFixed(2)}s;animation-delay:${(Math.random() * .5).toFixed(2)}s`;
+    box.append(p);
+  }
+  document.body.append(box);
+  setTimeout(() => box.remove(), 5000);
+  try { if (navigator.vibrate) navigator.vibrate([30, 70, 30]); } catch {}
+  const pic = app.querySelector('.done-ill'); if (pic) pic.classList.add('cheer-pop');
 }
 function viewMessage(title, body, ok = false, extra = null) {
   app.replaceChildren(h('main', { class: 'hero center' },
@@ -1347,6 +1371,7 @@ async function submit() {
   stopVoice();
   sentDone = true; forgetSecrets();
   viewMessage('担当者へ送信しました！', null, true, nextSteps(false, 'ありがとうございました。担当者が内容を確認してから、申込手続きを進めます。'));
+  confetti();
 }
 
 /* ---------- 担当者から「この項目だけ直してください」と頼まれた時（送信したあとの手直し） ---------- */
@@ -1419,6 +1444,7 @@ async function submitFix() {
   if (!ok) { toast('送信できませんでした。電波の良い場所でもう一度お試しください。', 5000); return; }
   sentDone = true; forgetSecrets();
   viewMessage('担当者へ送信しました！', '直していただいた内容を担当者へ送りました。ご協力ありがとうございました。', true);
+  confetti(60);
 }
 
 /* ---------- AI ---------- */
