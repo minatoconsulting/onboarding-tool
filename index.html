@@ -391,9 +391,6 @@ const SECTIONS = [
     F('bank_open_date', '口座開設日', { type: 'date', def: (new Date().getFullYear() - 5) + '-04-01', hint: '例：2015年4月1日。分からなければ、だいたいの年の4月1日' }),
     F('fund_method', '資金源（積立のお金の出どころ）', { def: '給与', hint: '毎月の積立をどのお金から払うか。例：お給料から → 給与、貯金から → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
     F('fund_currency', '資金源の通貨', { def: 'JPY' }),
-    F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50000' }),
-    F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600000）' }),
-    F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1000000' }),
     F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
   { id: 'payment', title: '支払方法（カード）', note: 'カードを撮影すると、カード番号・有効期限・ブランドが自動で入ります（写真と番号はツールには保存しません）。', fields: [
@@ -408,7 +405,7 @@ const SECTIONS = [
 const FIELD_MAP = Object.fromEntries(SECTIONS.flatMap(s => s.fields).map(f => [f.k, f]));
 FIELD_MAP.has_passport = F('has_passport', 'パスポートはお持ちですか？（あれば必ず撮影）', { type: 'select', opts: ['はい', 'いいえ'] });
 const ALL_KEYS = Object.keys(FIELD_MAP);
-const MANUAL_KEYS = new Set(['email', 'fund_annual', 'employer_address', 'postal_code', 'id_number', 'ben_id_number',
+const MANUAL_KEYS = new Set(['email', 'employer_address', 'postal_code', 'id_number', 'ben_id_number',
   'bank_branch_no', 'employer_website', 'gender', 'pep', 'us_status', 'employer_type', 'industry', 'position',
   'ben_gender', 'ben_relation', 'card_kind', 'card_brand', 'fund_method', 'purpose', 'birth_date', 'ben_birth_date',
   'bank_open_date', 'ben_percent', 'product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name',
@@ -970,7 +967,6 @@ function renderField(f) {
     state.data[f.k] = input.value; dirty.add(f.k);
     clearAI(f.k); afterChange(f.k); scheduleSave();
   });
-  if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
   if (f.k === 'employer_name') { wrap.append(employerLookupBtn()); input.addEventListener('change', () => setTimeout(maybeLookupEmployer, 0)); }
   if (VALIDATE[f.k]) {
     const msg = h('small', { class: 'err field-err', role: 'alert' });
@@ -1027,7 +1023,7 @@ function updateCounts() {
 // お客様に入れてもらう主な項目（受取人は「指定しない」でもよいので1つ、書類2点もまとめて1つとして数える）
 const PROG_KEYS = ['name_ja', 'name_kana', 'gender', 'birth_date', 'id_number', 'id_issue_date', 'id_expiry', 'email', 'phone_area', 'address_ja', 'postal_code',
   'employer_type', 'employer_name', 'employer_address', 'industry', 'position', 'job_detail', 'employment_start', 'income_amount',
-  'card_kind', 'card_brand', 'card_company', 'bank_name', 'bank_branch', 'bank_branch_no', 'bank_open_date', 'fund_method', 'fund_amount', 'savings_amount', 'purpose'];
+  'card_kind', 'card_brand', 'card_company', 'bank_name', 'bank_branch', 'bank_branch_no', 'bank_open_date', 'fund_method', 'purpose'];
 // お客様の画面の番号（0＝最初の画面、1〜4＝書類を撮る・話して入力・確認・送信）
 const SEEN_STEPS = ['最初の画面', '書類の撮影', '話して入力', '内容の確認', '送信の画面'];
 function progressOf(d = {}) {
@@ -1473,7 +1469,6 @@ function applyAI(res, preset = {}, opts = {}) {
     setField(k, v, { ai: true, guess: guess.has(k) });
     n++; first = first || k;
   }
-  if ('fund_amount' in vals) syncFundAnnual();
   scheduleSave();
   if (!n) { toast(opts.emptyMsg || '読み取れる項目がありませんでした。明るい場所でもう一度お試しください。', 5000); return; }
   toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
@@ -1829,12 +1824,6 @@ function takeAccountFromVoice(res) {
   secretVals.account_number = n; syncSecret('account_number');
   return true;
 }
-// 積立に使えるお金：月の金額から年間を自動で出す
-function syncFundAnnual() {
-  const m = Number(String(D().fund_amount || '').replace(/[^\d.]/g, ''));
-  const v = m > 0 ? String(Math.round(m * 12)) : '';
-  if (String(D().fund_annual || '') !== v) setField('fund_annual', v);
-}
 
 /* ---------- 裏で読み取り（読み取り中も、ほかの項目を入力できる） ---------- */
 const bgTasks = new Set();
@@ -2000,8 +1989,6 @@ const SCRIPT = [
   { keys: ['account_number'], text: '口座番号は「7桁の番号」です。' },
   { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
   { keys: ['card_company'], text: 'カード会社は「〇〇」です。' },
-  { keys: ['fund_method', 'fund_amount'], text: '積立に使えるお金は「月〇万円くらい」あります。' },
-  { keys: ['savings_amount'], text: '貯金は「〇〇万円くらい」あります。' },
   { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
   { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P・EVO・FIP・PLS」を「〇年」、月「〇〇ドル」です。' },
   { keys: ['fund_choice'], text: 'ファンドは「〇〇」です。' },

@@ -432,8 +432,8 @@ const SECTIONS = [
   { id: 'me', title: 'お名前・生年月日', fields: [
     F('name_ja', '氏名（漢字）', { hint: '例：山田 花子' }),
     F('name_kana', 'ふりがな', { hint: '例：やまだ はなこ（姓と名の間にスペース）' }),
-    F('first_romaji', '名（ローマ字）', { hint: '例：HANAKO（ふりがながあれば、そこからヘボン式で作る）' }),
-    F('last_romaji', '姓（ローマ字）', { hint: '例：YAMADA（ふりがながあれば、そこからヘボン式で作る）' }),
+    F('first_romaji', '名（ローマ字）', { hint: '例：HANAKO（ふりがなから自動で入ります。つづりが違う時は直してください）' }),
+    F('last_romaji', '姓（ローマ字）', { hint: '例：YAMADA（ふりがなから自動で入ります。つづりが違う時は直してください）' }),
     F('gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
     F('birth_date', '生年月日', { type: 'date' }),
     F('birth_country', '生まれた国', { def: '日本' }),
@@ -479,8 +479,8 @@ const SECTIONS = [
   { id: 'beneficiary', title: '受取人（受益者）', capture: 'ben_license', fields: [
     F('ben_name_ja', '氏名（漢字）'),
     F('ben_name_kana', 'ふりがな', { hint: '例：やまだ たろう（姓と名の間にスペース）' }),
-    F('ben_first_romaji', '名（ローマ字）', { hint: 'ふりがなからヘボン式で作る' }),
-    F('ben_last_romaji', '姓（ローマ字）', { hint: 'ふりがなからヘボン式で作る' }),
+    F('ben_first_romaji', '名（ローマ字）', { hint: 'ふりがなから自動で入ります。つづりが違う時は直してください' }),
+    F('ben_last_romaji', '姓（ローマ字）', { hint: 'ふりがなから自動で入ります。つづりが違う時は直してください' }),
     F('ben_gender', '性別', { type: 'select', opts: ['男性', '女性'] }),
     F('ben_birth_date', '生年月日', { type: 'date' }),
     F('ben_birth_country', '生まれた国', { def: '日本' }),
@@ -516,9 +516,6 @@ const SECTIONS = [
     F('bank_open_date', '入力した銀行口座を作った日（だいたいでOK）', { type: 'date', def: (new Date().getFullYear() - 5) + '-04-01', hint: '例：2015年4月1日。はっきり分からなければ、だいたいの年の4月1日でOK' }),
     F('fund_method', '積立のお金は、どこから払いますか？', { def: '給与', hint: '毎月の積立に使うお金の元（もと）を選んでください。例：お給料から払う → 給与、貯金から払う → 貯蓄', chips: ['給与', '貯蓄', '事業収入', '退職金', '相続'] }),
     F('fund_currency', '通貨', { def: 'JPY' }),
-    F('fund_amount', '積立に使えるお金（月あたり・円）', { type: 'number', hint: '例：月5万円なら 50,000' }),
-    F('fund_annual', '積立に使えるお金（年間・円）', { type: 'number', hint: '月の金額から自動で計算します（月5万円 → 600,000）' }),
-    F('savings_amount', '貯金（だいたいの額・円）', { type: 'number', hint: '例：100万円なら 1,000,000' }),
     F('purpose', '投資の目的', { multi: true, hint: '当てはまるものを全部タップ', chips: ['老後資金', '教育資金', '資産形成', '相続対策'] }),
   ]},
 ];
@@ -846,14 +843,15 @@ function loadProgress() { try { return JSON.parse(localStorage.getItem(LS_KEY) |
 function saveProgress(p) { try { localStorage.setItem(LS_KEY, JSON.stringify({ ...loadProgress(), ...p })); } catch {} }
 
 /* ---------- 入力画面（4ステップ） ---------- */
-// お客様には見せない項目（ローマ字・決まった値は自動で入る）
-const HIDE = new Set(['first_romaji', 'last_romaji', 'prefecture', 'city', 'addr1', 'addr2', 'addr_country',
-  'ben_first_romaji', 'ben_last_romaji', 'birth_country', 'nationality', 'ben_birth_country', 'ben_nationality',
+// お客様には見せない項目（住所のローマ字・決まった値は自動で入る）
+// 氏名のローマ字は、読み方やつづりが特別な人もいるので、お客様に見せて確認してもらう
+const HIDE = new Set(['prefecture', 'city', 'addr1', 'addr2', 'addr_country',
+  'birth_country', 'nationality', 'ben_birth_country', 'ben_nationality',
   'id_country', 'ben_id_country', 'phone_cc', 'income_currency', 'fund_currency', 'tax_country',
   // 積立の資金源はほぼ全員「給与」なので、お客様には聞かない（給与のまま送り、担当者の画面で確認・変更する）
   'fund_method']);
 const MANUAL_GROUPS = [
-  { title: 'お名前のふりがな', note: '音声だと漢字に変換されてしまうので、ひらがなで入力してください。', keys: ['name_kana'] },
+  { title: 'お名前のふりがな・ローマ字', note: 'ふりがなは、音声だと漢字に変換されてしまうので、ひらがなで入力してください。ローマ字は自動で入ります。パスポートなどと、つづりが違う時は直してください。', keys: ['name_kana', 'last_romaji', 'first_romaji'] },
   { title: '数字・連絡先', note: '数字や記号は読み上げず、書類を見ながら入力してください。', keys: ['postal_code', 'id_number'] },
   { title: '選択肢をタップ', note: '当てはまるものを選んでください。', keys: ['gender', 'pep', 'us_status', 'employer_type', 'industry', 'position', 'card_kind', 'card_brand', 'purpose', 'id_type'] },
   { title: '日付を確認して入力', note: '分からない項目は空欄で進められます。', keys: ['birth_date', 'id_issue_date', 'id_expiry', 'employment_start', 'bank_open_date'] },
@@ -865,9 +863,9 @@ const CONTRACT_GROUP = { title: 'ご契約内容', note: '担当者と決めた�
 const BEN_KEYS = SECTIONS.find(s => s.id === 'beneficiary').fields.map(f => f.k);
 const CONTRACT_KEYS = ['product_type', 'contract_years', 'monthly_usd', 'fund_choice', 'introducer_name', 'staff_name'];
 // 最初から値が入っているが、確認してもらうために手入力の欄に出し続ける項目
-const ALWAYS_SHOW = new Set(['bank_open_date', 'employment_start']);
+const ALWAYS_SHOW = new Set(['bank_open_date', 'employment_start', 'last_romaji', 'first_romaji']);
 // 勤務先の住所・ホームページは会社名から自動で調べるので、話す・手入力の対象にしない（確認画面で直せる）
-const MANUAL_KEYS = new Set(['email', 'phone_type', 'fund_annual', 'fund_method', 'employer_address', 'employer_website', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
+const MANUAL_KEYS = new Set(['email', 'phone_type', 'fund_method', 'employer_address', 'employer_website', ...MANUAL_GROUPS.flatMap(g => g.keys), ...BEN_KEYS, ...CONTRACT_KEYS]);
 const VOICE_KEYS = ALL_KEYS.filter(k => !MANUAL_KEYS.has(k));
 const visibleFields = sec => sec.fields.filter(f => !HIDE.has(f.k));
 const STEPS = ['書類を撮る', '話して入力', '確認', '送信'];
@@ -1216,7 +1214,8 @@ function renderField(f) {
   });
   if (f.k === 'ben_name_kana') input.addEventListener('change', () => fillRomaji('ben_'));
   if (f.k === 'name_kana') input.addEventListener('change', () => fillRomaji(''));
-  if (f.k === 'fund_amount') input.addEventListener('input', syncFundAnnual);
+  // ローマ字は半角の大文字にそろえる
+  if (ROMAJI.has(f.k)) input.addEventListener('change', () => { const v = toRomaji(input.value); if (v !== input.value) setField(f.k, v); scheduleSave(); });
   if (f.k === 'birth_date') input.addEventListener('change', guessEmploymentStart);
   if (YEN.has(f.k)) {
     const man = h('small', { class: 'man' });
@@ -1498,7 +1497,6 @@ function applyAI(res, preset = {}, opts = {}) {
     if (k === 'postal_code') { v = zen2han(v).replace(/\D/g, ''); if (v.length !== 7) continue; v = v.slice(0, 3) + '-' + v.slice(3); }
     setField(k, v, true, guess.has(k)); n++; first = first || k;
   }
-  if ('fund_amount' in vals) syncFundAnnual();
   if ('birth_date' in vals) guessEmploymentStart();
   if ('bank_name' in vals || 'bank_branch' in vals) setTimeout(() => bankLookup(), 0);
   updateCounts(); scheduleSave(300);
@@ -1831,6 +1829,10 @@ function paintYears() {
 /* ---------- 入力チェック（決まった形でないとエラーを出す） ---------- */
 // ふりがな：ひらがな（カタカナも可）で、姓と名の間にスペース1つ
 const kanaError = v => /^[ぁ-ゖァ-ヺー]+[ 　][ぁ-ゖァ-ヺー]+$/.test(v.trim()) ? '' : 'ふりがなは、ひらがなで、姓と名の間にスペースを入れてください（例：やまだ はなこ）';
+// 氏名のローマ字：半角アルファベット（全角や小文字で打っても、半角の大文字に直す）
+const ROMAJI = new Set(['last_romaji', 'first_romaji', 'ben_last_romaji', 'ben_first_romaji']);
+const toRomaji = v => String(v ?? '').normalize('NFKC').toUpperCase().replace(/\s+/g, ' ').trim();
+const romajiError = v => /^[A-Z][A-Z '-]*$/.test(toRomaji(v)) ? '' : 'ローマ字は、半角のアルファベットで入力してください（例：YAMADA）';
 // 過去の日付だけ（生年月日・交付日など）
 const pastDate = label => v => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return '';
@@ -1841,6 +1843,10 @@ const pastDate = label => v => {
 const VALIDATE = {
   name_kana: kanaError,
   ben_name_kana: kanaError,
+  last_romaji: romajiError,
+  first_romaji: romajiError,
+  ben_last_romaji: romajiError,
+  ben_first_romaji: romajiError,
   birth_date: pastDate('生年月日'),
   ben_birth_date: pastDate('受取人の生年月日'),
   id_issue_date: pastDate('交付日'),
@@ -1854,7 +1860,7 @@ const VALIDATE = {
 const zen2han = s => String(s ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[－ー‐―]/g, '-');
 
 /* ---------- 金額の表示（4000000 → 4,000,000／400万円） ---------- */
-const YEN = new Set(['income_amount', 'fund_amount', 'fund_annual', 'savings_amount']);
+const YEN = new Set(['income_amount']);
 const yenText = v => { const s = zen2han(v).replace(/[,，円\s]/g, ''); return /^\d+$/.test(s) ? Number(s).toLocaleString('ja-JP') : String(v ?? ''); };
 function manText(v) {
   const n = Number(zen2han(v).replace(/[,，円\s]/g, ''));
@@ -1969,12 +1975,6 @@ function takeAccountFromVoice(res) {
   if (!n) return false;
   secretVals.account_number = n; syncSecret('account_number');
   return true;
-}
-// 積立に使えるお金：月の金額から年間を自動で出す
-function syncFundAnnual() {
-  const m = Number(String(D().fund_amount || '').replace(/[^\d.]/g, ''));
-  const v = m > 0 ? String(Math.round(m * 12)) : '';
-  if (String(D().fund_annual || '') !== v) setField('fund_annual', v);
 }
 
 /* ---------- 裏で読み取り（読み取り中も、ほかの項目を入力できる） ---------- */
@@ -2263,8 +2263,6 @@ const SCRIPT = [
   { keys: ['account_number'], text: '口座番号は「7桁の番号」です。' },
   { keys: ['bank_open_date'], text: 'その口座を作ったのは「〇年〇月ごろ」です。' },
   { keys: ['card_company'], text: 'カード会社は「楽天カード・イオンカード・三井住友カードなど」です。' },
-  { keys: ['fund_amount'], text: '積立に使えるお金は「月〇万円くらい」あります。' },
-  { keys: ['savings_amount'], text: '貯金は「〇〇万円くらい」あります。' },
   { keys: ['purpose'], text: '投資の目的は「老後資金・教育資金など」です。' },
   { keys: ['product_type', 'contract_years', 'monthly_usd'], text: '契約は「S&P・EVO・FIP・PLS」を「〇年」、月「〇〇ドル」です。' },
   { keys: ['fund_choice'], text: 'ファンドは「〇〇」です。' },
