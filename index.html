@@ -301,7 +301,7 @@ const SECTIONS = [
     F('support_fee', 'サポート料', { type: 'select', opts: SUPPORT_FEES, def: '9,800円', hint: '22,000円のグループは、お客様の画面の公式LINE・お支払い先が変わります' }),
     F('invite_for', 'どのお客様用のリンクか（〇〇様用）', { hint: 'フルネームが分からなければ名字だけでもOK（例：山田 花子／山田）' }),
     F('product_type', '契約商品', { type: 'select', opts: ['S&P', 'EVO', 'FIP', 'PLS'] }),
-    F('contract_years', '契約年数', { type: 'number', chips: ['25年', '20年', '15年', '10年'], hint: '数字＋年（例：15年）' }),
+    F('contract_years', '契約年数', { type: 'number', chips: ['25年', '20年', '15年', '10年', '5年'], hint: '数字＋年（例：15年）' }),
     F('monthly_usd', '契約金額（月額・米ドル）', { type: 'number', hint: '数字のみ。例：月200ドル → 200' }),
     F('fund_choice', 'ファンド選択', { hint: '担当者と決めたもの', chips: ['BTC100％', 'BTC75％ ETH25％', 'BTC50％ GOLD50％', '分散ファンド'] }),
     F('introducer_name', '紹介者（漢字フルネーム）'),
@@ -1766,15 +1766,15 @@ function syncSecret(k, except) {
   document.querySelectorAll('[data-secret="' + k + '"]').forEach(el => { if (el !== except) el.value = secretVals[k] || ''; });
 }
 
-/* ---------- 契約年数：EVOは25・20・15・10年から選ぶ。S&Pは5〜20年（1年刻み）、FIP・PLSは手入力 ---------- */
-const YEARS_HINT = { 'S&P': '5〜20年の間で、1年刻みで入力できます（例：12）', EVO: '下の25年・20年・15年・10年から選んでください', FIP: '年数を数字で入力してください（例：10）', PLS: '年数を数字で入力してください（例：10）' };
+/* ---------- 契約年数：EVOは25・20・15・10・5年から選ぶ。S&Pは5〜20年（1年刻み）、FIP・PLSは手入力 ---------- */
+const YEARS_HINT = { 'S&P': '5〜20年の間で、1年刻みで入力できます（例：12）', EVO: '下の25年・20年・15年・10年・5年から選んでください', FIP: '年数を数字で入力してください（例：10）', PLS: '年数を数字で入力してください（例：10）' };
 const yearsNum = v => String(v ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[年\s]/g, '');
 function yearsError(v) {
   const s = yearsNum(v);
   if (!/^\d+$/.test(s)) return '年数は数字で入力してください（例：15）';
   const n = +s, p = D().product_type;
   if (p === 'S&P' && (n < 5 || n > 20)) return 'S&Pは5〜20年の間で選べます';
-  if (p === 'EVO' && ![10, 15, 20, 25].includes(n)) return 'EVOは25年・20年・15年・10年のどれかです';
+  if (p === 'EVO' && ![5, 10, 15, 20, 25].includes(n)) return 'EVOは25年・20年・15年・10年・5年のどれかです';
   if (n < 1 || n > 50) return '年数を確認してください';
   return '';
 }
