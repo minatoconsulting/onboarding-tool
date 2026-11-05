@@ -317,7 +317,17 @@ details.consent ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px}
 .bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;width:calc(100% - 32px);max-width:560px;padding:8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700;line-height:1.45;pointer-events:none}
 .man{display:block;margin-top:4px;font-weight:700;color:var(--seal)}
 /* 下から出るメニュー（写真を撮る等）が開いている間は、読み取り中の表示を画面の上に出す（メニューのボタンと重ならないように） */
-body:has(.backdrop) .bg-pill{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}
+body:has(.backdrop) .bg-pill,body:has(.voice-page) .bg-pill{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}
+/* 話して入力：上に重ねる枠ではなく、ふつうのページとして出す（iPhoneのSafariで、重ねた枠の中がスクロールできなくなることがあるため）
+   読み上げ見本も枠の中でスクロールさせず、全部並べる。録音ボタンは画面の下に出したままにする */
+.voice-page{min-height:100vh;min-height:100dvh;background:var(--paper);padding:8px 0 0}
+.voice-page .sheet{max-height:none;overflow:visible;margin:0 auto;border-radius:18px 18px 0 0;min-height:calc(100vh - 8px);min-height:calc(100dvh - 8px);align-content:start}
+.voice-page .script{max-height:none;overflow:visible}
+.voice-rec{position:sticky;bottom:0;z-index:2;display:grid;gap:6px;justify-items:center;margin:0 -16px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.voice-rec .mic{width:72px;height:72px}
+.voice-rec .mic svg{width:32px;height:32px}
+.voice-rec p{margin:0}
+.voice-rec p:empty{display:none}
 .bg-pill small{display:block;font-size:.76rem;font-weight:500;color:var(--muted)}
 .bg-pill .spinner{flex:none;width:18px;height:18px}
 .btn svg{width:20px;height:20px;flex:none}
@@ -419,11 +429,6 @@ const CONFIG = {
   CONTRACT_URL: 'https://drive.google.com/file/d/1En5eZ0N2E9Pd6QbGAvhNjIirUO9ApD81/view?usp=sharing',
   // 送信が終わった後に案内する公式LINE（友だち追加のリンク）
   LINE_URL: 'demo',
-  // サポート料 22,000円のグループ（別会社）：担当者が「サポート料」で22,000円を選んだお客様には、こちらを出す
-  // 別会社の決済ページなので、お支払いの記録はスプレッドシートに付かない（支払いリンク・契約書は空ならボタンを出さない）
-  STRIPE_PAYMENT_LINK_22000: 'https://sl.lmes.jp/l/ezGO6o2RnD',
-  CONTRACT_URL_22000: '',
-  LINE_URL_22000: 'https://lin.ee/pMV5LAf',
 };
 
 const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
@@ -572,7 +577,7 @@ function toast(msg, ms = 3500) {
 // 下から出るメニューが開いている間は、お知らせを画面の上に出す（メニューのボタンと重ならないように）
 function placeToast() {
   const t = document.querySelector('.toast'); if (!t) return;
-  if (document.querySelector('.backdrop')) {
+  if (document.querySelector('.backdrop, .voice-page')) {
     t.style.bottom = 'auto';
     t.style.top = bgPill ? (bgPill.getBoundingClientRect().bottom + 10) + 'px' : 'calc(10px + env(safe-area-inset-top,0px))';
   } else {
@@ -606,7 +611,7 @@ async function boot() {
   const { data: st, error } = await sb.rpc('onboarding_invite_status', { p_token: TOKEN });
   if (error) return viewMessage('通信できませんでした', '電波の良い場所で、もう一度開いてください。');
   if (st === 'used') {
-    // 送信済み：サポート料のグループ（9,800円／22,000円）と、支払い・LINEボタンの記録だけを読んで、お支払い先と矢印を合わせる
+    // 送信済み：サポート料の支払い・LINEボタンの記録だけを読んで、お支払い先と矢印を合わせる
     const { data: after } = await sb.rpc('onboarding_invite_after', { p_token: TOKEN });
     if (after) {
       data = { support_fee: after.support_fee || '' };
@@ -710,10 +715,8 @@ let refreshGo = () => {};
 const goDone = {};
 function goNext(kind) { goDone[kind + 'Opened'] = true; saveProgress({ [kind + 'Opened']: true }); refreshGo(true); }
 // 公式LINEの友だち追加
-// サポート料の金額で、お支払い先・契約書・公式LINEを切り替える（担当者が選んだ data.support_fee。お客様は変更できない）
+// サポート料（9,800円）のお支払い先・契約書・公式LINE
 function plan() {
-  if (String((data && data.support_fee) || '') === '22,000円')
-    return { fee: '22,000円', pay: CONFIG.STRIPE_PAYMENT_LINK_22000, contract: CONFIG.CONTRACT_URL_22000, line: CONFIG.LINE_URL_22000, ours: false };
   return { fee: '9,800円', pay: CONFIG.STRIPE_PAYMENT_LINK, contract: CONFIG.CONTRACT_URL, line: CONFIG.LINE_URL, ours: true };
 }
 function lineBlock(no = '') {
@@ -780,7 +783,6 @@ function payBlock(again = false, no = '') {
   try {
     const url = new URL(pl.pay);
     const email = String((data && data.email) || '').trim();
-    // 別会社の決済ページ（22,000円）には、メールアドレスもこのツールの番号も渡さない
     if (email && pl.ours) url.searchParams.set('prefilled_email', email);
     // 支払いが終わった時にStripeから届く通知で「どのお客様か」が分かるように、このリンクの番号を付ける（スプレッドシートの「サポート料」に記録される）
     if (TOKEN && pl.ours) url.searchParams.set('client_reference_id', TOKEN);
@@ -2403,7 +2405,8 @@ function openVoice(step = 1) {
       recordTimer = setTimeout(() => { if (recording) mic.click(); }, 120000);
     } catch { release(); mic.disabled = false; status.textContent = 'マイクを使えません。ブラウザで許可するか、下の欄に手入力してください。'; }
   });
-  const close = () => { canceled = true; stopVoice(); clearTimeout(recordTimer); back.remove(); };
+  const backY = window.scrollY;
+  const close = () => { canceled = true; stopVoice(); clearTimeout(recordTimer); back.remove(); app.style.display = ''; window.scrollTo(0, backY); };
   const hasMore = () => step < VOICE_ROUNDS && remainingLines().length > voiceChunkNow.length;
   const send = h('button', { class: 'btn primary wide', type: 'button' }, '自動で項目に入れる');
   send.addEventListener('click', async () => {
@@ -2419,19 +2422,19 @@ function openVoice(step = 1) {
     close();
     if (step < VOICE_ROUNDS && remainingLines().length) openVoice(step + 1); else voiceFinished();
   });
-  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
+  // 上に重ねる枠ではなく、入力画面と入れ替えて、ふつうのページとして出す（iPhoneのSafariで、重ねた枠の中がスクロールできなくなることがあるため）
+  const back = h('div', { class: 'voice-page' }, h('div', { class: 'sheet', role: 'region', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
     h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
     scriptBox(voiceValues(), VOICE_AVAIL, step),
-    mic, label, status, checkNote, ta, send, skip,
+    h('div', { class: 'voice-rec' }, mic, label, status), checkNote, ta, send, skip,
     h('p', { class: 'voice-foot' }, '録音は文字起こしのためOpenAIへ送ります（OpenAIのAPIでは、送った音声が学習などほかの目的に使われることはありません）。表示された文字を確認してから項目に入力します。', h('br'),
       'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
-  back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
   checkNote.textContent = `✏️ 文字になった内容をご確認ください。間違いがあれば、下の欄をタップして手入力で直してから、「${send.textContent}」を押してください。`;
   if (voiceDraft.trim() && canRecord) label.textContent = 'もう一度録音する';
   if (!voiceChunkNow.length) skip.hidden = true;
-  document.body.append(back);
+  app.style.display = 'none'; document.body.append(back); window.scrollTo(0, 0);
 }
 
 /* ---------- 体験版：送信後のボタンは外へ飛ばない ---------- */

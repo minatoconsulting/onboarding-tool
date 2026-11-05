@@ -223,6 +223,17 @@ a.btn.ghost{color:var(--muted)}
 .sheet p[role=status]:empty{display:none}
 .bg-pill{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.15);font-size:.86rem;font-weight:700}
 .bg-pill .spinner{flex:none;width:18px;height:18px}
+/* 話して入力：上に重ねる枠ではなく、ふつうのページとして出す（iPhoneのSafariで、重ねた枠の中がスクロールできなくなることがあるため）
+   読み上げ見本も枠の中でスクロールさせず、全部並べる。録音ボタンは画面の下に出したままにする */
+body:has(.voice-page) .bg-pill{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}
+.voice-page{min-height:100vh;min-height:100dvh;background:var(--paper);padding:8px 0 0}
+.voice-page .sheet{max-height:none;overflow:visible;margin:0 auto;border-radius:18px 18px 0 0;min-height:calc(100vh - 8px);min-height:calc(100dvh - 8px);align-content:start}
+.voice-page .script{max-height:none;overflow:visible}
+.voice-rec{position:sticky;bottom:0;z-index:2;display:grid;gap:6px;justify-items:center;margin:0 -16px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.voice-rec .mic{width:72px;height:72px}
+.voice-rec .mic svg{width:32px;height:32px}
+.voice-rec p{margin:0}
+.voice-rec p:empty{display:none}
 .btn svg{width:20px;height:20px;flex:none}
 a.btn{text-decoration:none}
 
@@ -293,12 +304,9 @@ const CONFIG = {
    ========================================================= */
 const F = (k, label, o = {}) => ({ k, label, type: 'text', ...o });
 const ID_TYPES = ['運転免許証', 'パスポート', 'マイナンバーカード'];
-// サポート料：9,800円（これまで通り）／22,000円（別会社のグループ。お客様の画面の公式LINE・お支払い先が変わる）
-const SUPPORT_FEES = ['9,800円', '22,000円'];
 const SECTIONS = [
   { id: 'prep', title: '担当者が先に入力（担当FP・お客様名・ご契約内容）', note: 'お客様用リンクを作る前に入力してください。お客様の画面では確認画面に出て、金額や商品が変わった時はお客様も「直す」で変更できます。', fields: [
     F('staff_name', '担当FP', { hint: '例：赤田' }),
-    F('support_fee', 'サポート料', { type: 'select', opts: SUPPORT_FEES, def: '9,800円', hint: '22,000円のグループは、お客様の画面の公式LINE・お支払い先が変わります' }),
     F('invite_for', 'どのお客様用のリンクか（〇〇様用）', { hint: 'フルネームが分からなければ名字だけでもOK（例：山田 花子／山田）' }),
     F('product_type', '契約商品', { type: 'select', opts: ['S&P', 'EVO', 'FIP', 'PLS'] }),
     F('contract_years', '契約年数', { type: 'number', chips: ['25年', '20年', '15年', '10年', '5年'], hint: '数字＋年（例：15年）' }),
@@ -852,8 +860,6 @@ function entryCard() {
     const url = new URL('customer.html', location.href); url.search = '?fp=' + link.code + '&openExternalBrowser=1';
     const msg = 'お申込みに必要な情報のご入力をお願いします。こちらのリンクから、免許証の撮影と音声で入力できます。\n' + url;
     const nameIn = h('input', { type: 'text', value: link.staff_name || '', placeholder: '例：赤田', 'aria-label': '担当FP' });
-    const feeIn = h('select', { onchange: () => set({ p_support_fee: feeIn.value }).then(ok => ok && toast('サポート料を' + link.support_fee + 'にしました')) },
-      ...SUPPORT_FEES.map(o => h('option', { value: o, selected: o === (link.support_fee || '9,800円') }, o)));
     const copy = async (text, label) => {
       try { await navigator.clipboard.writeText(text); } catch { const t = h('textarea'); t.value = text; document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
       toast(label + 'をコピーしました');
@@ -864,7 +870,6 @@ function entryCard() {
       h('label', { class: 'lbl' }, '担当FP（申込みに入る名前）', nameIn),
       !link.staff_name ? h('p', { class: 'warn small', style: 'margin:0' }, '担当FPの名前を入れて「保存」を押してください。') : null,
       h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { if (nameIn.value.trim()) load(nameIn.value.trim()).then(() => toast('保存しました')); } }, '担当FPを保存'),
-      h('label', { class: 'lbl' }, 'サポート料（このリンクから申し込んだお客様）', feeIn),
       link.active ? null : h('p', { class: 'warn', style: 'margin:0' }, '受付を停止中です。お客様が開いても申込みできません。'),
       h('p', { class: 'small', style: 'margin:0;word-break:break-all' }, String(url)),
       h('button', { class: 'btn primary wide', type: 'button', onclick: () => copy(msg, '案内文') }, '案内文ごとコピー'),
@@ -1068,9 +1073,7 @@ function rowProgress(r) {
 }
 // 送信後のお支払い・公式LINE（お客様が送信した後だけ出す）。記録は Stripe の通知と、お客様がLINEボタンを押した時に入る
 const submittedOf = r => inviteState(inviteMap.get(r.id)) === 'submitted' || !!(r.data && (r.data._paid || r.data._line));
-// 22,000円のグループは別会社の決済で、支払いの記録がこのツールに届かないので出さない
-const otherPay = r => String((r.data && r.data.support_fee) || '') === '22,000円';
-function payState(r) { return r.data && r.data._paid ? 'ok' : submittedOf(r) && !otherPay(r) ? 'wait' : ''; }
+function payState(r) { return r.data && r.data._paid ? 'ok' : submittedOf(r) ? 'wait' : ''; }
 function lineState(r) { return r.data && r.data._line ? 'ok' : submittedOf(r) ? 'wait' : ''; }
 function afterTags(r) {
   const pay = payState(r), line = lineState(r);
@@ -1089,7 +1092,7 @@ function nextAction(r) {
   else if (st === 'submitted' && payState(r) === 'wait') {
     what = 'サポート料のお支払いがまだです → お支払いのお願いを送る';
     text = [head('サポート料のお支払いのお願い'), '', 'お申込み情報のご送信、ありがとうございました。',
-      'サポート料（' + (d.support_fee || '9,800円') + '）のお支払いが、まだ確認できておりません。下のリンクを開くと、お支払いの画面へ進めます。', '', inviteUrl(inv.token)].join('\n');
+      'サポート料（9,800円）のお支払いが、まだ確認できておりません。下のリンクを開くと、お支払いの画面へ進めます。', '', inviteUrl(inv.token)].join('\n');
   } else if (st === 'submitted' && !d._line) {
     what = '公式LINEの登録ボタンがまだ押されていません → 登録のお願いを送る';
     text = [head('公式LINEご登録のお願い'), '', 'ご契約後のお手続き（住所変更・カードの変更・引き出しなど）のお問い合わせ窓口として、公式LINEへのご登録をお願いします。',
@@ -1200,7 +1203,7 @@ function renderInviteCard() {
     ist !== 'none' ? h('p', { class: 'note' }, '📊 ' + progressText(row, inv)) : null,
     fd ? h('p', { class: 'note' }, '✏️ お客様が直した内容を送信しました（' + fmtAt(fd.at) + '）：' + (fd.keys || []).map(fixLabel).join('、')) : null,
     follow ? h('p', { class: 'warn' }, '📣 フォローが必要です：' + follow) : null,
-    (ist === 'submitted' && state.data.support_fee !== '22,000円') || state.data._paid ? h('p', { class: state.data._paid ? 'note' : 'warn' }, state.data._paid
+    ist === 'submitted' || state.data._paid ? h('p', { class: state.data._paid ? 'note' : 'warn' }, state.data._paid
       ? '💳 サポート料：支払い済み（' + fmtAt(state.data._paid.at) + (state.data._paid.amount ? '・' + Number(state.data._paid.amount).toLocaleString('ja-JP') + '円' : '') + '）'
       : '💳 サポート料：まだお支払いの記録がありません') : null,
     ist === 'submitted' || state.data._line ? h('p', { class: state.data._line ? 'note' : 'warn' }, state.data._line
@@ -2090,7 +2093,8 @@ function openVoice(step = 1) {
       recordTimer = setTimeout(() => { if (recording) mic.click(); }, 120000);
     } catch { release(); mic.disabled = false; status.textContent = 'マイクを使えません。ブラウザで許可するか、下の欄に手入力してください。'; }
   });
-  const close = () => { canceled = true; stopVoice(); clearTimeout(recordTimer); back.remove(); };
+  const backY = window.scrollY;
+  const close = () => { canceled = true; stopVoice(); clearTimeout(recordTimer); back.remove(); app.style.display = ''; window.scrollTo(0, backY); };
   const hasMore = () => remainingLines().length > voiceChunkNow.length;
   const send = h('button', { class: 'btn primary wide', type: 'button' }, '自動で項目に入れる');
   send.addEventListener('click', async () => {
@@ -2106,17 +2110,17 @@ function openVoice(step = 1) {
     close();
     if (remainingLines().length) openVoice(step + 1); else toast('読み上げる項目は以上です。');
   });
-  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '話して入力' },
+  // 上に重ねる枠ではなく、入力画面と入れ替えて、ふつうのページとして出す（iPhoneのSafariで、重ねた枠の中がスクロールできなくなることがあるため）
+  const back = h('div', { class: 'voice-page' }, h('div', { class: 'sheet', role: 'region', 'aria-label': '話して入力' },
     h('div', { class: 'sheet-top' }, h('h2', {}, '話して入力'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
     h('p', { class: 'note' }, '💡 途中で詰まったり、わからない部分があったりしたら、そこは飛ばして次を読んで大丈夫です。あとで画面で直せます。'),
     scriptBox(voiceValues(), VOICE_AVAIL, step),
-    mic, label, status, ta, send, skip,
+    h('div', { class: 'voice-rec' }, mic, label, status), ta, send, skip,
     h('p', { class: 'voice-foot' }, '録音は文字起こしのためOpenAIへ送ります（OpenAIのAPIでは、送った音声が学習などほかの目的に使われることはありません）。表示された文字を確認してから項目に入力します。', h('br'),
       'カード番号・マイナンバーは話さないでください（話しても入力されません）。口座番号は話してOKです（ツールには保存せず、送信の時にスプレッドシートへ直接送ります）。')));
-  back.addEventListener('click', e => { if (e.target === back) close(); });
   if (hasMore()) send.textContent = '入力して次の項目へ';
   if (!voiceChunkNow.length) skip.hidden = true;
-  document.body.append(back);
+  app.style.display = 'none'; document.body.append(back); window.scrollTo(0, 0);
 }
 
 boot();
