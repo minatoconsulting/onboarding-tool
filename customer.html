@@ -1245,7 +1245,7 @@ function renderField(f) {
     const check = () => { const e = fieldError(f.k, input.value); msg.textContent = e ? '⚠ ' + e : ''; wrap.classList.toggle('bad', !!e); };
     input.addEventListener('input', check); wrap.append(msg); check(); wrap.check = check;
   }
-  if (f.k === 'product_type') input.addEventListener('change', paintYears);
+  if (f.k === 'product_type') input.addEventListener('change', () => { syncFund(); paintYears(); });
   if (f.k === 'contract_years') {
     // 「12」と入れたら「12年」にそろえる
     input.addEventListener('change', () => { const n = yearsNum(input.value); if (/^\d+$/.test(n) && input.value !== n + '年') { input.value = n + '年'; input.dispatchEvent(new Event('input')); } });
@@ -1313,6 +1313,14 @@ function setField(k, v, ai = false, guess = false) {
   if (k === 'postal_code' || k === 'address_ja') watchZip();
   if (ai) { aiKeys.add(k); guess ? guessKeys.add(k) : guessKeys.delete(k); }
   paint(k);
+  if (k === 'product_type') syncFund();
+}
+// 契約商品をS&Pにしたら、ファンドも「S&P」にする（S&P以外に変えたら、その「S&P」は消す）
+function syncFund() {
+  const f = String(data.fund_choice || '').trim();
+  const v = data.product_type === 'S&P' ? 'S&P' : (f === 'S&P' ? '' : f);
+  if (v === f) return;
+  setField('fund_choice', v); aiKeys.delete('fund_choice'); guessKeys.delete('fund_choice'); paint('fund_choice'); updateCounts();
 }
 function updateCounts() {
   for (const c of counters) {

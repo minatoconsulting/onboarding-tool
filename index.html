@@ -1060,7 +1060,14 @@ function setField(k, v, { ai = false, guess = false } = {}) {
   if (ai) { listAdd('_ai', k); guess ? listAdd('_guess', k) : listDel('_guess', k); }
   paintAI(k); afterChange(k);
 }
+// 契約商品をS&Pにしたら、ファンドも「S&P」にする（S&P以外に変えたら、その「S&P」は消す）
+function syncFund() {
+  const f = String(state.data.fund_choice || '').trim();
+  const v = state.data.product_type === 'S&P' ? 'S&P' : (f === 'S&P' ? '' : f);
+  if (v !== f) { setField('fund_choice', v); clearAI('fund_choice'); }
+}
 function afterChange(k) {
+  if (k === 'product_type') syncFund();
   if (k === 'monthly_usd') {
     const m = Number(String(state.data.monthly_usd || '').replace(/[^\d.]/g, ''));
     if (m > 0 && (state.data.frequency || '毎月') === '毎月') { state.data.annual_usd = String(m * 12); dirty.add('annual_usd'); if (inputs.annual_usd) inputs.annual_usd.input.value = state.data.annual_usd; }
