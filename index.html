@@ -188,6 +188,7 @@ a.btn.ghost{color:var(--muted)}
 .doc-label{display:grid;gap:0}
 .doc-actions{display:flex;gap:6px;flex:none}
 .doc-ok{color:var(--seal);font-weight:700;font-size:.8rem}
+.doc-del{flex:none;min-height:32px;padding:0 10px;font-size:.82rem;white-space:nowrap}
 
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
 .chip-btn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 12px;font-size:.84rem;cursor:pointer;min-height:34px}
@@ -449,7 +450,7 @@ const STATUSES = ['入力中', '入力完了', 'ITA提出済み'];
    ========================================================= */
 const app = document.getElementById('app');
 // いま開いている画面が、いつ直した版かを見分けるための日付（直して公開するたびに書き換える。録音画面のいちばん下に小さく出る）
-const BUILD = '2026-11-10';
+const BUILD = '2026-11-10-2';
 
 /* ---------- SHEET_AS_PAGE：長い枠は、ふつうのページとして出す ----------
    iPhoneのSafariでは、画面に重ねた枠（.backdrop）の中がスクロールできず、下の項目やボタンまで行けなくなることがある。
@@ -958,8 +959,7 @@ function viewCustomer(row) {
     // ここから下はお客様に入力してもらう項目。分かる範囲で担当者が先に入れてもよい
     h('div', { class: 'staff-optional', role: 'separator' },
       h('div', { class: 'so-line' }, 'ここから下はお客様の入力項目'),
-      h('p', {}, '分かる範囲があれば、担当者が先に入力しておくこともできます。'),
-      h('button', { class: 'btn outline wide', type: 'button', onclick: openMemoImport }, '📝 面談の録音メモ（PLAUDなど）から入れる')),
+      h('p', {}, '分かる範囲があれば、担当者が先に入力しておくこともできます。')),
     (docsPanelEl = renderDocsPanel()),
     ...SECTIONS.slice(1).map((s, i) => renderSection(s, i + 1)),
     secretCard('🔒 マイナンバー・クレジットカード番号（送信の直前に入力）'),
@@ -1537,7 +1537,7 @@ function applyAI(res, preset = {}, opts = {}) {
   }
   scheduleSave();
   if (!n) { toast(opts.emptyMsg || '読み取れる項目がありませんでした。明るい場所でもう一度お試しください。', 5000); return; }
-  toast(`${n}項目を入力しました。黄色の欄を確認してください。` + (opts.extra || ''), opts.extra ? 7000 : 4500);
+  toast(`${n}項目を入力しました。黄色の欄を確認してください。`, 4500);
   warnExpiryToast();
   const r = opts.since ? null : inputs[first];
   if (r) r.wrap.scrollIntoView({ block: 'center' });
@@ -1755,7 +1755,8 @@ function renderDocsPanel() {
   const groups = Object.keys(DOC_TYPES).map(doc => {
     const isDone = docDone(d, doc);
     return h('div', { class: 'doc-group' + (isDone ? ' done' : '') },
-      h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null),
+      h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null,
+        canRemoveDoc(d, doc) ? h('button', { class: 'btn danger sm doc-del', type: 'button', onclick: () => removeDoc(doc) }, '削除') : null),
       ...DOC_SLOTS.filter(x => x.doc === doc).map(x => {
         const has = !!docsOf(d)[x.slot], pend = pendingSlots.has(x.slot);
         return h('div', { class: 'doc-row' },
@@ -1781,6 +1782,30 @@ async function viewDoc(slot) {
   const { data: res, error } = await sb.storage.from('onboarding-docs').createSignedUrl(`${state.id}/${slot}.jpg`, 300);
   if (error || !res) { toast('写真を開けませんでした：' + (error ? error.message : '')); return; }
   window.open(res.signedUrl, '_blank', 'noopener');
+}
+/* ---------- いらない書類を撮ってしまった時に、その書類の写真だけ消す（表・裏はまとめて） ---------- */
+const docSlotsOf = doc => DOC_SLOTS.filter(x => x.doc === doc).map(x => x.slot);
+const canRemoveDoc = (d, doc) => { const s = docSlotsOf(doc); return !s.some(x => pendingSlots.has(x)) && s.some(x => docsOf(d)[x]); };
+// 消した書類から入った身分証の情報（種類・番号・日付）は、残すと別の書類と食い違うので一緒に消す
+const ID_FROM_DOC = { passport: { type: 'パスポート', keys: ['id_number', 'id_issue_date', 'id_expiry', 'id_country'] }, license: { type: '運転免許証', keys: ['id_number', 'id_issue_date', 'id_expiry'] } };
+async function removeDoc(doc) {
+  const cid = curId(), d = D(), slots = docSlotsOf(doc), saved = slots.filter(x => docsOf(d)[x]);
+  if (!cid || !saved.length) return;
+  if (!confirm(nameOf(d) + 'の' + DOC_TYPES[doc] + 'の写真を削除しますか？' + (saved.length > 1 ? '（表と裏の両方）' : '') + '\n削除した写真は元に戻せません。')) return;
+  const done = busy('削除中…');
+  try { await callAI({ mode: 'remove', slots: saved, customer_id: cid }); done(); }
+  catch (e) { done(); toast('削除できませんでした：' + e.message, 6000); return; }
+  // 削除している間に別のお客様を開いた時は、写真の記録だけ消えている（開き直すと反映される）
+  if (curId() !== cid) { toast(nameOf(d) + 'の' + DOC_TYPES[doc] + 'の写真を削除しました', 5000); return; }
+  const docs = { ...docsOf(d) };
+  slots.forEach(x => delete docs[x]);
+  d._docs = docs;
+  if (slots.includes(d._addr_src)) { delete d._addr_src; markDirty('_addr_src'); }
+  const id = ID_FROM_DOC[doc];
+  const idCleared = !!id && d.id_type === id.type;
+  if (idCleared) { ['id_type', ...id.keys].forEach(k => { setField(k, ''); clearAI(k); }); updateCounts(); scheduleSave(300); }
+  refreshDocs();
+  toast(DOC_TYPES[doc] + 'の写真を削除しました' + (idCleared ? '。この書類から入った身分証の番号・日付も消しました' : ''), 5000);
 }
 async function purgeDocs() {
   if (!confirm('このお客様の書類の写真をすべて削除します。元に戻せません。よろしいですか？')) return;
@@ -2095,96 +2120,6 @@ function scriptBox(values, available, step = 1) {
   }
   box.append(ol);
   return box;
-}
-
-/* ---------- 面談の録音メモ（PLAUDなどの文字起こし）から入れる ----------
-   録音機のアプリで文字にした文章を、貼り付けるかファイルで選ぶと、話に出てきた項目を自動で入れる。
-   長い文章は、AIに一度に送れる長さ（8000文字）に収まるよう、いくつかに分けて順番に読ませる。
-   文章そのものは保存しない。すでに入力済みの項目は書き換えない（書類から読んだ正しい値を、聞き間違いで壊さないため） */
-const MEMO_MAX = 80000, MEMO_CHUNK = 7400;
-const MEMO_HINT = '【補足】これは面談の録音を文字にしたものの一部です。お客様（申込者）本人の情報だけを項目に入れ、担当者（ファイナンシャルプランナー）自身の勤務先・連絡先などは入れないでください。\n';
-// 字幕ファイル（.srt / .vtt）の番号と時刻の行は、いらないので取り除く
-function cleanMemo(text) {
-  return String(text || '').replace(/\r/g, '').split('\n')
-    .filter(l => !/^\s*\d+\s*$/.test(l) && !/^\s*[\d:.,]+\s*-->\s*[\d:.,]+/.test(l) && !/^WEBVTT/.test(l))
-    .join('\n').replace(/\n{3,}/g, '\n\n').trim();
-}
-// 行の切れ目で、決まった長さごとに分ける
-function splitMemo(text, size = MEMO_CHUNK) {
-  const out = []; let cur = '';
-  for (let line of text.split('\n')) {
-    while (line.length > size) { if (cur) { out.push(cur); cur = ''; } out.push(line.slice(0, size)); line = line.slice(size); }
-    if (cur.length + line.length + 1 > size) { out.push(cur); cur = ''; }
-    cur += (cur ? '\n' : '') + line;
-  }
-  if (cur.trim()) out.push(cur);
-  return out;
-}
-const isFilled = k => { const v = String(state.data[k] ?? '').trim(); return !!v && v !== String((FIELD_MAP[k] || {}).def ?? ''); };
-async function importMemo(text) {
-  const id = state.id;
-  const chunks = splitMemo(text);
-  const fields = [...fieldSpec(VOICE_KEYS), ACCOUNT_SPEC];
-  const done = busy(chunks.length > 1 ? `録音メモを読んでいます…（${chunks.length}つに分けて読みます。1〜2分かかります）` : '録音メモを読んでいます…');
-  const results = [];
-  try {
-    // 3つずつ同時に読む
-    for (let i = 0; i < chunks.length; i += 3)
-      results.push(...await Promise.allSettled(chunks.slice(i, i + 3).map(c => callAI({ mode: 'voice', transcript: MEMO_HINT + c, fields }, 120000))));
-  } finally { done(); }
-  if (curId() !== id) { toast('別のお客様を開いたので、録音メモの内容は入れませんでした。', 6000); return false; }
-  const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-  const failed = results.length - ok.length;
-  if (!ok.length) throw new Error(results[0].reason && results[0].reason.message || '読み取れませんでした');
-  // 同じ項目が何度も出てきたら、あとの話（言い直し）を優先する
-  const values = {}, unsure = new Set();
-  for (const r of ok) for (const [k, v] of Object.entries((r && r.values) || {})) {
-    if (v == null || !String(v).trim()) continue;
-    values[k] = v; ((r.uncertain || []).includes(k) ? unsure.add(k) : unsure.delete(k));
-  }
-  const res = { values, uncertain: [...unsure] };
-  const gotAccount = !secretVals.account_number && takeAccountFromVoice(res);
-  delete res.values.account_number;
-  let kept = 0;
-  for (const k of Object.keys(res.values)) if (isFilled(k)) { delete res.values[k]; kept++; }
-  const extra = (kept ? `（入力済みの${kept}項目はそのままにしました）` : '') + (gotAccount ? '口座番号も入れました。' : '') + (failed ? `⚠ 一部（${failed}/${results.length}）は読めませんでした。` : '');
-  applyAI(res, {}, { extra, emptyMsg: kept ? `新しく入れる項目はありませんでした（話に出てきた${kept}項目は、すでに入力済みです）。` : gotAccount ? '口座番号を入れました。送信前の画面で確認してください。' : '録音メモから読み取れる項目がありませんでした。' });
-  return true;
-}
-function openMemoImport() {
-  const ta = h('textarea', { class: 'transcript', rows: '8', 'aria-label': '録音メモの文章', placeholder: 'ここに、録音アプリ（PLAUDなど）の「文字起こし」や「要約」をコピーして貼り付けます。' });
-  const count = h('p', { class: 'muted small', style: 'margin:0', role: 'status' }, '');
-  const paint = () => { const n = ta.value.length; count.textContent = n ? n.toLocaleString('ja-JP') + '文字' + (n > MEMO_MAX ? `（長すぎます。${MEMO_MAX.toLocaleString('ja-JP')}文字までにしてください）` : '') : ''; count.style.color = n > MEMO_MAX ? 'var(--danger)' : ''; };
-  ta.addEventListener('input', paint);
-  const file = h('input', { type: 'file', accept: '.txt,.md,.srt,.vtt,text/plain,text/markdown', hidden: true });
-  file.addEventListener('change', async () => {
-    const f = file.files && file.files[0]; file.value = '';
-    if (!f) return;
-    if (!/\.(txt|md|srt|vtt)$/i.test(f.name) && !/^text\//.test(f.type)) { toast('文字のファイル（.txt など）を選んでください。録音アプリの「テキスト（TXT）」で書き出すと使えます。', 6500); return; }
-    if (f.size > 1_000_000) { toast('ファイルが大きすぎます。'); return; }
-    try { ta.value = cleanMemo(await f.text()); paint(); } catch { toast('ファイルを読み込めませんでした。'); }
-  });
-  const close = () => { dropFocus(); back.remove(); };
-  const go = h('button', { class: 'btn primary wide', type: 'button' }, '自動で項目に入れる');
-  go.addEventListener('click', async () => {
-    const t = cleanMemo(ta.value);
-    if (!t) { toast('録音メモの文章を貼り付けてください。'); return; }
-    if (t.length > MEMO_MAX) { toast('文章が長すぎます。お客様の情報が出てくる部分だけにしてください。', 6000); return; }
-    close();
-    try { await importMemo(t); }
-    catch (e) { toast('うまくいきませんでした：' + e.message, 6000); }
-  });
-  const back = h('div', { class: 'backdrop' }, h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': '面談の録音メモから入れる' },
-    h('div', { class: 'sheet-top' }, h('h2', {}, '面談の録音メモから入れる'), h('button', { class: 'icon-btn', type: 'button', 'aria-label': '閉じる', onclick: close }, icon('close'))),
-    h('p', { class: 'note' }, '録音アプリ（PLAUDなど）で文字にした面談の内容を入れると、話に出てきた項目（勤務先・年収・銀行・受取人など）を自動で入力します。'),
-    ta, count,
-    h('button', { class: 'btn outline wide', type: 'button', onclick: () => file.click() }, '📄 ファイルから選ぶ（.txt）'), file,
-    go,
-    h('p', { class: 'muted small', style: 'margin:0' }, '・すでに入力済みの項目は書き換えません（空いている項目だけに入ります）。', h('br'),
-      '・貼り付けた文章は、項目の整理のためAnthropic社のClaudeへ送ります。文章そのものはツールに保存しません。', h('br'),
-      '・マイナンバーとカード番号は、話に出ていても入力されません。')));
-  back.addEventListener('click', e => { if (e.target === back) close(); });
-  document.body.append(back);
 }
 
 /* ---------- 話して入力 ---------- */

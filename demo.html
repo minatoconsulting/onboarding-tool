@@ -190,6 +190,7 @@ a.btn.ghost{color:var(--muted)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .doc-row.retake,:root:not([data-theme="light"]) .retake-banner{background:#3A1E1A;color:#F2B8AE}}
 .doc-actions{display:flex;gap:6px;flex:none}
 .doc-ok{color:var(--seal);font-weight:700;font-size:.8rem}
+.doc-del{flex:none;min-height:32px;padding:0 10px;font-size:.82rem;white-space:nowrap}
 
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
 .chip-btn{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 12px;font-size:.84rem;cursor:pointer;min-height:34px}
@@ -550,7 +551,7 @@ const DOCS = {
 
 const app = document.getElementById('app');
 // いま開いている画面が、いつ直した版かを見分けるための日付（直して公開するたびに書き換える。録音画面のいちばん下に小さく出る）
-const BUILD = '2026-11-10';
+const BUILD = '2026-11-10-2';
 
 /* ---------- SHEET_AS_PAGE：長い枠は、ふつうのページとして出す ----------
    iPhoneのSafariでは、画面に重ねた枠（.backdrop）の中がスクロールできず、下の項目やボタンまで行けなくなることがある。
@@ -1780,7 +1781,8 @@ function renderDocsPanel() {
   const groups = Object.keys(DOC_TYPES).map(doc => {
     const isDone = docDone(d, doc);
     return h('div', { class: 'doc-group' + (isDone ? ' done' : ''), id: 'grp-' + doc },
-      h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null),
+      h('div', { class: 'doc-name' }, ill(DOC_ILL[doc], 'doc-ill'), h('span', { class: 'doc-title' }, DOC_TYPES[doc]), isDone ? h('span', { class: 'doc-ok' }, '✓ OK') : null,
+        canRemoveDoc(d, doc) ? h('button', { class: 'btn danger sm doc-del', type: 'button', onclick: () => removeDoc(doc) }, '削除') : null),
       ...DOC_SLOTS.filter(x => x.doc === doc).map(x => {
         const has = !!docsOf(d)[x.slot], pend = pendingSlots.has(x.slot), redo = !pend && retakeNeed[x.slot];
         return h('div', { class: 'doc-row' + (redo ? ' retake' : ''), id: 'slot-' + x.slot },
@@ -1812,6 +1814,32 @@ async function viewDoc(slot) {
   const { data: res, error } = await sb.storage.from('onboarding-docs').createSignedUrl(`${state.id}/${slot}.jpg`, 300);
   if (error || !res) { toast('写真を開けませんでした：' + (error ? error.message : '')); return; }
   window.open(res.signedUrl, '_blank', 'noopener');
+}
+/* ---------- いらない書類を撮ってしまった時に、その書類の写真だけ消す（表・裏はまとめて） ---------- */
+const docSlotsOf = doc => DOC_SLOTS.filter(x => x.doc === doc).map(x => x.slot);
+const canRemoveDoc = (d, doc) => { const s = docSlotsOf(doc); return !s.some(x => pendingSlots.has(x)) && s.some(x => docsOf(d)[x] || retakeNeed[x]); };
+// 消した書類から入った身分証の情報（種類・番号・日付）は、残すと別の書類と食い違うので一緒に消す
+const ID_FROM_DOC = { passport: { type: 'パスポート', keys: ['id_number', 'id_issue_date', 'id_expiry', 'id_country'] }, license: { type: '運転免許証', keys: ['id_number', 'id_issue_date', 'id_expiry'] } };
+async function removeDoc(doc) {
+  const d = D(), slots = docSlotsOf(doc), saved = slots.filter(x => docsOf(d)[x]);
+  if (!confirm(DOC_TYPES[doc] + 'の写真を削除しますか？' + (saved.length > 1 ? '（表と裏の両方）' : '') + '\n削除した写真は元に戻せません。')) return;
+  if (saved.length) {
+    const done = busy('削除中…');
+    try { await callAI({ mode: 'remove', slots: saved, ...(STAFF ? { customer_id: state.id } : {}) }); done(); }
+    catch (e) { done(); toast('削除できませんでした：' + e.message, 6000); return; }
+  }
+  const docs = { ...docsOf(d) };
+  slots.forEach(x => { delete docs[x]; delete retakeNeed[x]; });
+  d._docs = docs;
+  if (slots.includes(d._addr_src)) { delete d._addr_src; markDirty('_addr_src'); }
+  const id = ID_FROM_DOC[doc];
+  const idCleared = !!id && d.id_type === id.type;
+  if (idCleared) {
+    ['id_type', ...id.keys].forEach(k => { setField(k, ''); aiKeys.delete(k); guessKeys.delete(k); paint(k); });
+    updateCounts(); scheduleSave(300);
+  }
+  refreshDocs();
+  toast(DOC_TYPES[doc] + 'の写真を削除しました' + (idCleared ? '。この書類から入った身分証の番号・日付も消しました' : ''), 5000);
 }
 async function purgeDocs() {
   if (!confirm('このお客様の書類の写真をすべて削除します。元に戻せません。よろしいですか？')) return;
